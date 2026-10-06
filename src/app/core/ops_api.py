@@ -2,6 +2,8 @@
 
 import hashlib
 import json
+
+# noinspection PyPep8Naming
 import xml.etree.ElementTree as ET
 from contextlib import contextmanager
 from typing import Any, Iterator
@@ -252,7 +254,7 @@ class OpsApi:
     @staticmethod
     def _typed[T](*, value: Any, kind: type[T]) -> T:
         """
-        Check the type of a parsed JSON value; a bool is not accepted as an int.
+        Check the type of parsed JSON value; a bool is not accepted as an int.
 
         :param value: value to check
         :param kind: expected type
