@@ -9,6 +9,9 @@
   reference files `http_client.py` and `tg_templater.py` deleted; first commit on `master`. Public GitHub repo set up
   (description, topics; home page shows Releases only). Next: plan step 1. Pending from the user: the logger module
   (needed in step 2).
+- 2026-10-06: logger module received and adapted (`src/app/infra/logger.py`); the package is named `app`, not
+  `gamepreset_peek` (user's choice). Logger tests in `tests/src/app/infra/test_logger.py`; tests are written
+  together with the code in each step, not at the end.
 
 ## Decisions and findings
 
@@ -17,7 +20,8 @@
 - tkinter GUI: game list (loaded once at start; on failure a "Load games" button), resolution list taken from the
   preset request answer, "Show settings" button hidden while settings are shown; changing game or resolution clears
   them. Collapsible log panel at the bottom (15 lines, scrollable).
-- Log file in `%TEMP%\GamePresetPeek\`, overwritten on every start.
+- Log file in `%LOCALAPPDATA%\GamePresetPeek\logs\` (not `%TEMP%`: cleanup tools wipe it), loguru rotation
+  at midnight, retention 7 days, so a user can attach recent logs to an issue.
 - UI languages: en, ru, de, fr, es; setting names and values come from NVIDIA's `.translation` files.
 - Game names: a bundled slug -> display name dictionary built from `fingerprint.db`; a slug missing there is shown as
   the slug with underscores replaced by spaces and every word capitalized.
@@ -55,3 +59,20 @@
 - `ops-gx.nvidia.com` answers 403 (CloudFront) to an empty User-Agent; any non-empty one works. `wpc-download` doesn't
   care. Presets come as `binary/octet-stream`, so decode the body as JSON regardless of Content-Type.
 - No NVIDIA endpoint returning a list of known GPUs or CPUs was found.
+
+### Logging (2026-10-06)
+
+- `LoggingManager(debug=...)` is called at the start of `__main__` with a literal: `True` during development,
+  `False` in releases. No CLI flag or env var.
+- The UI log panel does not read the file: a callable sink puts formatted lines into `LoggingManager.lines`
+  (`queue.Queue`), the panel drains it via `root.after`. Lines logged before the window exists wait in the queue.
+- The console sink is added only when `sys.stderr` is not None: a windowed Nuitka exe has no stderr.
+- The file sink has no `enqueue=True`: one process, few records; synchronous writes keep the last lines before a
+  crash, and loguru sinks are already thread-safe (a lock per sink).
+- Stdlib `logging` is used only to intercept third-party records (`requests`, `urllib3`) into loguru. In
+  `_InterceptHandler.emit` the frame walk starts at the caller of `emit()` (always `Handler.handle`), otherwise every
+  record is attributed to `logging/__init__.py`.
+- Unhandled exceptions: `main()` wraps `application.run()` in try / `logger.exception` / finally, but that only
+  catches errors while building the window. Tk callback errors go to `report_callback_exception` (override it in the
+  window, step 8), worker thread errors to `threading.excepthook` (set by `LoggingManager`). The presenter also
+  catches worker task errors itself to show them in the UI.

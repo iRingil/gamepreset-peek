@@ -10,7 +10,8 @@ Mark a step `[x]` when it is done. Background and the reasons behind the decisio
 - HTTP: synchronous client on `requests` (port of the user's aiohttp client: GET retries with backoff, connect and
   total timeouts, `HttpClientError`), run in a worker thread so the window never blocks.
 - Data: own frozen dataclasses with hand-written parsing, no pydantic; stdlib `json`, no orjson.
-- Logging: loguru only; file in `%TEMP%\GamePresetPeek\`, overwritten on every start; the log panel reads a sink.
+- Logging: loguru only; file in `%LOCALAPPDATA%\GamePresetPeek\logs\`, rotated daily, kept 7 days; the log panel
+  drains a queue filled by a sink.
 - i18n: every UI text is a member of a `StrEnum` (value = English source), no `_()` in code; `.po` per language,
   Babel is a dev tool only (`.pot` generated from the enum, `pybabel update / compile`), runtime uses stdlib
   `gettext`. Languages: en, ru, de, fr, es. UI language: auto-detected from Windows, changeable in a dropdown, saved.
@@ -25,7 +26,7 @@ Mark a step `[x]` when it is done. Background and the reasons behind the decisio
 ## Layout
 
 ```
-src/gamepreset_peek/
+src/app/
   __main__.py            # entry point: logging, wiring, run the window
   config.py              # constants: URLs, timeouts, paths, UI sizes
   core/                  # business logic, no tkinter imports
@@ -41,7 +42,7 @@ src/gamepreset_peek/
     locale/<lang>/LC_MESSAGES/messages.po|.mo
   infra/
     http_client.py       # requests-based client
-    logger.py            # user's logger module + UI sink
+    logger.py            # LoggingManager: console, file and UI panel sinks
   ui/
     main_window.py       # widgets and layout
     presenter.py         # UI events -> service in a worker thread -> results via root.after
@@ -50,7 +51,7 @@ src/gamepreset_peek/
     game_names.json
     gpus.json            # GPU list for the manual choice
 tools/                   # dev scripts: build game_names.json / gpus.json, generate messages.pot
-tests/src/gamepreset_peek/...
+tests/src/app/...
 ```
 
 ## Steps
@@ -65,7 +66,8 @@ tests/src/gamepreset_peek/...
 ### 2. Infrastructure
 - [ ] `config.py` with endpoints, User-Agent (ops-gx answers 403 to an empty one), timeouts, paths.
 - [ ] `infra/http_client.py`: `get_json`, `get_bytes`; retries on connection errors, timeouts and 5xx.
-- [ ] `infra/logger.py`: user's module (to be provided) + file sink in `%TEMP%` with mode `w` + UI sink.
+- [x] `infra/logger.py`: user's module adapted: rotating file sink, UI queue sink, `threading.excepthook`;
+  `config.py` started (app name and paths).
 - [ ] Tests (HTTP mocked).
 
 ### 3. NVIDIA API and models
