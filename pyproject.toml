@@ -1,5 +1,4 @@
 [tool.pylint.main]
-extension-pkg-allow-list = ["orjson"]
 fail-under = 10
 ignore = ["CVS"]
 ignore-patterns = ["^\\.#"]
