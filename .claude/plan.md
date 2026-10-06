@@ -56,7 +56,7 @@ tests/src/gamepreset_peek/...
 ## Steps
 
 ### 1. Skeleton and tooling
-- [ ] `git init`, `.gitignore` check, first commit of the current state (user's decision what goes in).
+- [x] First commit `bc58a29` on `master` (the user keeps `master` as the default branch everywhere).
 - [ ] Package directories with empty `__init__.py`.
 - [ ] Requirements: add `requests`, dev `babel`; drop `aiohttp` (and `orjson` from the pylint allow-list).
 - [x] `pyproject.toml`: removed `asyncio_mode` / `asyncio_default_fixture_loop_scope` (no asyncio in the app).

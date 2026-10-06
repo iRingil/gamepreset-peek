@@ -5,6 +5,10 @@
 - 2026-10-06: project setup. Claude Code files moved to `.claude/` (`CLAUDE.md`, `rules/code-style.md`); Black
   26.10.0 added to dev requirements and configured in `pyproject.toml`. Code style trimmed to this project: no web
   stack (templates, JS/CSS, translations, migrations), logging through loguru only.
+- 2026-10-06: stage 0 research done (`research/stage0_probe.py`), plan agreed and written to `.claude/plan.md`;
+  reference files `http_client.py` and `tg_templater.py` deleted; first commit on `master`. Public GitHub repo set up
+  (description, topics; home page shows Releases only). Next: plan step 1. Pending from the user: the logger module
+  (needed in step 2).
 
 ## Decisions and findings
 
