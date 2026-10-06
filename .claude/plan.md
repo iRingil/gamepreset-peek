@@ -60,7 +60,8 @@ src/app/
   data/
     game_names.json
     gpus.json            # GPU list for the manual choice
-tools/                   # dev scripts: build game_names.json / gpus.json, generate messages.pot
+    gpu_ranks.json       # chip generation and tier by device id
+tools/                   # dev scripts: build game_names.json / gpus.json / gpu_ranks.json, generate messages.pot
 tests/src/app/...
 ```
 
@@ -93,16 +94,19 @@ tests/src/app/...
 - [x] `core/game_names.py` with the slug fallback; tests.
 
 ### 5. Hardware
-- [ ] `core/hardware.py`: CPU name, NVIDIA GPU name and device id from the registry; memory size
-  (`GlobalMemoryStatusEx`) and Windows version for the compatibility check.
-- [ ] `tools/build_gpus.py`: NVIDIA GeForce list (source: PCI ID database), each entry checked against the preset
-  endpoint, result -> `data/gpus.json`.
-- [ ] `core/user_settings.py`: load / save hardware and language.
-- [ ] Tests (registry mocked).
+- [x] `core/hardware.py`: CPU name, NVIDIA GPU names and device ids from the registry (`DEVICEMAP\VIDEO`, active
+  adapters only), the most powerful first (`GpuRanks`: generation + chip tier); memory size (`GlobalMemoryStatusEx`) and Windows
+  version for the compatibility check; `GpuList` loads the bundled list.
+- [x] `tools/build_gpus.py`: NVIDIA GeForce list (source: PCI ID database), each entry checked against the
+  compatibility and preset endpoints, one id per name, result -> `data/gpus.json`; chip ranks of all NVIDIA
+  devices -> `data/gpu_ranks.json`.
+- [x] `core/user_settings.py`: load / save language and the GPU the user chose.
+- [x] Tests (registry mocked).
 
 ### 6. Service
 - [ ] `core/service.py`: games list, resolutions of a game, settings of game + resolution (translated with the game's
-  `.translation`), hardware flow (saved -> detected -> compatibility -> manual choice).
+  `.translation`), hardware flow (saved -> detected -> compatibility -> manual choice); several NVIDIA adapters ->
+  the user picks one of them, the strongest preselected.
 - [ ] Tests.
 
 ### 7. i18n

@@ -1,10 +1,11 @@
-"""Data classes of the NVIDIA presets data and of the user's hardware."""
+"""Data classes of the NVIDIA presets data, of the user's hardware and of the saved user settings."""
 
 from dataclasses import dataclass
 
 __all__: tuple[str, ...] = (
     "Compatibility",
     "GamePresets",
+    "Gpu",
     "Hardware",
     "PresetsFile",
     "RemoteFile",
@@ -12,7 +13,16 @@ __all__: tuple[str, ...] = (
     "Setting",
     "SettingTranslation",
     "Translations",
+    "UserSettings",
 )
+
+
+@dataclass(frozen=True, slots=True)
+class Gpu:
+    """An NVIDIA graphics card: name as Windows shows it and PCI device id as 4 lowercase hex digits, e.g. "28e0"."""
+
+    name: str
+    device_id: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,3 +134,11 @@ class Translations:
         """
         translation: SettingTranslation | None = self.languages.get(language, {}).get(setting)
         return (translation.values.get(value) if translation is not None else None) or value
+
+
+@dataclass(frozen=True, slots=True)
+class UserSettings:
+    """Settings kept between runs: UI language code and the GPU the user chose; None when not chosen yet."""
+
+    language: str | None = None
+    gpu: Gpu | None = None

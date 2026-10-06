@@ -20,6 +20,9 @@
   (`OpsApi`, `OpsFormatError`) with tests on saved mordhau answers.
 - 2026-10-06: step 4: `tools/build_game_names.py` builds `src/app/data/game_names.json` (2054 names) from
   `fingerprint.db`; `core/game_names.py` (`GameNames`) with the slug fallback; tests.
+- 2026-10-06: step 5: `core/hardware.py` (`HardwareDetector`, `GpuList`, `GpuRanks`), `core/user_settings.py`
+  (`UserSettingsStore`), models `Gpu` and `UserSettings`; `tools/build_gpus.py` builds `src/app/data/gpus.json` and `gpu_ranks.json`;
+  tests with a fake registry. Compatibility re-checked: the gpu state depends on `gpu.deviceID`, not the name.
 
 ## Decisions and findings
 
@@ -94,8 +97,9 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
   en_US translations equal the names. Largest file: war_thunder, 7.3 MB.
 - Compatibility: `GET /v4/ops-compatibility/` (no game in the path; with a slug -> 403 "Missing Authentication
   Token"). Requires `cpu.name`, `gpu.name` (400 otherwise) and also `memory.size` and `os.version` (without them
-  memory and os are reported false). Any values of memory and os pass (2 GB, OS 6.1); unknown CPU or GPU name ->
-  that state false. Answer `{"criteria": {"overallState": bool, "states": [{"name", "state"}]}}`, `states` only when
+  memory and os are reported false). Any values of memory and os pass (2 GB, OS 6.1); unknown CPU name -> cpu false.
+  The gpu state depends on `gpu.deviceID` only (re-checked in step 5): any name with a known id passes, the real name
+  without `gpu.deviceID` or with an unknown id fails. Answer `{"criteria": {"overallState": bool, "states": [{"name", "state"}]}}`, `states` only when
   false; names `cpu`, `gpu`, `memory`, `os`. GT 710 passes compatibility.
 - Preset request: `gpu.deviceID` is case-insensitive and `0x28e0` works too; an unknown id -> 404; an unknown
   `gpu.name` with a known id falls back to `regular`.
@@ -175,3 +179,37 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
   `NvBackend\ApplicationOntology\data\`); it is a dev script without tests. The data file path is
   `GAME_NAMES_FILE` in `config.py` (`src/app/data/`, next to the package for the Nuitka build).
 - Fallback name: `str.capitalize` per `_`-separated word (`nba_2k27` -> `Nba 2k27`), empty parts dropped.
+
+### Hardware (2026-10-06, step 5)
+
+- GPUs are read from `HKLM\HARDWARE\DEVICEMAP\VIDEO` (volatile, rebuilt at boot with active adapters only), each
+  `\Device\VideoN` value pointing to `\Registry\Machine\...\Control\Video\{guid}\0000` with `DriverDesc` and
+  `MatchingDeviceId`. The driver class key `{4d36e968-...}` also keeps removed or disabled devices: on the dev laptop it
+  lists Intel UHD whose device is not present. One adapter appears once per output: deduplicated by device id. The
+  basic display adapter has no `MatchingDeviceId` and is skipped.
+- NVIDIA filter: `ven_10de&dev_xxxx` in `MatchingDeviceId`, case-insensitive (Intel writes it upper case). Integrated
+  graphics is never NVIDIA, so several results mean several discrete NVIDIA cards.
+- Several NVIDIA adapters (user's decision): all are shown to the user, the most powerful one preselected;
+  `nvidia_gpus(ranks=...)` returns them in that order.
+- Power (`GpuRanks`, `data/gpu_ranks.json`): score = generation + chip tier. Ordering by generation first fails on
+  GTX 780 vs GT 1030; ordering by the number in the name fails on RTX 3090 vs 4060; device id grows with the
+  generation but, within one, the flagship chip has the lowest id (AD102 `2684`, AD107 `28xx`). The sum assumes a
+  new generation is about one chip tier faster and orders all those pairs right.
+- Generations by chip prefix: GF 0, GK 1, GM 2, GP 3, TU 4, GA 5, AD 6, GB 7. Tier by the last two digits of the
+  chip number: 00 / 02 / 10 -> 4, 03 -> 3.5, 04 / 14 -> 3, 05 -> 2.5, 06 / 16 -> 2, 07 / 17 -> 1, 08 / 18 / 19 -> 0.
+  The table covers every NVIDIA device of `pci.ids` with such a chip (945 ids, Quadro / RTX A included), not only
+  the GeForce list. Chip names come from `pci.ids` (`28e0  AD107M [...]`); Windows doesn't show them.
+- A device id missing from the table: newer than every known id -> newest generation + 1, otherwise legacy (-1);
+  the tier from the last two digits of the largest number in the name (x90 4, x80 3.5, x70 3, x60 2, x50 1, else 0).
+- Memory: `GlobalMemoryStatusEx` total physical memory in GiB, rounded (15.7 -> 16). OS: `sys.getwindowsversion()`
+  major.minor; Windows 11 is `10.0`, as NVIDIA App sends it.
+- The preset request: `gpu.deviceID` picks the tier, the name only picks the profile: any name containing `RTX` gets
+  `regular_rtx` (even just `"RTX"`), so PCI ID names work as is.
+- `gpus.json`: GeForce devices of vendor `10de` from `pci.ids` (`https://pci-ids.ucw.cz/v2.2/pci.ids`), named
+  `"NVIDIA " + <bracketed name>` (e.g. `NVIDIA GeForce RTX 4060 Max-Q / Mobile`). Each id is kept when the
+  compatibility check passes and the preset request for `baldurs_gate_3` is not 404; one id per name (the first one
+  accepted, so a name may map to another id than a given card's), sorted by name: 194 GPUs. Dev tool, no tests; run
+  with `PYTHONPATH=src`, `--ranks-only` rebuilds `gpu_ranks.json` without the ~7 minutes of NVIDIA checks.
+- Saved settings (user's decision): only the language and a GPU the user chose (name + device id) in
+  `%LOCALAPPDATA%\GamePresetPeek\settings.json`; CPU, memory and OS are detected on every start. A missing or broken
+  file gives the defaults with a warning in the log.
