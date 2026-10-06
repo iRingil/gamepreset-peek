@@ -18,6 +18,8 @@
 - 2026-10-06: game config locations researched (future auto-apply feature added to the plan). Step 3: all 1754 games
   probed (`research/stage3_probe.py`), decisions on the data layer agreed; `core/models.py`, `core/ops_api.py`
   (`OpsApi`, `OpsFormatError`) with tests on saved mordhau answers.
+- 2026-10-06: step 4: `tools/build_game_names.py` builds `src/app/data/game_names.json` (2054 names) from
+  `fingerprint.db`; `core/game_names.py` (`GameNames`) with the slug fallback; tests.
 
 ## Decisions and findings
 
@@ -159,3 +161,17 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
   no saved mitmproxy flows, NVIDIA App could not be installed separately to capture it again.
 - `fake-useragent` works offline from its bundled `data/browsers.jsonl` (2.6 MB): the Nuitka build needs
   `--include-package-data=fake_useragent`.
+
+### Game names (2026-10-06)
+
+- `game_names.json` holds every fingerprint of `fingerprint.db` (2054), not only the 1754 catalog games: games that
+  join the catalog later already have a name. 11 current catalog slugs are missing (e.g. `nba_2k27`, `wardogs`).
+- Entities (`&apos;`, `&#x2122;`, `&amp;`) are decoded by the XML parser; no double-encoded ones were found.
+- Cleaning: names are stripped (`"Enshrouded "`, `" Star Wars..."`), and UTF-8 text decoded as Latin-1 is repaired
+  (`"DEAD OR ALIVEÂ® 5"`): the repair applies only when `encode("latin-1").decode("utf-8")` succeeds, which a
+  normal name with `®`, `™` or `’` never does. `™` / `®` marks are kept as NVIDIA writes them.
+- `borderlands_4` has two identical `DisplayName` elements; the first is taken.
+- The tool takes the `fingerprint.db` path as an argument (NVIDIA App keeps it in
+  `NvBackend\ApplicationOntology\data\`); it is a dev script without tests. The data file path is
+  `GAME_NAMES_FILE` in `config.py` (`src/app/data/`, next to the package for the Nuitka build).
+- Fallback name: `str.capitalize` per `_`-separated word (`nba_2k27` -> `Nba 2k27`), empty parts dropped.

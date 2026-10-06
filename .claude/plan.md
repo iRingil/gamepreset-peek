@@ -68,13 +68,14 @@ tests/src/app/...
 
 ### 1. Skeleton and tooling
 - [x] First commit `bc58a29` on `master` (the user keeps `master` as the default branch everywhere).
-- [ ] Package directories with empty `__init__.py`.
+- [x] Package directories with empty `__init__.py`: each package is created with its first module.
 - [x] Requirements: add `requests`, dev `babel`; drop `aiohttp` (and `orjson` from the pylint allow-list).
 - [x] `pyproject.toml`: removed `asyncio_mode` / `asyncio_default_fixture_loop_scope` (no asyncio in the app).
 - [x] `http_client.py` and `tg_templater.py` removed from the root (client behavior to port is in the notes).
 
 ### 2. Infrastructure
-- [ ] `config.py` with endpoints, User-Agent (ops-gx answers 403 to an empty one), timeouts, paths.
+- [x] `config.py` with endpoints, User-Agent (ops-gx answers 403 to an empty one), timeouts, paths
+  (endpoints added in step 3).
 - [x] `infra/http_client.py`: `get_json`, `get_bytes`; retries on connection errors, timeouts and 5xx.
   HTTP part of `config.py` (User-Agent, timeouts, retries) done; endpoints come in step 3.
 - [x] `infra/logger.py`: user's module adapted: rotating file sink, UI queue sink, `threading.excepthook`;
@@ -88,8 +89,8 @@ tests/src/app/...
 - [x] Tests on fixtures copied into `tests/src/app/core/data/` (`research/` is git-ignored and will be deleted).
 
 ### 4. Game names
-- [ ] `tools/build_game_names.py`: `fingerprint.db` -> `data/game_names.json` (sorted, HTML entities decoded).
-- [ ] `core/game_names.py` with the slug fallback; tests.
+- [x] `tools/build_game_names.py`: `fingerprint.db` -> `data/game_names.json` (sorted, HTML entities decoded).
+- [x] `core/game_names.py` with the slug fallback; tests.
 
 ### 5. Hardware
 - [ ] `core/hardware.py`: CPU name, NVIDIA GPU name and device id from the registry; memory size
