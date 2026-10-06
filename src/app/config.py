@@ -1,4 +1,4 @@
-"""Application constants: names, paths and HTTP settings."""
+"""Application constants: names, paths, HTTP settings and NVIDIA endpoints."""
 
 import os
 from pathlib import Path
@@ -11,6 +11,11 @@ __all__: tuple[str, ...] = (
     "HTTP_READ_TIMEOUT",
     "HTTP_RETRY_BACKOFF",
     "LOG_FILE",
+    "OPS_CATALOG_URL",
+    "OPS_COMMON_FILES_URL",
+    "OPS_COMPATIBILITY_URL",
+    "OPS_PRESETS_URL",
+    "TRANSLATION_LANGUAGES",
     "USER_AGENT_OS",
 )
 
@@ -26,3 +31,12 @@ HTTP_READ_TIMEOUT: float = 15.0
 HTTP_MAX_RETRIES: int = 2
 # Delay before retry n (0-based) is HTTP_RETRY_BACKOFF * 2 ** n seconds.
 HTTP_RETRY_BACKOFF: float = 0.5
+
+_OPS_HOST: str = "https://ops-gx.nvidia.com"
+OPS_CATALOG_URL: str = f"{_OPS_HOST}/v3/applications/applications-regular_rtx.json"
+OPS_COMPATIBILITY_URL: str = f"{_OPS_HOST}/v4/ops-compatibility/"
+# Templates filled with str.format.
+OPS_PRESETS_URL: str = _OPS_HOST + "/v3/ops/{game_id}/"
+OPS_COMMON_FILES_URL: str = _OPS_HOST + "/v3/applications/{game_id}/common-files-{profile}.json"
+# Languages kept from a game's translation file: the ones the UI offers.
+TRANSLATION_LANGUAGES: tuple[str, ...] = ("en_US", "ru_RU", "de_DE", "fr_FR", "es_ES")

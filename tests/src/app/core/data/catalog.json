@@ -1,0 +1,31 @@
+{
+    "applications": {
+        "mordhau": {
+            "profiles": {
+                "regular_rtx": {
+                    "version": "1.4151619460.138697779",
+                    "files": "b9309d8ba895d5869df5b50cabd952dfd58e45524c25c4e6639aeeb3a061aacb"
+                }
+            }
+        },
+        "baldurs_gate_3": {
+            "profiles": {
+                "regular_rtx": {
+                    "version": "1.2497321979.241443468",
+                    "files": "7754106a5d2c2604b5b4dcaad9d0d2bc40a87df0eafe50e9af1264a639f0a1ea"
+                }
+            }
+        },
+        "2xko": {
+            "profiles": {
+                "regular": {
+                    "version": "1.2413695412.1734642495",
+                    "files": "4635ccf09abaabd10cd25a408b29c182162eae6070e0d54a1fb482844e085800"
+                }
+            }
+        }
+    },
+    "ontology_version": "3f4bf3cae2f7524eb8f0233e56ee9c76c98b541c1f09728a473f59a658c9d7b1",
+    "ontology_arm_version": "b4f665c869c06e9cc663d86ddaa5ab5447d7df2bbd4a7cb9bcf85eb9ea3297a6",
+    "version": "2f759cc2219cf86ac353336390366769f51bca2b86bbd80ba178c117dccfc10d"
+}

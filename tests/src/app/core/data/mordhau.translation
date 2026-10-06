@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<game name="mordhau">
+  <language name="ar_AE" translation="">
+    <setting name="Ambient Occlusion" translation="إطباق محيطي">
+      <value name="Off" translation="إيقاف تشغيل"/>
+      <value name="On" translation="تشغيل"/>
+    </setting>
+    <setting name="Anti-aliasing" translation="منع الترادف">
+      <value name="Off" translation="إيقاف تشغيل"/>
+      <value name="FXAA" translation="FXAA"/>
+      <value name="Temporal AA" translation="AA مؤقت"/>
+    </setting>
+    <setting name="Character Cloth" translation="ملابس الشخصية">
+      <value name="No Cloth" translation="بلا ملابس"/>
+      <value name="Only Self" translation="ذاتي فقط"/>
+      <value name="All Cloth" translation="كل الملابس"/>
+    </setting>
+    <setting name="Character Quality" translation="جودة الشخصية">
+      <value name="Low" translation="منخفض"/>
+      <value name="Medium" translation="متوسط"/>
+      <value name="High" translation="مرتفع"/>
+    </setting>
+    <setting name="Display Mode" translation="وضع العرض">
+      <value name="Full-screen" translation="شاشة كاملة"/>
+      <value name="Windowed Borderless" translation="نافذة بلا حدود"/>
+      <value name="Windowed" translation="مزود بإطارات"/>
+    </setting>
+    <setting name="Effects Quality" translation="جودة التأثيرات">
+      <value name="Low" translation="منخفض"/>
+      <value name="Medium" translation="متوسط"/>
+      <value name="High" translation="مرتفع"/>
+      <value name="Ultra" translation="فائق"/>
+    </setting>
+    <setting name="Foliage Density" translation="كثافة أوراق الشجر">
+      <value name="Low" translation="منخفض"/>
+      <value name="Medium" translation="متوسط"/>
+      <value name="High" translation="مرتفع"/>
+      <value name="Ultra" translation="ألترا"/>
+    </setting>
+    <setting name="Indirect Shadows" translation="ظلال غير مباشرة">
+      <value name="Off" translation="إيقاف"/>
+      <value name="On" translation="تشغيل"/>
+    </setting>
+    <setting name="Post-Processing" translation="معالجة لاحقة">
+      <value name="Low" translation="منخفض"/>
+      <value name="Medium" translation="متوسط"/>
+      <value name="High" translation="مرتفع"/>
+      <value name="Ultra" translation="فائق"/>
+    </setting>
+    <setting name="Ragdoll Quality" translation="جودة Ragdoll">
+      <value name="Low" translation="منخفض"/>
+      <value name="Medium" translation="متوسط"/>
+      <value name="High" translation="مرتفع"/>
+    </setting>
+    <setting name="Reflex" translation="Reflex">
+      <value name="Disabled" translation="تعطيل"/>
+      <value name="Enabled" translation="تمكين"/>
+      <value name="Enabled+Boost" translation="تمكين + تعزيز"/>
+    </setting>
+    <setting name="Resolution" translation="الدقة"/>
+    <setting name="Resolution Scale" translation="معيار الدقة"/>
+    <setting name="Screen Space Reflections" translation="انعكاسات مساحة الشاشة">
+      <value name="Off" translation="إيقاف التشغيل"/>
+      <value name="Low" translation="منخفض"/>
+      <value name="High" translation="مرتفع"/>
+      <value name="Ultra" translation="ألترا"/>
+    </setting>
+    <setting name="Shadow Quality" translation="جودة الظل">
+      <value name="Low" translation="منخفض"/>
+      <value name="High" translation="مرتفع"/>
+      <value name="Ultra" translation="فائق"/>
+    </setting>
+    <setting name="Texture Quality" translation="جودة مواد الصور">
+      <value name="Low" translation="منخفض"/>
+      <value name="Medium" translation="متوسط"/>
+      <value name="High" translation="مرتفع"/>
+      <value name="Ultra" translation="فائق"/>
+    </setting>
+    <setting name="VSync" translation="VSync">
+      <value name="Off" translation="إيقاف تشغيل"/>
+      <value name="On" translation="تشغيل"/>
+    </setting>
+    <setting name="Vertical Sync" translation="مزامنة رأسية">
+      <value name="Use the 3D Application Setting" translation="استخدام إعداد التطبيق ثلاثي الأبعاد"/>
+      <value name="Off" translation="إيقاف تشغيل"/>
+      <value name="On" translation="تشغيل"/>
+      <value name="Force On (Interval 2)" translation="تشغيل إجباري (فاصل 2)"/>
+      <value name="Adaptive" translation="مهايئ"/>
+      <value name="Adaptive (Half Refresh Rate)" translation="متكيف (معدل تحديث نصفي)"/>
+      <value name="On (Smooth)" translation="تشغيل (ناعم)"/>
+      <value name="G-SYNC" translation="G-SYNC"/>
+      <value name="G-SYNC Not Supported" translation="G-SYNC غير مدعم"/>
+      <value name="Fast" translation="سريع"/>
+    </setting>
+    <setting name="View Distance" translation="عرض المسافة">
+      <value name="Low" translation="منخفض"/>
+      <value name="Medium" translation="متوسط"/>
+      <value name="High" translation="مرتفع"/>
+      <value name="Ultra" translation="فائق"/>
+    </setting>
+  </language>
+  <language name="en_US" translation="">
+    <setting name="Ambient Occlusion" translation="Ambient Occlusion">
+      <value name="Off" translation="Off"/>
+      <value name="On" translation="On"/>
+    </setting>
+    <setting name="Anti-aliasing" translation="Anti-aliasing">
+      <value name="Off" translation="Off"/>
+      <value name="FXAA" translation="FXAA"/>
+      <value name="Temporal AA" translation="Temporal AA"/>
+    </setting>
+    <setting name="Character Cloth" translation="Character Cloth">
+      <value name="No Cloth" translation="No Cloth"/>
+      <value name="Only Self" translation="Only Self"/>
+      <value name="All Cloth" translation="All Cloth"/>
+    </setting>
+    <setting name="Character Quality" translation="Character Quality">
+      <value name="Low" translation="Low"/>
+      <value name="Medium" translation="Medium"/>
+      <value name="High" translation="High"/>
+    </setting>
+    <setting name="Display Mode" translation="Display Mode">
+      <value name="Full-screen" translation="Full-screen"/>
+      <value name="Windowed Borderless" translation="Windowed Borderless"/>
+      <value name="Windowed" translation="Windowed"/>
+    </setting>
+    <setting name="Effects Quality" translation="Effects Quality">
+      <value name="Low" translation="Low"/>
+      <value name="Medium" translation="Medium"/>
+      <value name="High" translation="High"/>
+      <value name="Ultra" translation="Ultra"/>
+    </setting>
+    <setting name="Foliage Density" translation="Foliage Density">
+      <value name="Low" translation="Low"/>
+      <value name="Medium" translation="Medium"/>
+      <value name="High" translation="High"/>
+      <value name="Ultra" translation="Ultra"/>
+    </setting>
+    <setting name="Indirect Shadows" translation="Indirect Shadows">
+      <value name="Off" translation="Off"/>
+      <value name="On" translation="On"/>
+    </setting>
+    <setting name="Post-Processing" translation="Post-Processing">
+      <value name="Low" translation="Low"/>
+      <value name="Medium" translation="Medium"/>
+      <value name="High" translation="High"/>
+      <value name="Ultra" translation="Ultra"/>
+    </setting>
+    <setting name="Ragdoll Quality" translation="Ragdoll Quality">
+      <value name="Low" translation="Low"/>
+      <value name="Medium" translation="Medium"/>
+      <value name="High" translation="High"/>
+    </setting>
+    <setting name="Reflex" translation="Reflex">
+      <value name="Disabled" translation="Disabled"/>
+      <value name="Enabled" translation="Enabled"/>
+      <value name="Enabled+Boost" translation="Enabled+Boost"/>
+    </setting>
+    <setting name="Resolution" translation="Resolution"/>
+    <setting name="Resolution Scale" translation="Resolution Scale"/>
+    <setting name="Screen Space Reflections" translation="Screen Space Reflections">
+      <value name="Off" translation="Off"/>
+      <value name="Low" translation="Low"/>
+      <value name="High" translation="High"/>
+      <value name="Ultra" translation="Ultra"/>
+    </setting>
+    <setting name="Shadow Quality" translation="Shadow Quality">
+      <value name="Low" translation="Low"/>
+      <value name="High" translation="High"/>
+      <value name="Ultra" translation="Ultra"/>
+    </setting>
+    <setting name="Texture Quality" translation="Texture Quality">
+      <value name="Low" translation="Low"/>
+      <value name="Medium" translation="Medium"/>
+      <value name="High" translation="High"/>
+      <value name="Ultra" translation="Ultra"/>
+    </setting>
+    <setting name="VSync" translation="VSync">
+      <value name="Off" translation="Off"/>
+      <value name="On" translation="On"/>
+    </setting>
+    <setting name="Vertical Sync" translation="Vertical Sync">
+      <value name="Use the 3D Application Setting" translation="Use the 3D Application Setting"/>
+      <value name="Off" translation="Off"/>
+      <value name="On" translation="On"/>
+      <value name="Force On (Interval 2)" translation="Force On (Interval 2)"/>
+      <value name="Adaptive" translation="Adaptive"/>
+      <value name="Adaptive (Half Refresh Rate)" translation="Adaptive (Half Refresh Rate)"/>
+      <value name="On (Smooth)" translation="On (Smooth)"/>
+      <value name="G-SYNC" translation="G-SYNC"/>
+      <value name="G-SYNC Not Supported" translation="G-SYNC Not Supported"/>
+      <value name="Fast" translation="Fast"/>
+    </setting>
+    <setting name="View Distance" translation="View Distance">
+      <value name="Low" translation="Low"/>
+      <value name="Medium" translation="Medium"/>
+      <value name="High" translation="High"/>
+      <value name="Ultra" translation="Ultra"/>
+    </setting>
+  </language>
+  <language name="ru_RU" translation="">
+    <setting name="Ambient Occlusion" translation="Затенение фонового освещения">
+      <value name="Off" translation="Выкл."/>
+      <value name="On" translation="Вкл."/>
+    </setting>
+    <setting name="Anti-aliasing" translation="Сглаживание">
+      <value name="Off" translation="Выкл."/>
+      <value name="FXAA" translation="FXAA"/>
+      <value name="Temporal AA" translation="Временное сглаживание"/>
+    </setting>
+    <setting name="Character Cloth" translation="Физика ткани">
+      <value name="No Cloth" translation="Никто"/>
+      <value name="Only Self" translation="Только игрок"/>
+      <value name="All Cloth" translation="Все"/>
+    </setting>
+    <setting name="Character Quality" translation="Качество прорисовки персонажей">
+      <value name="Low" translation="Низкое"/>
+      <value name="Medium" translation="Среднее"/>
+      <value name="High" translation="Высокое"/>
+    </setting>
+    <setting name="Display Mode" translation="Экранный режим">
+      <value name="Full-screen" translation="Полный экран"/>
+      <value name="Windowed Borderless" translation="В окне без рамки"/>
+      <value name="Windowed" translation="В окне"/>
+    </setting>
+    <setting name="Effects Quality" translation="Качество эффектов">
+      <value name="Low" translation="Низкое"/>
+      <value name="Medium" translation="Среднее"/>
+      <value name="High" translation="Высокое"/>
+      <value name="Ultra" translation="Самое высокое"/>
+    </setting>
+    <setting name="Foliage Density" translation="Плотность растительности">
+      <value name="Low" translation="Низкая"/>
+      <value name="Medium" translation="Средняя"/>
+      <value name="High" translation="Высокая"/>
+      <value name="Ultra" translation="Ультра"/>
+    </setting>
+    <setting name="Indirect Shadows" translation="Вторичные тени">
+      <value name="Off" translation="Выкл."/>
+      <value name="On" translation="Вкл."/>
+    </setting>
+    <setting name="Post-Processing" translation="Постобработка">
+      <value name="Low" translation="Низко"/>
+      <value name="Medium" translation="Средне"/>
+      <value name="High" translation="Высоко"/>
+      <value name="Ultra" translation="Ультра"/>
+    </setting>
+    <setting name="Ragdoll Quality" translation="Качество ragdoll-анимации">
+      <value name="Low" translation="Низкое"/>
+      <value name="Medium" translation="Среднее"/>
+      <value name="High" translation="Высокое"/>
+    </setting>
+    <setting name="Reflex" translation="Reflex">
+      <value name="Disabled" translation="Выключено"/>
+      <value name="Enabled" translation="Включено"/>
+      <value name="Enabled+Boost" translation="Включено + ускорение"/>
+    </setting>
+    <setting name="Resolution" translation="Разрешение"/>
+    <setting name="Resolution Scale" translation="Масштабирование разрешения"/>
+    <setting name="Screen Space Reflections" translation="Отражения объектов на экране">
+      <value name="Off" translation="Выкл."/>
+      <value name="Low" translation="Низко"/>
+      <value name="High" translation="Высоко"/>
+      <value name="Ultra" translation="Ультра"/>
+    </setting>
+    <setting name="Shadow Quality" translation="Качество теней">
+      <value name="Low" translation="Низкое"/>
+      <value name="High" translation="Высокое"/>
+      <value name="Ultra" translation="Самое высокое"/>
+    </setting>
+    <setting name="Texture Quality" translation="Качество текстуры">
+      <value name="Low" translation="Низкое"/>
+      <value name="Medium" translation="Среднее"/>
+      <value name="High" translation="Высокое"/>
+      <value name="Ultra" translation="Самое высокое"/>
+    </setting>
+    <setting name="VSync" translation="Вертикальная синхронизация">
+      <value name="Off" translation="Выкл."/>
+      <value name="On" translation="Вкл."/>
+    </setting>
+    <setting name="Vertical Sync" translation="Вертикальная синхронизация">
+      <value name="Use the 3D Application Setting" translation="Использовать настройку 3D-приложения"/>
+      <value name="Off" translation="Выкл."/>
+      <value name="On" translation="Вкл."/>
+      <value name="Force On (Interval 2)" translation="Включить (Интервал 2)"/>
+      <value name="Adaptive" translation="Адаптивный"/>
+      <value name="Adaptive (Half Refresh Rate)" translation="Адаптивный (половина частоты обновления)"/>
+      <value name="On (Smooth)" translation="Вкл. (плавная)"/>
+      <value name="G-SYNC" translation="G-SYNC"/>
+      <value name="G-SYNC Not Supported" translation="G-SYNC не поддерживается"/>
+      <value name="Fast" translation="Быстрая"/>
+    </setting>
+    <setting name="View Distance" translation="Дальность видимости">
+      <value name="Low" translation="Низкая"/>
+      <value name="Medium" translation="Средняя"/>
+      <value name="High" translation="Высокая"/>
+      <value name="Ultra" translation="Самая высокая"/>
+    </setting>
+  </language>
+</game>

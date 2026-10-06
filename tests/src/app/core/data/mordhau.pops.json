@@ -1,0 +1,360 @@
+{
+    "settings": [
+        {
+            "Ambient Occlusion": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Anti-aliasing": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Character Cloth": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Character Quality": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Display Mode": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Effects Quality": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Foliage Density": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Indirect Shadows": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Post-Processing": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Ragdoll Quality": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Reflex": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Resolution Scale": {
+                "type": "FLOAT"
+            }
+        },
+        {
+            "Screen Space Reflections": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Shadow Quality": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Texture Quality": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "VSync": {
+                "type": "ENUM"
+            }
+        },
+        {
+            "Vertical Sync": {
+                "type": "DRVENUM"
+            }
+        },
+        {
+            "View Distance": {
+                "type": "ENUM"
+            }
+        }
+    ],
+    "pops": [
+        {
+            "values": {
+                "1": "Off",
+                "2": "Off",
+                "3": "No Cloth",
+                "4": "Low",
+                "5": "Full-screen",
+                "6": "Low",
+                "7": "Low",
+                "8": "Off",
+                "9": "Low",
+                "10": "Low",
+                "11": "Enabled",
+                "12": "0.750",
+                "13": "Off",
+                "14": "Low",
+                "15": "Low",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Low"
+            }
+        },
+        {
+            "values": {
+                "1": "Off",
+                "2": "Off",
+                "3": "No Cloth",
+                "4": "Low",
+                "5": "Full-screen",
+                "6": "Low",
+                "7": "Low",
+                "8": "Off",
+                "9": "Low",
+                "10": "Low",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "Off",
+                "14": "Low",
+                "15": "Low",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Low"
+            }
+        },
+        {
+            "values": {
+                "1": "Off",
+                "2": "FXAA",
+                "3": "No Cloth",
+                "4": "Low",
+                "5": "Full-screen",
+                "6": "Low",
+                "7": "Medium",
+                "8": "Off",
+                "9": "Low",
+                "10": "Low",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "Off",
+                "14": "High",
+                "15": "Medium",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Low"
+            }
+        },
+        {
+            "values": {
+                "1": "Off",
+                "2": "FXAA",
+                "3": "No Cloth",
+                "4": "Low",
+                "5": "Full-screen",
+                "6": "Medium",
+                "7": "Medium",
+                "8": "On",
+                "9": "Low",
+                "10": "Low",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "Off",
+                "14": "High",
+                "15": "High",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Low"
+            }
+        },
+        {
+            "values": {
+                "1": "Off",
+                "2": "FXAA",
+                "3": "No Cloth",
+                "4": "Low",
+                "5": "Full-screen",
+                "6": "Medium",
+                "7": "Medium",
+                "8": "On",
+                "9": "Medium",
+                "10": "Low",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "Low",
+                "14": "High",
+                "15": "High",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "High"
+            }
+        },
+        {
+            "values": {
+                "1": "Off",
+                "2": "FXAA",
+                "3": "No Cloth",
+                "4": "Low",
+                "5": "Full-screen",
+                "6": "High",
+                "7": "High",
+                "8": "On",
+                "9": "High",
+                "10": "Low",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "High",
+                "14": "Ultra",
+                "15": "High",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "High"
+            }
+        },
+        {
+            "values": {
+                "1": "On",
+                "2": "FXAA",
+                "3": "No Cloth",
+                "4": "Medium",
+                "5": "Full-screen",
+                "6": "High",
+                "7": "High",
+                "8": "On",
+                "9": "Ultra",
+                "10": "Medium",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "High",
+                "14": "Ultra",
+                "15": "Ultra",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "High"
+            }
+        },
+        {
+            "values": {
+                "1": "On",
+                "2": "FXAA",
+                "3": "Only Self",
+                "4": "Medium",
+                "5": "Full-screen",
+                "6": "Ultra",
+                "7": "Ultra",
+                "8": "On",
+                "9": "Ultra",
+                "10": "Medium",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "Ultra",
+                "14": "Ultra",
+                "15": "Ultra",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Ultra"
+            }
+        },
+        {
+            "values": {
+                "1": "On",
+                "2": "Temporal AA",
+                "3": "Only Self",
+                "4": "Medium",
+                "5": "Full-screen",
+                "6": "Ultra",
+                "7": "Ultra",
+                "8": "On",
+                "9": "Ultra",
+                "10": "Medium",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "Ultra",
+                "14": "Ultra",
+                "15": "Ultra",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Ultra"
+            }
+        },
+        {
+            "values": {
+                "1": "On",
+                "2": "Temporal AA",
+                "3": "All Cloth",
+                "4": "High",
+                "5": "Full-screen",
+                "6": "Ultra",
+                "7": "Ultra",
+                "8": "On",
+                "9": "Ultra",
+                "10": "High",
+                "11": "Enabled",
+                "12": "1.000",
+                "13": "Ultra",
+                "14": "Ultra",
+                "15": "Ultra",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Ultra"
+            }
+        },
+        {
+            "values": {
+                "1": "On",
+                "2": "Temporal AA",
+                "3": "All Cloth",
+                "4": "High",
+                "5": "Full-screen",
+                "6": "Ultra",
+                "7": "Ultra",
+                "8": "On",
+                "9": "Ultra",
+                "10": "High",
+                "11": "Enabled",
+                "12": "1.500",
+                "13": "Ultra",
+                "14": "Ultra",
+                "15": "Ultra",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Ultra"
+            }
+        },
+        {
+            "values": {
+                "1": "On",
+                "2": "Temporal AA",
+                "3": "All Cloth",
+                "4": "High",
+                "5": "Full-screen",
+                "6": "Ultra",
+                "7": "Ultra",
+                "8": "On",
+                "9": "Ultra",
+                "10": "High",
+                "11": "Enabled",
+                "12": "2.000",
+                "13": "Ultra",
+                "14": "Ultra",
+                "15": "Ultra",
+                "16": "Off",
+                "17": "Use the 3D Application Setting",
+                "18": "Ultra"
+            }
+        }
+    ]
+}

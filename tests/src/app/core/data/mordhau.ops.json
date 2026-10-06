@@ -1,0 +1,61 @@
+{
+    "regular_rtx": {
+        "ops": [
+            {
+                "belowMinSpec": false,
+                "pops": 4,
+                "rate": 40,
+                "resolution": "3840x2160"
+            },
+            {
+                "belowMinSpec": false,
+                "pops": 11,
+                "rate": 40,
+                "resolution": "1920x1080"
+            },
+            {
+                "belowMinSpec": false,
+                "pops": 10,
+                "rate": 40,
+                "resolution": "2560x1600"
+            },
+            {
+                "belowMinSpec": false,
+                "pops": 11,
+                "rate": 40,
+                "resolution": "1920x1200"
+            },
+            {
+                "belowMinSpec": false,
+                "pops": 11,
+                "rate": 40,
+                "resolution": "1680x1050"
+            },
+            {
+                "belowMinSpec": false,
+                "pops": 12,
+                "rate": 40,
+                "resolution": "1280x1024"
+            },
+            {
+                "belowMinSpec": false,
+                "pops": 10,
+                "rate": 40,
+                "resolution": "2560x1440"
+            },
+            {
+                "belowMinSpec": false,
+                "pops": 12,
+                "rate": 40,
+                "resolution": "1360x768"
+            }
+        ],
+        "pops": {
+            "filename": "pops.pub.tsv",
+            "sha256": "d7c567d0e3eed98b7fc9c4fe3e0ed01ba55988e147b8f05e2e748b83d06c4447",
+            "size": 9389,
+            "url": "https://wpc-download.gfe.nvidia.com/static/8a78f2ea/pops/mordhau/ops_rtx.json"
+        },
+        "version": "1163492583.4151619460.138697779"
+    }
+}
