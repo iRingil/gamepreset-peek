@@ -1,0 +1,4727 @@
+{
+  "06c0": {
+    "chip": "GF100",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06c4": {
+    "chip": "GF100",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06ca": {
+    "chip": "GF100M",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06cb": {
+    "chip": "GF100",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06cd": {
+    "chip": "GF100",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06d0": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06d1": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06d2": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06d8": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06d9": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06da": {
+    "chip": "GF100GLM",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06dc": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06dd": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06de": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "06df": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "0be5": {
+    "chip": "GF100",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "0be9": {
+    "chip": "GF106",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0bea": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0beb": {
+    "chip": "GF104",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0bee": {
+    "chip": "GF116",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dc0": {
+    "chip": "GF106",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dc4": {
+    "chip": "GF106",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dc5": {
+    "chip": "GF106",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dc6": {
+    "chip": "GF106",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dcd": {
+    "chip": "GF106M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dce": {
+    "chip": "GF106M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dd1": {
+    "chip": "GF106M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dd2": {
+    "chip": "GF106M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dd3": {
+    "chip": "GF106M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dd6": {
+    "chip": "GF106M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dd8": {
+    "chip": "GF106GL",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0dda": {
+    "chip": "GF106GLM",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "0de0": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0de1": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0de2": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0de3": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0de4": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0de5": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0de7": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0de8": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0de9": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0dea": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0deb": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0dec": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0ded": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0dee": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0def": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df0": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df1": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df2": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df3": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df4": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df5": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df6": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df7": {
+    "chip": "GF108M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df8": {
+    "chip": "GF108GL",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0df9": {
+    "chip": "GF108GLM",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0dfa": {
+    "chip": "GF108GLM",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0dfc": {
+    "chip": "GF108GLM",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0e08": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0e09": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "0e0a": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "0e0b": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "0e0c": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0e0f": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "0e1a": {
+    "chip": "GK110",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "0e1b": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0e22": {
+    "chip": "GF104",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0e23": {
+    "chip": "GF104",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0e24": {
+    "chip": "GF104",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0e30": {
+    "chip": "GF104M",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0e31": {
+    "chip": "GF104M",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0e3a": {
+    "chip": "GF104GLM",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0e3b": {
+    "chip": "GF104GLM",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "0f00": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0f01": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0f02": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0f03": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0f06": {
+    "chip": "GF108",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "0fb0": {
+    "chip": "GM200",
+    "generation": 2,
+    "tier": 4.0
+  },
+  "0fb8": {
+    "chip": "GP108",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "0fb9": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "0fba": {
+    "chip": "GM206",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "0fbb": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "0fbc": {
+    "chip": "GM107",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "0fc0": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fc1": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fc2": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fc4": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fc5": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fc6": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fc8": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fc9": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fcb": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fcc": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fcd": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fce": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fcf": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd0": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd1": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd2": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd3": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd4": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd5": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd6": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd7": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd8": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fd9": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fda": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fdb": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fdc": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fdd": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fde": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fdf": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe0": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe1": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe2": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe3": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe4": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe5": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe6": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe7": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe8": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fe9": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fea": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fec": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fed": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fee": {
+    "chip": "GK107M",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fef": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff0": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff1": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff2": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff3": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff5": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff6": {
+    "chip": "GK107GLM",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff7": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff8": {
+    "chip": "GK107GLM",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ff9": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ffa": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ffb": {
+    "chip": "GK107GLM",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ffc": {
+    "chip": "GK107GLM",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ffd": {
+    "chip": "GK107",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0ffe": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "0fff": {
+    "chip": "GK107GL",
+    "generation": 1,
+    "tier": 1.0
+  },
+  "1001": {
+    "chip": "GK110B",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1003": {
+    "chip": "GK110",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1004": {
+    "chip": "GK110",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1005": {
+    "chip": "GK110",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1007": {
+    "chip": "GK110",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1008": {
+    "chip": "GK110",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "100a": {
+    "chip": "GK110B",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "100c": {
+    "chip": "GK110B",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "101e": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "101f": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1020": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1021": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1022": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1023": {
+    "chip": "GK110BGL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1026": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1027": {
+    "chip": "GK110BGL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1028": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1029": {
+    "chip": "GK110BGL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "102a": {
+    "chip": "GK110BGL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "102d": {
+    "chip": "GK210GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "102e": {
+    "chip": "GK110BGL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "102f": {
+    "chip": "GK110BGL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "103a": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "103c": {
+    "chip": "GK110GL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "103f": {
+    "chip": "GK110BGL",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1040": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1042": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1045": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1048": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1049": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "104a": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "104b": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "104c": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "104d": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1050": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1051": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1052": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1054": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1055": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1056": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1057": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1058": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1059": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "105a": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "105b": {
+    "chip": "GF119M",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "107c": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "107d": {
+    "chip": "GF119",
+    "generation": 0,
+    "tier": 0.0
+  },
+  "1080": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1081": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1082": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1084": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1086": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1087": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1088": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1089": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "108b": {
+    "chip": "GF110",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "108e": {
+    "chip": "GF110GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1091": {
+    "chip": "GF110GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1094": {
+    "chip": "GF110GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "1096": {
+    "chip": "GF110GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "109a": {
+    "chip": "GF100GLM",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "109b": {
+    "chip": "GF100GL",
+    "generation": 0,
+    "tier": 4.0
+  },
+  "10ef": {
+    "chip": "GP102",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "10f0": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "10f1": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "10f7": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "10f8": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "10f9": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1140": {
+    "chip": "GF117M",
+    "generation": 0,
+    "tier": 1.0
+  },
+  "1180": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1182": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1183": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1184": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1185": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1186": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1187": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1188": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1189": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "118a": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "118b": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "118c": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "118d": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "118e": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "118f": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1191": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1193": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1194": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1195": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1198": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "1199": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "119a": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "119d": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "119e": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "119f": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a0": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a1": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a2": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a3": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a4": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a5": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a7": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a8": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11a9": {
+    "chip": "GK104M",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11aa": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11ac": {
+    "chip": "GK104",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11af": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11b0": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11b1": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11b4": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11b6": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11b7": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11b8": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11b9": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11ba": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11bb": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11bc": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11bd": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11be": {
+    "chip": "GK104GLM",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11bf": {
+    "chip": "GK104GL",
+    "generation": 1,
+    "tier": 3.0
+  },
+  "11c0": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11c1": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11c2": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11c3": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11c4": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11c5": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11c6": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11c7": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11c8": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11cb": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11d0": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11d1": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11d2": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11d3": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11e0": {
+    "chip": "GK106M",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11e1": {
+    "chip": "GK106M",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11e2": {
+    "chip": "GK106M",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11e3": {
+    "chip": "GK106M",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11e7": {
+    "chip": "GK106M",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11fa": {
+    "chip": "GK106GL",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11fc": {
+    "chip": "GK106GLM",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "11ff": {
+    "chip": "GK106",
+    "generation": 1,
+    "tier": 2.0
+  },
+  "1200": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1201": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1202": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1203": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1205": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1206": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1207": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1208": {
+    "chip": "GF114",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1210": {
+    "chip": "GF114M",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1211": {
+    "chip": "GF114M",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1212": {
+    "chip": "GF114M",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1213": {
+    "chip": "GF114M",
+    "generation": 0,
+    "tier": 3.0
+  },
+  "1241": {
+    "chip": "GF116",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1243": {
+    "chip": "GF116",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1244": {
+    "chip": "GF116",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1245": {
+    "chip": "GF116",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1246": {
+    "chip": "GF116M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1247": {
+    "chip": "GF116M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1248": {
+    "chip": "GF116M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1249": {
+    "chip": "GF116",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "124b": {
+    "chip": "GF116",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "124d": {
+    "chip": "GF116M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1251": {
+    "chip": "GF116M",
+    "generation": 0,
+    "tier": 2.0
+  },
+  "1280": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1281": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1282": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1283": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1284": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1285": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1286": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1287": {
+    "chip": "GK208B",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1288": {
+    "chip": "GK208B",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1289": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "128a": {
+    "chip": "GK208B",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "128b": {
+    "chip": "GK208B",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "128c": {
+    "chip": "GK208B",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1290": {
+    "chip": "GK208M",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1291": {
+    "chip": "GK208M",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1292": {
+    "chip": "GK208M",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1293": {
+    "chip": "GK208M",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1294": {
+    "chip": "GK208M",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1295": {
+    "chip": "GK208M",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1296": {
+    "chip": "GK208M",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1298": {
+    "chip": "GK208M",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "1299": {
+    "chip": "GK208BM",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "129a": {
+    "chip": "GK208BM",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "12a0": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "12ad": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "12ae": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "12af": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "12b0": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "12b1": {
+    "chip": "GK208",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "12b9": {
+    "chip": "GK208GLM",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "12ba": {
+    "chip": "GK208GLM",
+    "generation": 1,
+    "tier": 0.0
+  },
+  "130b": {
+    "chip": "GK110",
+    "generation": 1,
+    "tier": 4.0
+  },
+  "1340": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "1341": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "1344": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "1346": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "1347": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "1348": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "1349": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "134b": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "134d": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "134e": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "134f": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "137a": {
+    "chip": "GM108GLM",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "137b": {
+    "chip": "GM108GLM",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "137d": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "1380": {
+    "chip": "GM107",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1381": {
+    "chip": "GM107",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1382": {
+    "chip": "GM107",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1389": {
+    "chip": "GM107GL",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1390": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1391": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1392": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1393": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1398": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "1399": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "139a": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "139b": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "139c": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "139d": {
+    "chip": "GM107M",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13ad": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13ae": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13b0": {
+    "chip": "GM107GLM",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13b1": {
+    "chip": "GM107GLM",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13b2": {
+    "chip": "GM107GLM",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13b3": {
+    "chip": "GM107GLM",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13b4": {
+    "chip": "GM107GLM",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13b6": {
+    "chip": "GM107GLM",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13b9": {
+    "chip": "GM107GL",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13ba": {
+    "chip": "GM107GL",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13bb": {
+    "chip": "GM107GL",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13bc": {
+    "chip": "GM107GL",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13bd": {
+    "chip": "GM107GL",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "13be": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13bf": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13c0": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13c1": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13c2": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13c3": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13c4": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13d7": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13d8": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13d9": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13da": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13e4": {
+    "chip": "GM204",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13e7": {
+    "chip": "GM204GL",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13f0": {
+    "chip": "GM204GL",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13f1": {
+    "chip": "GM204GL",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13f2": {
+    "chip": "GM204GL",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13f3": {
+    "chip": "GM204GL",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13f8": {
+    "chip": "GM204GLM",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13f9": {
+    "chip": "GM204GLM",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13fa": {
+    "chip": "GM204GLM",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "13fb": {
+    "chip": "GM204GLM",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "1401": {
+    "chip": "GM206",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "1402": {
+    "chip": "GM206",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "1404": {
+    "chip": "GM206",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "1406": {
+    "chip": "GM206",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "1407": {
+    "chip": "GM206",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "1427": {
+    "chip": "GM206M",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "1430": {
+    "chip": "GM206GL",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "1431": {
+    "chip": "GM206GL",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "1436": {
+    "chip": "GM206GLM",
+    "generation": 2,
+    "tier": 2.0
+  },
+  "15c2": {
+    "chip": "GP100",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15f0": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15f1": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15f7": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15f8": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15f9": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15fa": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15fb": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15fc": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "15ff": {
+    "chip": "GP100GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1613": {
+    "chip": "GM204GL",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "1617": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "1618": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "1619": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "161a": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "1667": {
+    "chip": "GM204M",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "1676": {
+    "chip": "GM204GLM",
+    "generation": 2,
+    "tier": 3.0
+  },
+  "1725": {
+    "chip": "GP100",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "172e": {
+    "chip": "GP100",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "172f": {
+    "chip": "GP100",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "174d": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "174e": {
+    "chip": "GM108M",
+    "generation": 2,
+    "tier": 0.0
+  },
+  "1789": {
+    "chip": "GM107GL",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "179c": {
+    "chip": "GM107",
+    "generation": 2,
+    "tier": 1.0
+  },
+  "17c2": {
+    "chip": "GM200",
+    "generation": 2,
+    "tier": 4.0
+  },
+  "17c8": {
+    "chip": "GM200",
+    "generation": 2,
+    "tier": 4.0
+  },
+  "17f0": {
+    "chip": "GM200GL",
+    "generation": 2,
+    "tier": 4.0
+  },
+  "17f1": {
+    "chip": "GM200GL",
+    "generation": 2,
+    "tier": 4.0
+  },
+  "17fd": {
+    "chip": "GM200GL",
+    "generation": 2,
+    "tier": 4.0
+  },
+  "1ad6": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1ad7": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1ad8": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ad9": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ada": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1adb": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1aeb": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1aec": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1aed": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1aef": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "1af1": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "1b00": {
+    "chip": "GP102",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b01": {
+    "chip": "GP102",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b02": {
+    "chip": "GP102",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b04": {
+    "chip": "GP102",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b06": {
+    "chip": "GP102",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b07": {
+    "chip": "GP102",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b30": {
+    "chip": "GP102GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b38": {
+    "chip": "GP102GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b39": {
+    "chip": "GP102GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b70": {
+    "chip": "GP102GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b78": {
+    "chip": "GP102GL",
+    "generation": 3,
+    "tier": 4.0
+  },
+  "1b80": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1b81": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1b82": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1b83": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1b84": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1b87": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1ba0": {
+    "chip": "GP104M",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1ba1": {
+    "chip": "GP104M",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1ba2": {
+    "chip": "GP104M",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1ba9": {
+    "chip": "GP104M",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1baa": {
+    "chip": "GP104M",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bad": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb0": {
+    "chip": "GP104GL",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb1": {
+    "chip": "GP104GL",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb3": {
+    "chip": "GP104GL",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb4": {
+    "chip": "GP104GL",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb5": {
+    "chip": "GP104GLM",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb6": {
+    "chip": "GP104GLM",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb7": {
+    "chip": "GP104GLM",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb8": {
+    "chip": "GP104GLM",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bb9": {
+    "chip": "GP104GLM",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bbb": {
+    "chip": "GP104GLM",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1bc7": {
+    "chip": "GP104",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1be0": {
+    "chip": "GP104BM",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1be1": {
+    "chip": "GP104BM",
+    "generation": 3,
+    "tier": 3.0
+  },
+  "1c00": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c01": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c02": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c03": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c04": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c06": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c07": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c09": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c20": {
+    "chip": "GP106M",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c21": {
+    "chip": "GP106M",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c22": {
+    "chip": "GP106M",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c23": {
+    "chip": "GP106M",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c2d": {
+    "chip": "GP106M",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c30": {
+    "chip": "GP106GL",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c31": {
+    "chip": "GP106GL",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c35": {
+    "chip": "GP106M",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c36": {
+    "chip": "GP106",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c60": {
+    "chip": "GP106BM",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c61": {
+    "chip": "GP106BM",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c62": {
+    "chip": "GP106BM",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c70": {
+    "chip": "GP106GL",
+    "generation": 3,
+    "tier": 2.0
+  },
+  "1c81": {
+    "chip": "GP107",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c82": {
+    "chip": "GP107",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c83": {
+    "chip": "GP107",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c8c": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c8d": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c8e": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c8f": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c90": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c91": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c92": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c94": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1c96": {
+    "chip": "GP107M",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1ca7": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1ca8": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1caa": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cb1": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cb2": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cb3": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cb6": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cba": {
+    "chip": "GP107GLM",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cbb": {
+    "chip": "GP107GLM",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cbc": {
+    "chip": "GP107GLM",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cbd": {
+    "chip": "GP107GLM",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1ccc": {
+    "chip": "GP107BM",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1ccd": {
+    "chip": "GP107BM",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cfa": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1cfb": {
+    "chip": "GP107GL",
+    "generation": 3,
+    "tier": 1.0
+  },
+  "1d01": {
+    "chip": "GP108",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d02": {
+    "chip": "GP108",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d10": {
+    "chip": "GP108M",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d11": {
+    "chip": "GP108M",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d12": {
+    "chip": "GP108M",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d13": {
+    "chip": "GP108M",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d16": {
+    "chip": "GP108M",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d33": {
+    "chip": "GP108GLM",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d34": {
+    "chip": "GP108GLM",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d52": {
+    "chip": "GP108BM",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1d56": {
+    "chip": "GP108BM",
+    "generation": 3,
+    "tier": 0.0
+  },
+  "1e02": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e03": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e04": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e07": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e09": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e2d": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e2e": {
+    "chip": "TU102",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e30": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e35": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e36": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e37": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e38": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e3c": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e3d": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e3e": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e78": {
+    "chip": "TU102GL",
+    "generation": 4,
+    "tier": 4.0
+  },
+  "1e81": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1e82": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1e84": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1e87": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1e89": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1e90": {
+    "chip": "TU104M",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1e91": {
+    "chip": "TU104M",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1e93": {
+    "chip": "TU104M",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eab": {
+    "chip": "TU104M",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eae": {
+    "chip": "TU104M",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eb0": {
+    "chip": "TU104GL",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eb1": {
+    "chip": "TU104GL",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eb4": {
+    "chip": "TU104GL",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eb5": {
+    "chip": "TU104GLM",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eb6": {
+    "chip": "TU104GLM",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eb8": {
+    "chip": "TU104GL",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eb9": {
+    "chip": "TU104GL",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1eba": {
+    "chip": "TU104GL",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ebe": {
+    "chip": "TU104GL",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ec2": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ec7": {
+    "chip": "TU104",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ed0": {
+    "chip": "TU104BM",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ed1": {
+    "chip": "TU104BM",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ed3": {
+    "chip": "TU104BM",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1ef5": {
+    "chip": "TU104GLM",
+    "generation": 4,
+    "tier": 3.0
+  },
+  "1f02": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f03": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f04": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f06": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f07": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f08": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f09": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f0a": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f0b": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f10": {
+    "chip": "TU106M",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f11": {
+    "chip": "TU106M",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f12": {
+    "chip": "TU106M",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f14": {
+    "chip": "TU106M",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f15": {
+    "chip": "TU106M",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f2e": {
+    "chip": "TU106M",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f36": {
+    "chip": "TU106GLM",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f42": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f47": {
+    "chip": "TU106",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f50": {
+    "chip": "TU106BM",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f51": {
+    "chip": "TU106BM",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f54": {
+    "chip": "TU106BM",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f55": {
+    "chip": "TU106BM",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f76": {
+    "chip": "TU106GLM",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "1f81": {
+    "chip": "TU117",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f82": {
+    "chip": "TU117",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f83": {
+    "chip": "TU117",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f91": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f92": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f94": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f95": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f96": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f97": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f98": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f99": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f9c": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f9d": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1f9f": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fa0": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fa1": {
+    "chip": "TU117M",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fae": {
+    "chip": "TU117GL",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fb0": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fb1": {
+    "chip": "TU117GL",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fb2": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fb6": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fb7": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fb8": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fb9": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fba": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fbb": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fbc": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fbf": {
+    "chip": "TU117GL",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fd9": {
+    "chip": "TU117BM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1fdd": {
+    "chip": "TU117BM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1ff0": {
+    "chip": "TU117GL",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1ff2": {
+    "chip": "TU117GL",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "1ff9": {
+    "chip": "TU117GLM",
+    "generation": 4,
+    "tier": 1.0
+  },
+  "2080": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2081": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2082": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b0": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b1": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b2": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b3": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b4": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b5": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b6": {
+    "chip": "GA100GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b7": {
+    "chip": "GA100GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b8": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20b9": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20bb": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20bd": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20be": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20bf": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20c0": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20c2": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20f0": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20f1": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20f2": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20f3": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20f5": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20f6": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20fd": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20fe": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "20ff": {
+    "chip": "GA100",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2182": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2183": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2184": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2186": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2187": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2188": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2189": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2191": {
+    "chip": "TU116M",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2192": {
+    "chip": "TU116M",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "21ae": {
+    "chip": "TU116GL",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "21bf": {
+    "chip": "TU116GL",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "21c2": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "21c3": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "21c4": {
+    "chip": "TU116",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "21d1": {
+    "chip": "TU116BM",
+    "generation": 4,
+    "tier": 2.0
+  },
+  "2200": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2203": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2204": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2205": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2206": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2207": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2208": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "220a": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "220d": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2216": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "222b": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "222f": {
+    "chip": "GA102",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2230": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2231": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2232": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2233": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2235": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2236": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2237": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "2238": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "223f": {
+    "chip": "GA102GL",
+    "generation": 5,
+    "tier": 4.0
+  },
+  "228b": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "228e": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2291": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "22ba": {
+    "chip": "AD102",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "22bb": {
+    "chip": "AD103",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "22bc": {
+    "chip": "AD104",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "22bd": {
+    "chip": "AD106M",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "22be": {
+    "chip": "AD107",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "22e8": {
+    "chip": "GB202",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "22e9": {
+    "chip": "GB203",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "22eb": {
+    "chip": "GB206",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "22ec": {
+    "chip": "GB207",
+    "generation": 7,
+    "tier": 1.0
+  },
+  "2414": {
+    "chip": "GA103",
+    "generation": 5,
+    "tier": 3.5
+  },
+  "2420": {
+    "chip": "GA103M",
+    "generation": 5,
+    "tier": 3.5
+  },
+  "2438": {
+    "chip": "GA103GLM",
+    "generation": 5,
+    "tier": 3.5
+  },
+  "2460": {
+    "chip": "GA103M",
+    "generation": 5,
+    "tier": 3.5
+  },
+  "2480": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "2482": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "2483": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "2484": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "2486": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "2487": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "2488": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "2489": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "248a": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "248c": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "248d": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "248e": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "249c": {
+    "chip": "GA104M",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "249d": {
+    "chip": "GA104M",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "249f": {
+    "chip": "GA104M",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24a0": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24a4": {
+    "chip": "GA104M",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24ac": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24ad": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24af": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24b0": {
+    "chip": "GA104GL",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24b1": {
+    "chip": "GA104GL",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24b6": {
+    "chip": "GA104GLM",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24b7": {
+    "chip": "GA104GLM",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24b8": {
+    "chip": "GA104GLM",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24b9": {
+    "chip": "GA104GLM",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24ba": {
+    "chip": "GA104GLM",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24bb": {
+    "chip": "GA104GLM",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24bf": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24c0": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24c7": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24c8": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24c9": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24dc": {
+    "chip": "GA104M",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24dd": {
+    "chip": "GA104M",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24df": {
+    "chip": "GA104M",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24e0": {
+    "chip": "GA104M",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "24fa": {
+    "chip": "GA104",
+    "generation": 5,
+    "tier": 3.0
+  },
+  "2501": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2503": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2504": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2505": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2507": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2508": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2509": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2520": {
+    "chip": "GA106M",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2521": {
+    "chip": "GA106M",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2523": {
+    "chip": "GA106M",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "252f": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2531": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2544": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2560": {
+    "chip": "GA106M",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2561": {
+    "chip": "GA106M",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2563": {
+    "chip": "GA106M",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2571": {
+    "chip": "GA106",
+    "generation": 5,
+    "tier": 2.0
+  },
+  "2582": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "2583": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "2584": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25a0": {
+    "chip": "GA107M",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25a2": {
+    "chip": "GA107M",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25a3": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25a4": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25a5": {
+    "chip": "GA107M",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25a6": {
+    "chip": "GA107M",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25a7": {
+    "chip": "GA107M",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25a9": {
+    "chip": "GA107M",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25aa": {
+    "chip": "GA107M",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25ab": {
+    "chip": "GA107M",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25ac": {
+    "chip": "GA107BM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25ad": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25af": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25b0": {
+    "chip": "GA107GL",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25b2": {
+    "chip": "GA107GL",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25b5": {
+    "chip": "GA107GLM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25b6": {
+    "chip": "GA107GL",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25b8": {
+    "chip": "GA107GLM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25b9": {
+    "chip": "GA107GLM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25ba": {
+    "chip": "GA107GLM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25bb": {
+    "chip": "GA107GLM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25bc": {
+    "chip": "GA107GLM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25bd": {
+    "chip": "GA107GLM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25e0": {
+    "chip": "GA107BM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25e2": {
+    "chip": "GA107BM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25e5": {
+    "chip": "GA107BM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25ec": {
+    "chip": "GA107BM",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25ed": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25f9": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25fa": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "25fb": {
+    "chip": "GA107",
+    "generation": 5,
+    "tier": 1.0
+  },
+  "2681": {
+    "chip": "AD102",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "2684": {
+    "chip": "AD102",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "2685": {
+    "chip": "AD102",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "2689": {
+    "chip": "AD102",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26af": {
+    "chip": "AD102",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26b1": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26b2": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26b3": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26b5": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26b7": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26b8": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26b9": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26ba": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26bb": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "26f5": {
+    "chip": "AD102GL",
+    "generation": 6,
+    "tier": 4.0
+  },
+  "2702": {
+    "chip": "AD103",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2703": {
+    "chip": "AD103",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2704": {
+    "chip": "AD103",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2705": {
+    "chip": "AD103",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2709": {
+    "chip": "AD103",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2717": {
+    "chip": "AD103M",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2730": {
+    "chip": "AD103GLM",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2757": {
+    "chip": "AD103M",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2770": {
+    "chip": "AD103GLM",
+    "generation": 6,
+    "tier": 3.5
+  },
+  "2782": {
+    "chip": "AD104",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "2783": {
+    "chip": "AD104",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "2785": {
+    "chip": "AD104",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "2786": {
+    "chip": "AD104",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "2788": {
+    "chip": "AD104",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27a0": {
+    "chip": "AD104M",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27b0": {
+    "chip": "AD104GL",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27b1": {
+    "chip": "AD104GL",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27b2": {
+    "chip": "AD104GL",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27b6": {
+    "chip": "AD104GL",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27b7": {
+    "chip": "AD104GL",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27b8": {
+    "chip": "AD104GL",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27ba": {
+    "chip": "AD104GLM",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27bb": {
+    "chip": "AD104GLM",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27e0": {
+    "chip": "AD104M",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27fa": {
+    "chip": "AD104GLM",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "27fb": {
+    "chip": "AD104GLM",
+    "generation": 6,
+    "tier": 3.0
+  },
+  "2803": {
+    "chip": "AD106",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "2805": {
+    "chip": "AD106",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "2808": {
+    "chip": "AD106",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "2820": {
+    "chip": "AD106M",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "2822": {
+    "chip": "AD106M",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "2838": {
+    "chip": "AD106GLM",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "2860": {
+    "chip": "AD106M",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "2878": {
+    "chip": "AD106GLM",
+    "generation": 6,
+    "tier": 2.0
+  },
+  "2882": {
+    "chip": "AD107",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28a0": {
+    "chip": "AD107M",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28a1": {
+    "chip": "AD107M",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28a3": {
+    "chip": "AD107M",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28b0": {
+    "chip": "AD107GL",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28b8": {
+    "chip": "AD107GLM",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28b9": {
+    "chip": "AD107GLM",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28ba": {
+    "chip": "AD107GLM",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28bb": {
+    "chip": "AD107GLM",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28e0": {
+    "chip": "AD107M",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28e1": {
+    "chip": "AD107M",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28e3": {
+    "chip": "AD107M",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "28f8": {
+    "chip": "AD107GLM",
+    "generation": 6,
+    "tier": 1.0
+  },
+  "2900": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2901": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2909": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "290a": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2920": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2924": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2925": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "293d": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2940": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2941": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "297e": {
+    "chip": "GB100",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2980": {
+    "chip": "GB102",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "29bb": {
+    "chip": "GB102",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "29bc": {
+    "chip": "GB102",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "29c0": {
+    "chip": "GB102",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "29f1": {
+    "chip": "GB102",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2b85": {
+    "chip": "GB202",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2b87": {
+    "chip": "GB202",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2b8c": {
+    "chip": "GB202",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2bb1": {
+    "chip": "GB202GL",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2bb2": {
+    "chip": "GB202GL",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2bb3": {
+    "chip": "GB202GL",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2bb4": {
+    "chip": "GB202GL",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2bb5": {
+    "chip": "GB202GL",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2bb9": {
+    "chip": "GB202GL",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2bbc": {
+    "chip": "GB202GL",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "2c02": {
+    "chip": "GB203",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c05": {
+    "chip": "GB203",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c09": {
+    "chip": "GB203",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c18": {
+    "chip": "GB203M",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c19": {
+    "chip": "GB203M",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c31": {
+    "chip": "GB203GL",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c33": {
+    "chip": "GB203GL",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c34": {
+    "chip": "GB203GL",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c38": {
+    "chip": "GB203GLM",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c39": {
+    "chip": "GB203GLM",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c3a": {
+    "chip": "GB203GL",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c58": {
+    "chip": "GB203M",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c59": {
+    "chip": "GB203M",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c77": {
+    "chip": "GB203GLM",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2c79": {
+    "chip": "GB203GLM",
+    "generation": 7,
+    "tier": 3.5
+  },
+  "2d04": {
+    "chip": "GB206",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d05": {
+    "chip": "GB206",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d18": {
+    "chip": "GB206M",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d19": {
+    "chip": "GB206M",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d30": {
+    "chip": "GB206GL",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d39": {
+    "chip": "GB206GLM",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d58": {
+    "chip": "GB206M",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d59": {
+    "chip": "GB206M",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d79": {
+    "chip": "GB206GLM",
+    "generation": 7,
+    "tier": 2.0
+  },
+  "2d83": {
+    "chip": "GB207",
+    "generation": 7,
+    "tier": 1.0
+  },
+  "2d98": {
+    "chip": "GB207M",
+    "generation": 7,
+    "tier": 1.0
+  },
+  "2db8": {
+    "chip": "GB207GLM",
+    "generation": 7,
+    "tier": 1.0
+  },
+  "2db9": {
+    "chip": "GB207GLM",
+    "generation": 7,
+    "tier": 1.0
+  },
+  "2dd8": {
+    "chip": "GB207M",
+    "generation": 7,
+    "tier": 1.0
+  },
+  "2df9": {
+    "chip": "GB207GLM",
+    "generation": 7,
+    "tier": 1.0
+  },
+  "2f04": {
+    "chip": "GB205",
+    "generation": 7,
+    "tier": 2.5
+  },
+  "2f06": {
+    "chip": "GB205",
+    "generation": 7,
+    "tier": 2.5
+  },
+  "2f18": {
+    "chip": "GB205M",
+    "generation": 7,
+    "tier": 2.5
+  },
+  "2f38": {
+    "chip": "GB205GLM",
+    "generation": 7,
+    "tier": 2.5
+  },
+  "2f58": {
+    "chip": "GB205M",
+    "generation": 7,
+    "tier": 2.5
+  },
+  "2f80": {
+    "chip": "GB205",
+    "generation": 7,
+    "tier": 2.5
+  },
+  "3180": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "3182": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "3183": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "3184": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "31a1": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "31c0": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "31c2": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "31c3": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  },
+  "31fe": {
+    "chip": "GB110",
+    "generation": 7,
+    "tier": 4.0
+  }
+}

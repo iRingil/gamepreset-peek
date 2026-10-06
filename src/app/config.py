@@ -7,6 +7,8 @@ __all__: tuple[str, ...] = (
     "APP_NAME",
     "APP_DATA_DIR",
     "GAME_NAMES_FILE",
+    "GPU_RANKS_FILE",
+    "GPUS_FILE",
     "HTTP_CONNECT_TIMEOUT",
     "HTTP_MAX_RETRIES",
     "HTTP_READ_TIMEOUT",
@@ -16,6 +18,7 @@ __all__: tuple[str, ...] = (
     "OPS_COMMON_FILES_URL",
     "OPS_COMPATIBILITY_URL",
     "OPS_PRESETS_URL",
+    "SETTINGS_FILE",
     "TRANSLATION_LANGUAGES",
     "USER_AGENT_OS",
 )
@@ -23,9 +26,12 @@ __all__: tuple[str, ...] = (
 APP_NAME: str = "GamePresetPeek"
 APP_DATA_DIR: Path = Path(os.environ["LOCALAPPDATA"]) / APP_NAME
 LOG_FILE: Path = APP_DATA_DIR / "logs" / "gamepreset-peek.log"
+SETTINGS_FILE: Path = APP_DATA_DIR / "settings.json"
 # Bundled data files live next to the package code.
 _DATA_DIR: Path = Path(__file__).parent / "data"
 GAME_NAMES_FILE: Path = _DATA_DIR / "game_names.json"
+GPUS_FILE: Path = _DATA_DIR / "gpus.json"
+GPU_RANKS_FILE: Path = _DATA_DIR / "gpu_ranks.json"
 
 # Operating systems a fake browser User-Agent is picked for, one per HTTP client.
 USER_AGENT_OS: tuple[str, ...] = ("Windows",)

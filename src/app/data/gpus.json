@@ -1,0 +1,778 @@
+[
+  {
+    "name": "NVIDIA GeForce 610M",
+    "device_id": "1058"
+  },
+  {
+    "name": "NVIDIA GeForce 610M/710M/810M/820M / GT 620M/625M/630M/720M",
+    "device_id": "1140"
+  },
+  {
+    "name": "NVIDIA GeForce 840M",
+    "device_id": "1341"
+  },
+  {
+    "name": "NVIDIA GeForce 845M",
+    "device_id": "1398"
+  },
+  {
+    "name": "NVIDIA GeForce 910M",
+    "device_id": "129a"
+  },
+  {
+    "name": "NVIDIA GeForce 920M",
+    "device_id": "1299"
+  },
+  {
+    "name": "NVIDIA GeForce 920MX",
+    "device_id": "134f"
+  },
+  {
+    "name": "NVIDIA GeForce 930M",
+    "device_id": "1346"
+  },
+  {
+    "name": "NVIDIA GeForce 930MX",
+    "device_id": "134e"
+  },
+  {
+    "name": "NVIDIA GeForce 940M",
+    "device_id": "1347"
+  },
+  {
+    "name": "NVIDIA GeForce 940MX",
+    "device_id": "134b"
+  },
+  {
+    "name": "NVIDIA GeForce 945M",
+    "device_id": "1399"
+  },
+  {
+    "name": "NVIDIA GeForce 945M / 945A",
+    "device_id": "1348"
+  },
+  {
+    "name": "NVIDIA GeForce GT 1010",
+    "device_id": "1d02"
+  },
+  {
+    "name": "NVIDIA GeForce GT 1030",
+    "device_id": "1d01"
+  },
+  {
+    "name": "NVIDIA GeForce GT 430",
+    "device_id": "0de1"
+  },
+  {
+    "name": "NVIDIA GeForce GT 435M",
+    "device_id": "0df2"
+  },
+  {
+    "name": "NVIDIA GeForce GT 520",
+    "device_id": "1040"
+  },
+  {
+    "name": "NVIDIA GeForce GT 520M",
+    "device_id": "1052"
+  },
+  {
+    "name": "NVIDIA GeForce GT 520MX",
+    "device_id": "1051"
+  },
+  {
+    "name": "NVIDIA GeForce GT 555M/635M",
+    "device_id": "1247"
+  },
+  {
+    "name": "NVIDIA GeForce GT 630 Rev. 2",
+    "device_id": "1284"
+  },
+  {
+    "name": "NVIDIA GeForce GT 635M",
+    "device_id": "0de3"
+  },
+  {
+    "name": "NVIDIA GeForce GT 710",
+    "device_id": "1281"
+  },
+  {
+    "name": "NVIDIA GeForce GT 720",
+    "device_id": "1288"
+  },
+  {
+    "name": "NVIDIA GeForce GT 730",
+    "device_id": "1287"
+  },
+  {
+    "name": "NVIDIA GeForce GT 730M",
+    "device_id": "1290"
+  },
+  {
+    "name": "NVIDIA GeForce GT 740",
+    "device_id": "0fc8"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1050",
+    "device_id": "1c81"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1050 3 GB Max-Q",
+    "device_id": "1c91"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1050 3GB",
+    "device_id": "1c83"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1050 Mobile",
+    "device_id": "1c22"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1050 Ti",
+    "device_id": "1c82"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1050 Ti Max-Q",
+    "device_id": "1c8f"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1050 Ti Mobile",
+    "device_id": "1c21"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1060 3GB",
+    "device_id": "1b84"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1060 5GB",
+    "device_id": "1c04"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1060 6GB",
+    "device_id": "1b83"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1060 6GB Rev. 2",
+    "device_id": "1c06"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1060 Mobile",
+    "device_id": "1c20"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1060 Mobile 6GB",
+    "device_id": "1c60"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1060 Mobile Rev. 2",
+    "device_id": "1c23"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1070",
+    "device_id": "1b81"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1070 Mobile",
+    "device_id": "1ba1"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1070 Ti",
+    "device_id": "1b82"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1080",
+    "device_id": "1b80"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1080 Mobile",
+    "device_id": "1ba0"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1080 Ti",
+    "device_id": "1b06"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1630",
+    "device_id": "1f83"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1650",
+    "device_id": "1f0a"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1650 Mobile",
+    "device_id": "1f92"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1650 Mobile / Max-Q",
+    "device_id": "1f91"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1650 Mobile Refresh",
+    "device_id": "1fd9"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1650 SUPER",
+    "device_id": "2187"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1650 Ti Mobile",
+    "device_id": "1f95"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1660",
+    "device_id": "2184"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1660 SUPER",
+    "device_id": "1f09"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1660 Ti",
+    "device_id": "2182"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 1660 Ti Mobile",
+    "device_id": "2191"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 2080 Engineering Sample",
+    "device_id": "1eae"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 550 Ti",
+    "device_id": "1244"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 560",
+    "device_id": "1201"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 650",
+    "device_id": "0fc6"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 650 OEM",
+    "device_id": "11c8"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 650 Ti",
+    "device_id": "11c6"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 650 Ti Boost",
+    "device_id": "11c2"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 680",
+    "device_id": "1180"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 750",
+    "device_id": "1381"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 750 Ti",
+    "device_id": "1380"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 750 v2",
+    "device_id": "1407"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 760",
+    "device_id": "1187"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 770",
+    "device_id": "1184"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 780",
+    "device_id": "1004"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 780 Rev. 2",
+    "device_id": "1007"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 780 Ti",
+    "device_id": "100a"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 850M",
+    "device_id": "1391"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 860M",
+    "device_id": "119a"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 870M",
+    "device_id": "1199"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 880M",
+    "device_id": "1198"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 950",
+    "device_id": "1402"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 950M",
+    "device_id": "139a"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 960",
+    "device_id": "1401"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 960 OEM",
+    "device_id": "1406"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 960 OEM / 970M",
+    "device_id": "13d8"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 960M",
+    "device_id": "139b"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 965M",
+    "device_id": "13d9"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 970",
+    "device_id": "13c2"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 970M",
+    "device_id": "1618"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 980",
+    "device_id": "13c0"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 980 Mobile",
+    "device_id": "13da"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 980 Ti",
+    "device_id": "17c8"
+  },
+  {
+    "name": "NVIDIA GeForce GTX 980M",
+    "device_id": "13d7"
+  },
+  {
+    "name": "NVIDIA GeForce GTX TITAN",
+    "device_id": "1005"
+  },
+  {
+    "name": "NVIDIA GeForce GTX TITAN Black",
+    "device_id": "100c"
+  },
+  {
+    "name": "NVIDIA GeForce GTX TITAN X",
+    "device_id": "17c2"
+  },
+  {
+    "name": "NVIDIA GeForce GTX TITAN Z",
+    "device_id": "1001"
+  },
+  {
+    "name": "NVIDIA GeForce MX110",
+    "device_id": "174e"
+  },
+  {
+    "name": "NVIDIA GeForce MX130",
+    "device_id": "174d"
+  },
+  {
+    "name": "NVIDIA GeForce MX150",
+    "device_id": "1c90"
+  },
+  {
+    "name": "NVIDIA GeForce MX230",
+    "device_id": "1d11"
+  },
+  {
+    "name": "NVIDIA GeForce MX250",
+    "device_id": "1d13"
+  },
+  {
+    "name": "NVIDIA GeForce MX330",
+    "device_id": "1d16"
+  },
+  {
+    "name": "NVIDIA GeForce MX350",
+    "device_id": "1c94"
+  },
+  {
+    "name": "NVIDIA GeForce MX450",
+    "device_id": "1f97"
+  },
+  {
+    "name": "NVIDIA GeForce MX550",
+    "device_id": "1f9f"
+  },
+  {
+    "name": "NVIDIA GeForce MX570",
+    "device_id": "25a6"
+  },
+  {
+    "name": "NVIDIA GeForce MX570 A",
+    "device_id": "25aa"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2050",
+    "device_id": "25a9"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2060",
+    "device_id": "1e89"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2060 12GB",
+    "device_id": "1f03"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2060 Max-Q",
+    "device_id": "1f12"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2060 Mobile",
+    "device_id": "1f11"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2060 Rev. A",
+    "device_id": "1f08"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2060 SUPER",
+    "device_id": "1f06"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2070",
+    "device_id": "1f02"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2070 Mobile",
+    "device_id": "1f10"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2070 Mobile / Max-Q",
+    "device_id": "1f50"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2070 Mobile / Max-Q Refresh",
+    "device_id": "1f14"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2070 Rev. A",
+    "device_id": "1f07"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2070 SUPER",
+    "device_id": "1e84"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2070 SUPER Mobile / Max-Q",
+    "device_id": "1e91"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2080",
+    "device_id": "1e82"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2080 Mobile",
+    "device_id": "1e90"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2080 Rev. A",
+    "device_id": "1e87"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2080 SUPER",
+    "device_id": "1e81"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2080 SUPER Mobile / Max-Q",
+    "device_id": "1e93"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2080 Ti",
+    "device_id": "1e04"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 2080 Ti Rev. A",
+    "device_id": "1e07"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 4GB Laptop GPU",
+    "device_id": "25ab"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 6GB",
+    "device_id": "2584"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 6GB Laptop GPU",
+    "device_id": "25ac"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 8GB",
+    "device_id": "2582"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 A Laptop GPU",
+    "device_id": "2822"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 Mobile",
+    "device_id": "25a2"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 OEM",
+    "device_id": "2508"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 Ti Mobile",
+    "device_id": "25a0"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3050 Ti Mobile / Max-Q",
+    "device_id": "2523"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060",
+    "device_id": "2487"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 12GB Rev. 2",
+    "device_id": "2509"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 8GB",
+    "device_id": "24c7"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 Engineering Sample",
+    "device_id": "252f"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "device_id": "2521"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 Lite Hash Rate",
+    "device_id": "2504"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 Mobile / Max-Q",
+    "device_id": "2520"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 Ti",
+    "device_id": "2414"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 Ti GDDR6X",
+    "device_id": "24c9"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3060 Ti Lite Hash Rate",
+    "device_id": "2489"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3070",
+    "device_id": "2484"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3070 Engineering Sample",
+    "device_id": "24af"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3070 Lite Hash Rate",
+    "device_id": "2488"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3070 Mobile / Max-Q",
+    "device_id": "249d"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3070 Ti",
+    "device_id": "2207"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080",
+    "device_id": "2206"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080 11GB / 12GB Engineering Sample",
+    "device_id": "222f"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080 12GB",
+    "device_id": "220a"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080 Lite Hash Rate",
+    "device_id": "2216"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080 Mobile / Max-Q 8GB/16GB",
+    "device_id": "249c"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080 Ti",
+    "device_id": "2208"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080 Ti 20GB",
+    "device_id": "2205"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080 Ti Laptop GPU",
+    "device_id": "2460"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3080 Ti Mobile",
+    "device_id": "2420"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3090",
+    "device_id": "2204"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 3090 Ti",
+    "device_id": "2203"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4050 Max-Q / Mobile",
+    "device_id": "28a1"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4060",
+    "device_id": "2808"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4060 Max-Q / Mobile",
+    "device_id": "28a0"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4060 Ti",
+    "device_id": "2788"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4060 Ti 16GB",
+    "device_id": "2805"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4070",
+    "device_id": "2709"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4070 Max-Q / Mobile",
+    "device_id": "2820"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4070 SUPER",
+    "device_id": "2783"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4070 Ti",
+    "device_id": "2782"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4070 Ti SUPER",
+    "device_id": "2689"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4080",
+    "device_id": "2704"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4080 Max-Q / Mobile",
+    "device_id": "27a0"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4080 SUPER",
+    "device_id": "2702"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4090",
+    "device_id": "2684"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4090 D",
+    "device_id": "2685"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 4090 Laptop GPU",
+    "device_id": "2717"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5050",
+    "device_id": "2d83"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5050 Max-Q / Mobile",
+    "device_id": "2d98"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5060",
+    "device_id": "2d05"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5060 Max-Q / Mobile",
+    "device_id": "2d19"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5060 Ti",
+    "device_id": "2d04"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5070",
+    "device_id": "2c09"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5070 Max-Q / Mobile",
+    "device_id": "2d18"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5070 Ti",
+    "device_id": "2c05"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5070 Ti Mobile",
+    "device_id": "2f18"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5080",
+    "device_id": "2c02"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5080 Max-Q / Mobile",
+    "device_id": "2c19"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5090",
+    "device_id": "2b85"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5090 D",
+    "device_id": "2b87"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5090 D V2",
+    "device_id": "2b8c"
+  },
+  {
+    "name": "NVIDIA GeForce RTX 5090 Max-Q / Mobile",
+    "device_id": "2c18"
+  }
+]
