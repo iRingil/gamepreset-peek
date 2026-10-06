@@ -6,6 +6,7 @@ from pathlib import Path
 __all__: tuple[str, ...] = (
     "APP_NAME",
     "APP_DATA_DIR",
+    "GAME_NAMES_FILE",
     "HTTP_CONNECT_TIMEOUT",
     "HTTP_MAX_RETRIES",
     "HTTP_READ_TIMEOUT",
@@ -22,6 +23,9 @@ __all__: tuple[str, ...] = (
 APP_NAME: str = "GamePresetPeek"
 APP_DATA_DIR: Path = Path(os.environ["LOCALAPPDATA"]) / APP_NAME
 LOG_FILE: Path = APP_DATA_DIR / "logs" / "gamepreset-peek.log"
+# Bundled data files live next to the package code.
+_DATA_DIR: Path = Path(__file__).parent / "data"
+GAME_NAMES_FILE: Path = _DATA_DIR / "game_names.json"
 
 # Operating systems a fake browser User-Agent is picked for, one per HTTP client.
 USER_AGENT_OS: tuple[str, ...] = ("Windows",)
