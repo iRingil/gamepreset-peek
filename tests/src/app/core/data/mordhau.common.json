@@ -1,0 +1,25 @@
+{
+    "translations": [
+        {
+            "filename": "mordhau.translation",
+            "sha256": "7fd3664218d4e053ef68a6c448e4032ddb825c7240cdeccd14fbc994952e0f35",
+            "size": 151472,
+            "url": "https://wpc-download.gfe.nvidia.com/static/eabfa929/translations/mordhau.translation"
+        }
+    ],
+    "wrappers": [
+        {
+            "filename": "common.lua",
+            "sha256": "eb610dafc4cae17a1bbfefac9a3ffa64a7d708242dde64a51baef6b19133d56f",
+            "size": 53196,
+            "url": "https://wpc-download.gfe.nvidia.com/static/eabfa929/wrappers/common.lua"
+        },
+        {
+            "filename": "current_game.lua",
+            "sha256": "8ec94ae5e1b719447212908a0ed6afe4566950e029a5f0da8bfbd71ad40eb204",
+            "size": 5509,
+            "url": "https://wpc-download.gfe.nvidia.com/static/8a78f2ea/wrappers/mordhau/current_game.lua"
+        }
+    ],
+    "version": "b9309d8ba895d5869df5b50cabd952dfd58e45524c25c4e6639aeeb3a061aacb"
+}

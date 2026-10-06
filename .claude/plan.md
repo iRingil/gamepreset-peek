@@ -21,7 +21,16 @@ Mark a step `[x]` when it is done. Background and the reasons behind the decisio
 - Hardware: registry via `winreg`; NVIDIA adapters only (`ven_10de`); none found -> message only. NVIDIA rejects the
   hardware (`/v4/ops-compatibility`) -> the user picks a GPU from a bundled list. Hardware and language are saved to
   JSON in `%LOCALAPPDATA%\GamePresetPeek\`.
-- Game catalog is requested on every start, not cached.
+- Game catalog is requested on every start, not cached; it is `applications-regular_rtx.json` (same slugs as the
+  `regular` one, the profile comes from the preset answer anyway).
+- Hardware sent to NVIDIA includes real memory size (`GlobalMemoryStatusEx` via `ctypes`) and Windows version:
+  the compatibility check needs them, though it accepts any values.
+- A setting's `type` is kept as a plain string (unknown types never break parsing); translation does not depend on
+  it: a value missing from `.translation` (all INT / FLOAT ones) is shown as is.
+- An NVIDIA answer of unexpected structure raises `OpsFormatError`; downloaded files are checked against their
+  sha256 (mismatch -> `OpsFormatError`).
+- `.translation` is parsed for the 5 UI languages only (`en_US`, `ru_RU`, `de_DE`, `fr_FR`, `es_ES`), all of them at
+  once, so switching the UI language needs no new download.
 
 ## Layout
 
@@ -72,17 +81,18 @@ tests/src/app/...
 - [x] Tests (HTTP mocked, `responses`).
 
 ### 3. NVIDIA API and models
-- [ ] Check across many games which setting `type` values exist besides `ENUM`, and which keys appear in answers.
-- [ ] `core/models.py`, `core/ops_api.py`: catalog, compatibility check, preset request, presets file, common files,
-  `.translation` XML.
-- [ ] Tests on fixtures copied into `tests/` (`research/` is git-ignored and will be deleted).
+- [x] Check across many games which setting `type` values exist besides `ENUM`, and which keys appear in answers.
+- [x] `core/models.py`, `core/ops_api.py`: catalog, compatibility check, preset request, presets file, common files,
+  `.translation` XML; endpoints in `config.py`.
+- [x] Tests on fixtures copied into `tests/src/app/core/data/` (`research/` is git-ignored and will be deleted).
 
 ### 4. Game names
 - [ ] `tools/build_game_names.py`: `fingerprint.db` -> `data/game_names.json` (sorted, HTML entities decoded).
 - [ ] `core/game_names.py` with the slug fallback; tests.
 
 ### 5. Hardware
-- [ ] `core/hardware.py`: CPU name, NVIDIA GPU name and device id from the registry.
+- [ ] `core/hardware.py`: CPU name, NVIDIA GPU name and device id from the registry; memory size
+  (`GlobalMemoryStatusEx`) and Windows version for the compatibility check.
 - [ ] `tools/build_gpus.py`: NVIDIA GeForce list (source: PCI ID database), each entry checked against the preset
   endpoint, result -> `data/gpus.json`.
 - [ ] `core/user_settings.py`: load / save hardware and language.
@@ -111,9 +121,18 @@ tests/src/app/...
 - [ ] GitHub Actions: lint, tests, Nuitka build, artifact upload.
 - [ ] SignPath Foundation application and signing step.
 
+## Future features
+
+Not part of the current plan; research findings are in `.claude/notes.md` ("Game config locations").
+
+- [ ] Auto-apply a preset: write the chosen settings into the game's own config file (or registry). Needs the
+  config path and the setting -> key mapping per game, both available only inside NVIDIA's compiled Lua wrappers.
+  First step: research (decompile wrappers with e.g. `unluac`, check coverage across games), then decide.
+
 ## Open questions
 
 - How to show a resolution whose answer has `belowMinSpec: true`?
-- Meaning of `rate` in the preset answer is unknown; shown or ignored?
+- Meaning of `rate` in the preset answer is unknown (most likely target FPS); shown or ignored?
+- How to show FLOAT values: as NVIDIA sends them (`"1.000"`) or normalized (`1`)?
+- What to show when a game has no recommendation (empty `ops`, 375 games, or a too weak GPU)?
 - Should the user be able to re-detect or change the saved GPU later (menu item / button)?
-- Which catalog to request: both list the same slugs; the profile comes from the preset answer anyway.

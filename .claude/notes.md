@@ -15,6 +15,9 @@
 - 2026-10-06: `aiohttp` and its dependencies removed from the venv; `requests` added, dev `babel`, `responses`,
   `types-requests`. `infra/http_client.py` (`HttpClient`, `HttpClientError`) with tests; HTTP constants in `config.py`.
   User-Agent switched to a fake one from `fake-useragent` (user's choice).
+- 2026-10-06: game config locations researched (future auto-apply feature added to the plan). Step 3: all 1754 games
+  probed (`research/stage3_probe.py`), decisions on the data layer agreed; `core/models.py`, `core/ops_api.py`
+  (`OpsApi`, `OpsFormatError`) with tests on saved mordhau answers.
 
 ## Decisions and findings
 
@@ -62,6 +65,67 @@
 - `ops-gx.nvidia.com` answers 403 (CloudFront) to an empty User-Agent; any non-empty one works. `wpc-download` doesn't
   care. Presets come as `binary/octet-stream`, so decode the body as JSON regardless of Content-Type.
 - No NVIDIA endpoint returning a list of known GPUs or CPUs was found.
+
+### Stage 3 findings (2026-10-06, `research/stage3_probe.py`, answers cached in `research/stage3_cache/`)
+
+All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every request answered 200.
+
+- Catalog: top keys `ontology_version`, `ontology_arm_version`, `version`, `applications`; each application has only
+  `profiles.<profile>.{version, files}`.
+- Preset answer: always exactly one key (the profile: 1440 `regular`, 314 `regular_rtx`), body keys `ops`, `pops`
+  (`filename`, `sha256`, `size`, `url`), `version`. Every `ops` entry has `resolution` (`WxH`), `pops` (int, always
+  within the presets file), `rate`, `belowMinSpec`.
+- Empty `ops` for 375 games (365 of them have a single dummy preset, e.g. only `Display Mode`): no recommendations.
+  Not hardware-related for those (an RTX 4090 gets the same), but a weak GPU empties it too: GT 710 gets `ops: []`
+  for baldurs_gate_3. Entries per game otherwise 1 to 11.
+- `rate`: 40 in 9708 of 9898 entries, otherwise 25, 30, 35, 50, 60; most likely the target FPS (not confirmed).
+  `belowMinSpec: true` in 170 entries.
+- Presets file: keys `settings` and `pops` only; each settings entry is a one-key object `{name: {"type": ...}}`,
+  names unique within a game; every preset has `values` with exactly the keys `"1"..str(len(settings))`, all strings.
+- Setting types: `ENUM` 15499, `INT` 465, `FLOAT` 142, `DRVENUM` 22 (driver setting, values "Use the 3D Application
+  Setting" / "Off"). INT values are integer strings, FLOAT mostly `"1.000"` style but sometimes `"100"` or `"0"`.
+- Common files: keys `translations` (always exactly one, `<slug>.translation`), `version`, `wrappers`.
+- `.translation` (checked on 449 games, all non-ENUM ones included): `<game name=slug>` / `<language name
+  translation="">` / `<setting name translation>` / `<value name translation>`, nothing else, no text nodes. All 30
+  languages in every file. Every setting of the presets file is present in en_US and ru_RU, and every ENUM / DRVENUM
+  value too; INT / FLOAT values are never listed (shown as is). Files list extra settings (e.g. `Resolution`).
+  en_US translations equal the names. Largest file: war_thunder, 7.3 MB.
+- Compatibility: `GET /v4/ops-compatibility/` (no game in the path; with a slug -> 403 "Missing Authentication
+  Token"). Requires `cpu.name`, `gpu.name` (400 otherwise) and also `memory.size` and `os.version` (without them
+  memory and os are reported false). Any values of memory and os pass (2 GB, OS 6.1); unknown CPU or GPU name ->
+  that state false. Answer `{"criteria": {"overallState": bool, "states": [{"name", "state"}]}}`, `states` only when
+  false; names `cpu`, `gpu`, `memory`, `os`. GT 710 passes compatibility.
+- Preset request: `gpu.deviceID` is case-insensitive and `0x28e0` works too; an unknown id -> 404; an unknown
+  `gpu.name` with a known id falls back to `regular`.
+
+### NVIDIA data layer (2026-10-06)
+
+- `OpsApi` methods map one to one to requests: `games`, `check_compatibility`, `game_presets`, `presets_file`,
+  `translation_file` (common files of the profile), `translations`. The service (step 6) chains them.
+- Parsing errors (`KeyError`, `TypeError`, `ValueError`, ..., `ET.ParseError`) inside the `_parsing` context become
+  `OpsFormatError`; HTTP failures stay `HttpClientError` / requests exceptions. `_typed` rejects a bool where an int
+  is expected (bool is an int subclass).
+- `hashlib.sha256(body)` is called positionally: pylint reports `data=` as an unexpected keyword (E1123).
+- Fixtures in `tests/src/app/core/data/`: real mordhau answers (ENUM, FLOAT and DRVENUM settings, 12 presets); the
+  catalog is cut to 3 games and the translation to en_US, ru_RU and ar_AE (ar_AE checks that other languages are
+  dropped). Tests build `RemoteFile` with the fixture's own sha256.
+- `src/app/config.py` had mixed CRLF / LF endings in the working tree (pylint C0327); normalized to LF.
+
+### Game config locations (2026-10-06, for the future auto-apply feature)
+
+- `fingerprint.db` and the catalogs hold no config paths or registry keys: only game executables (`Image`,
+  `DriverProfile`, `Files`), Steam / GOG ids and the launch command.
+- Config paths live only in the compiled Lua wrappers (`wrappers/<game>/current_game.lua`): a special folder from
+  `GetSpecialPath` (`GSP_LOCAL_APPDATA`, `GSP_MYDOCUMENTS`, `GSP_APPDATA`) joined with a relative path stored as a
+  UTF-16 string constant, so a plain ASCII strings scan misses it.
+- Examples: STALKER 2 `%LOCALAPPDATA%\Stalker2\Saved\Config\Windows|WinGDK\GameUserSettings.ini` plus
+  `Saved\GameSettings\AppliedSettingsWin64.cfg`; FFXIV `Documents\My Games\FINAL FANTASY XIV - A Realm Reborn\FFXIV.cfg`;
+  Forza Horizon 5 has separate Steam and Microsoft Store paths; Baldur's Gate 3 builds its path in code.
+- The wrappers also map each setting to its place in the file: XPath for XML (FH5), `section;key` for ini (STALKER 2),
+  with fallbacks and store variants in code, so only decompilation gives a reliable answer.
+- Registry: across the 25 cached wrappers the only `RegRead` is `HKCU\Software\Valve\Steam\SteamPath` (Steam lookup
+  in the shared `common.lua`); none of the 5 cached games keeps settings in the registry.
+- Wrappers are public: listed with url and sha256 in `common-files-<profile>.json` and in each game's file set.
 
 ### Logging (2026-10-06)
 
