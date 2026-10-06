@@ -1,6 +1,7 @@
 # Implementation plan
 
-Each step is one working session: implement, pass Black / mypy / pylint / pytest, update `.claude/notes.md`, commit.
+Each step is one working session: implement, pass Black / mypy / pylint / pytest, update `.claude/notes.md`.
+Commit only on the user's command.
 Mark a step `[x]` when it is done. Background and the reasons behind the decisions are in `.claude/notes.md`.
 
 ## Agreed decisions
