@@ -12,6 +12,9 @@
 - 2026-10-06: logger module received and adapted (`src/app/infra/logger.py`); the package is named `app`, not
   `gamepreset_peek` (user's choice). Logger tests in `tests/src/app/infra/test_logger.py`; tests are written
   together with the code in each step, not at the end.
+- 2026-10-06: `aiohttp` and its dependencies removed from the venv; `requests` added, dev `babel`, `responses`,
+  `types-requests`. `infra/http_client.py` (`HttpClient`, `HttpClientError`) with tests; HTTP constants in `config.py`.
+  User-Agent switched to a fake one from `fake-useragent` (user's choice).
 
 ## Decisions and findings
 
@@ -76,3 +79,19 @@
   catches errors while building the window. Tk callback errors go to `report_callback_exception` (override it in the
   window, step 8), worker thread errors to `threading.excepthook` (set by `LoggingManager`). The presenter also
   catches worker task errors itself to show them in the UI.
+
+### HTTP client (2026-10-06)
+
+- Timeouts are (connect 5 s, read 15 s) with no total limit: read is the longest pause between bytes, so a slow but
+  alive connection never times out, while a dead one fails fast. The former 30 s total came from a VPS bot.
+  Largest file seen in the cache is ~330 KB. Worst case for a dead host: 3 x 5 s + 1.5 s backoff.
+- When retries run out, a transport error propagates as the original `requests` exception, a 5xx as
+  `HttpClientError`. `SSLError` is a `ConnectionError` subclass, so it is retried too.
+- `HttpClientError.url` is `response.url` (query string included), not the URL passed in.
+- Tests mock HTTP with `responses`; timeouts, User-Agent and query are checked through its matchers.
+- `typing_extensions` must stay in the venv: mypy needs it (`pip show` doesn't list mypy under Required-by).
+- User-Agent: a random Windows browser UA from `fake-useragent` (`os=["Windows"]`), picked once per `HttpClient`
+  and kept until it is closed; logged at DEBUG so a failure can be tied to it. The real NVIDIA App UA is unknown:
+  no saved mitmproxy flows, NVIDIA App could not be installed separately to capture it again.
+- `fake-useragent` works offline from its bundled `data/browsers.jsonl` (2.6 MB): the Nuitka build needs
+  `--include-package-data=fake_useragent`.

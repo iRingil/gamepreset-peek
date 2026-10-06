@@ -59,16 +59,17 @@ tests/src/app/...
 ### 1. Skeleton and tooling
 - [x] First commit `bc58a29` on `master` (the user keeps `master` as the default branch everywhere).
 - [ ] Package directories with empty `__init__.py`.
-- [ ] Requirements: add `requests`, dev `babel`; drop `aiohttp` (and `orjson` from the pylint allow-list).
+- [x] Requirements: add `requests`, dev `babel`; drop `aiohttp` (and `orjson` from the pylint allow-list).
 - [x] `pyproject.toml`: removed `asyncio_mode` / `asyncio_default_fixture_loop_scope` (no asyncio in the app).
 - [x] `http_client.py` and `tg_templater.py` removed from the root (client behavior to port is in the notes).
 
 ### 2. Infrastructure
 - [ ] `config.py` with endpoints, User-Agent (ops-gx answers 403 to an empty one), timeouts, paths.
-- [ ] `infra/http_client.py`: `get_json`, `get_bytes`; retries on connection errors, timeouts and 5xx.
+- [x] `infra/http_client.py`: `get_json`, `get_bytes`; retries on connection errors, timeouts and 5xx.
+  HTTP part of `config.py` (User-Agent, timeouts, retries) done; endpoints come in step 3.
 - [x] `infra/logger.py`: user's module adapted: rotating file sink, UI queue sink, `threading.excepthook`;
   `config.py` started (app name and paths).
-- [ ] Tests (HTTP mocked).
+- [x] Tests (HTTP mocked, `responses`).
 
 ### 3. NVIDIA API and models
 - [ ] Check across many games which setting `type` values exist besides `ENUM`, and which keys appear in answers.
@@ -103,7 +104,8 @@ tests/src/app/...
 - [ ] Presenter with the worker thread; switching game or resolution clears the table and shows the button again.
 
 ### 9. Build
-- [ ] Nuitka onefile build script with data files (`data/*.json`, `.mo`); check the exe on a clean machine.
+- [ ] Nuitka onefile build script with data files (`data/*.json`, `.mo`, `fake_useragent` package data); check the
+  exe on a clean machine.
 
 ### 10. CI and signing
 - [ ] GitHub Actions: lint, tests, Nuitka build, artifact upload.

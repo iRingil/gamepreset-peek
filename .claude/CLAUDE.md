@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project state
 
 Early stage: no application code exists yet, only tooling config (`pyproject.toml`, `src/requirements*.txt`),
-the code style guide and sample data in `research/`. Python 3.13; runtime deps are `aiohttp` and `loguru`.
+the code style guide and sample data in `research/`. Python 3.13; runtime deps are `requests`, `fake-useragent` and `loguru`.
 The project is not a git repository yet.
 
 ## Commands

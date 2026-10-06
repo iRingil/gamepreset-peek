@@ -1,6 +1,9 @@
 -c requirements.txt
 
+babel==2.18.0
 black==26.10.0
 mypy==2.4.0
 pylint==4.1.2
 pytest==9.1.1
+responses==0.26.3
+types-requests==2.33.0.20261006
