@@ -124,27 +124,57 @@ class TestTranslations:
 
 
 class TestGameSettings:
-    """Tests of GameSettings.rows."""
+    """Tests of GameSettings.count and rows."""
 
-    def test_rows_translated(self) -> None:
+    @pytest.fixture(name="settings")
+    def _settings(self) -> GameSettings:
         """
-        Translates setting names and values, keeping values without a translation (numbers) as NVIDIA sends them.
+        Build two presets of an ENUM and a FLOAT setting with Russian translations.
 
-        :return: None
+        :return: game settings
         """
-        # Arrange
-        settings: GameSettings = GameSettings(
-            values=((Setting(name="Shadows", type="ENUM"), "High"), (Setting(name="Scale", type="FLOAT"), "1.000")),
+        return GameSettings(
+            presets=PresetsFile(
+                settings=(Setting(name="Shadows", type="ENUM"), Setting(name="Scale", type="FLOAT")),
+                presets=(("Low", "0.750"), ("High", "1.000")),
+            ),
             translations=Translations(
                 languages={
                     "ru_RU": {
-                        "Shadows": SettingTranslation(name="Тени", values={"High": "Высокое"}),
+                        "Shadows": SettingTranslation(name="Тени", values={"Low": "Низкое", "High": "Высокое"}),
                         "Scale": SettingTranslation(name="Масштаб", values={}),
                     }
                 }
             ),
         )
-        # Act
-        rows: tuple[tuple[str, str], ...] = settings.rows(language="ru_RU")
+
+    def test_count(self, settings: GameSettings) -> None:
+        """
+        Counts the presets.
+
+        :param settings: two presets
+        :return: None
+        """
+        # Arrange & Act
+        count: int = settings.count
         # Assert
-        assert rows == (("Тени", "Высокое"), ("Масштаб", "1.000"))
+        assert count == 2
+
+    @pytest.mark.parametrize(
+        argnames=("index", "expected"),
+        argvalues=[(1, (("Тени", "Низкое"), ("Масштаб", "0.750"))), (2, (("Тени", "Высокое"), ("Масштаб", "1.000")))],
+        ids=["lowest", "highest"],
+    )
+    def test_rows_translated(self, settings: GameSettings, index: int, expected: tuple[tuple[str, str], ...]) -> None:
+        """
+        Translates setting names and values of a preset, keeping values without a translation (numbers) as is.
+
+        :param settings: two presets
+        :param index: 1-based preset index
+        :param expected: translated rows
+        :return: None
+        """
+        # Arrange & Act
+        rows: tuple[tuple[str, str], ...] = settings.rows(index=index, language="ru_RU")
+        # Assert
+        assert rows == expected

@@ -1,4 +1,4 @@
-"""Fixtures shared by the i18n tests."""
+"""Fixtures shared by the app tests: the UI catalogs, read from the source tree and compiled."""
 
 from pathlib import Path
 

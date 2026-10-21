@@ -1,4 +1,4 @@
-"""Settings kept between runs: UI language and the GPU the user chose, as JSON in the app data folder."""
+"""Settings kept between runs: UI language, the GPU the user chose and the theme, as JSON in the app data folder."""
 
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ from typing import Any
 from loguru import logger
 
 from app.config import SETTINGS_FILE
-from app.core.models import Gpu, UserSettings
+from app.core.models import Gpu, ThemeMode, UserSettings
 
 __all__: tuple[str, ...] = ("UserSettingsStore",)
 
@@ -49,6 +49,7 @@ class UserSettingsStore:
         """
         document: dict[str, Any] = {
             "language": settings.language,
+            "theme": settings.theme.value,
             "gpu": (None if settings.gpu is None else {"name": settings.gpu.name, "device_id": settings.gpu.device_id}),
         }
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -68,6 +69,7 @@ class UserSettingsStore:
         gpu: Any = document.get("gpu")
         return UserSettings(
             language=cls._optional_str(value=document.get("language")),
+            theme=ThemeMode(cls._required_str(value=document.get("theme", ThemeMode.AUTO.value))),
             gpu=(
                 None
                 if gpu is None
