@@ -1,60 +1,43 @@
 """Read-only view of the application log at the bottom of the main window."""
 
-import tkinter as tk
 from queue import Empty, Queue
-from tkinter import ttk
+
+from PySide6.QtCore import QTimer
+from PySide6.QtGui import QFontDatabase
+from PySide6.QtWidgets import QPlainTextEdit, QWidget
 
 from app.config import LOG_PANEL_HEIGHT, LOG_PANEL_MAX_LINES, LOG_POLL_MS
 
 __all__: tuple[str, ...] = ("LogPanel",)
 
 
-class LogPanel:
+class LogPanel(QPlainTextEdit):
     """A scrollable text that keeps appending the lines of the log queue, whether it is shown or not."""
 
-    def __init__(self, *, parent: tk.Misc, lines: Queue[str]) -> None:
+    def __init__(self, *, lines: Queue[str], parent: QWidget | None = None) -> None:
         """
         Build the panel and start draining the queue.
 
-        :param parent: widget to place the panel in
         :param lines: formatted log lines, filled by the logging sink
+        :param parent: widget the panel belongs to
         """
-        self.frame: ttk.Frame = ttk.Frame(master=parent)
+        super().__init__(parent)
         self._lines: Queue[str] = lines
-        self._text: tk.Text = tk.Text(
-            master=self.frame,
-            height=LOG_PANEL_HEIGHT,
-            wrap="none",
-            state="disabled",
-            font="TkFixedFont",
-            padx=6,
-            pady=4,
-            relief="flat",
-            borderwidth=0,
-        )
-        scrollbar: ttk.Scrollbar = ttk.Scrollbar(master=self.frame, orient="vertical", command=self._text.yview)
-        self._text.configure(yscrollcommand=scrollbar.set)
-        self._text.grid(row=0, column=0, sticky="nsew")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        self.frame.columnconfigure(index=0, weight=1)
-        self.frame.rowconfigure(index=0, weight=1)
+        self.setReadOnly(True)
+        self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        # The oldest lines are dropped beyond the limit.
+        self.setMaximumBlockCount(LOG_PANEL_MAX_LINES)
+        self.setFont(QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont))
+        margins: int = round(self.document().documentMargin() * 2) + self.frameWidth() * 2
+        self.setFixedHeight(self.fontMetrics().lineSpacing() * LOG_PANEL_HEIGHT + margins)
+        self._timer: QTimer = QTimer(parent=self, interval=LOG_POLL_MS)
+        self._timer.timeout.connect(self._drain)
+        self._timer.start()
         self._drain()
-
-    def apply_colors(self, *, background: str, foreground: str) -> None:
-        """
-        Color the text like the ttk theme: tk.Text is not a ttk widget, so the theme doesn't reach it.
-
-        :param background: background color
-        :param foreground: text color
-        :return: None
-        """
-        self._text.configure(
-            background=background, foreground=foreground, insertbackground=foreground, selectforeground=background
-        )
 
     def _drain(self) -> None:
         """
-        Append the queued lines, keeping the view at the end when it was there, and schedule the next drain.
+        Append the queued lines; the view stays at the end when it was there.
 
         :return: None
         """
@@ -65,14 +48,4 @@ class LogPanel:
             except Empty:
                 break
         if lines:
-            at_end: bool = self._text.yview()[1] >= 1.0
-            self._text.configure(state="normal")
-            self._text.insert(index="end", chars="\n".join(lines) + "\n")
-            # The last line is the empty one after the final newline.
-            excess: int = int(self._text.index(index="end-1c").split(sep=".", maxsplit=1)[0]) - 1 - LOG_PANEL_MAX_LINES
-            if excess > 0:
-                self._text.delete(index1="1.0", index2=f"{excess + 1}.0")
-            self._text.configure(state="disabled")
-            if at_end:
-                self._text.see(index="end")
-        self.frame.after(ms=LOG_POLL_MS, func=self._drain)
+            self.appendPlainText("\n".join(lines))

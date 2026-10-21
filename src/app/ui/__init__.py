@@ -1,3 +1,3 @@
-"""tkinter user interface: main window, presenter and background worker."""
+"""Qt user interface: main window, presenter and background worker."""
 
 __all__: tuple = ()

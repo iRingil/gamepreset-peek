@@ -1,9 +1,7 @@
 """Small icons drawn in code: the warning sign put after a list item text."""
 
-import base64
 import math
 import struct
-import tkinter as tk
 import zlib
 
 __all__: tuple[str, ...] = ("Icons",)
@@ -13,7 +11,7 @@ _Rgba = tuple[int, int, int, int]
 
 
 class Icons:
-    """Icons as Tk images made from PNG data, the only way Tk 8.6 shows partly transparent (antialiased) pixels.
+    """Icons as PNG data with antialiased, partly transparent edges, drawn the same at any size.
 
     The warning sign is a road-sign triangle: amber with a dark rim, so its outline holds on light, dark and selected
     rows alike. Corners are rounded like the other shapes of the theme; sizes are fractions of the icon side."""
@@ -31,21 +29,15 @@ class Icons:
     _DOT: tuple[_Point, float] = ((0.5, 0.735), 0.065)
 
     @classmethod
-    def warning(cls, *, root: tk.Misc, size: int, gap: int = 0) -> tk.PhotoImage:
+    def warning(cls, *, size: int) -> bytes:
         """
         Draw the warning sign: an amber rounded triangle with a dark rim and exclamation mark.
 
-        :param root: Tk widget the image belongs to
         :param size: height and width of the sign in pixels
-        :param gap: transparent pixels left of the sign, to space it from the text before it
-        :return: the image
+        :return: PNG data
         """
-        pixels: list[_Rgba] = [
-            (0, 0, 0, 0) if x < gap else cls._pixel(x=x - gap, y=y, size=size)
-            for y in range(size)
-            for x in range(gap + size)
-        ]
-        return tk.PhotoImage(master=root, data=cls._png(width=gap + size, height=size, pixels=pixels))
+        pixels: list[_Rgba] = [cls._pixel(x=x, y=y, size=size) for y in range(size) for x in range(size)]
+        return cls._png(width=size, height=size, pixels=pixels)
 
     @classmethod
     def _pixel(cls, *, x: int, y: int, size: int) -> _Rgba:
@@ -161,14 +153,14 @@ class Icons:
         return all(side >= 0 for side in sides) or all(side <= 0 for side in sides)
 
     @classmethod
-    def _png(cls, *, width: int, height: int, pixels: list[_Rgba]) -> str:
+    def _png(cls, *, width: int, height: int, pixels: list[_Rgba]) -> bytes:
         """
-        Encode RGBA pixels as PNG data the way Tk takes it.
+        Encode RGBA pixels as PNG data.
 
         :param width: width in pixels
         :param height: height in pixels
         :param pixels: red, green, blue and alpha of each pixel, row by row
-        :return: base64 PNG data
+        :return: PNG data
         """
         rows: bytes = b"".join(
             # Filter type 0 (none) starts every row.
@@ -177,13 +169,12 @@ class Icons:
         )
         # 8 bits per channel, color type 6 (RGBA), no interlace.
         header: bytes = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
-        data: bytes = (
+        return (
             b"\x89PNG\r\n\x1a\n"
             + cls._chunk(kind=b"IHDR", body=header)
             + cls._chunk(kind=b"IDAT", body=zlib.compress(rows))
             + cls._chunk(kind=b"IEND", body=b"")
         )
-        return base64.b64encode(data).decode(encoding="ascii")
 
     @staticmethod
     def _chunk(*, kind: bytes, body: bytes) -> bytes:

@@ -1,6 +1,9 @@
 [tool.pylint.main]
+# Qt bindings are C extensions: pylint has to import them to see their names.
+extension-pkg-allow-list = ["PySide6"]
 fail-under = 10
-ignore = ["CVS"]
+# vendor holds third-party code copied as is.
+ignore = ["CVS", "vendor"]
 ignore-patterns = ["^\\.#"]
 init-hook="import sys; sys.path.append('src')"
 jobs = 0
@@ -111,6 +114,8 @@ spelling-ignore-comment-directives = "fmt: on,fmt: off,noqa:,noqa,nosec,isort:sk
 
 [tool.pylint.typecheck]
 contextmanager-decorators = ["contextlib.contextmanager"]
+# Qt signals are bound at run time: pylint sees them as plain methods without connect().
+generated-members = ["connect"]
 ignore-none = true
 ignore-on-opaque-inference = true
 ignored-checks-for-mixins = [
@@ -136,6 +141,7 @@ redefining-builtins-modules = ["six.moves", "past.builtins", "future.builtins", 
 [tool.black]
 line-length = 120
 target-version = ["py313"]
+extend-exclude = "src/app/ui/vendor/"
 
 
 [tool.mypy]
@@ -146,9 +152,12 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+# Third-party code copied as is: its own typing is not ours to fix.
+module = ["app.ui.vendor.qdarktheme", "app.ui.vendor.qdarktheme.*"]
+ignore_errors = true
+
 
 [tool.pytest.ini_options]
-# Capture at the Python level only: swapping the standard file descriptors breaks Tcl's file reads in Tk tests.
-addopts = "--capture=sys"
 pythonpath = ["src"]
 python_files = ["tests/**/*.py"]

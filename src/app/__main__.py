@@ -1,10 +1,10 @@
-"""Entry point: set up logging, wire the service and the window, run the Tk event loop."""
+"""Entry point: set up logging, wire the service and the window, run the Qt event loop."""
 
-import ctypes
-import tkinter as tk
-from typing import Any
+import sys
+from types import TracebackType
 
 from loguru import logger
+from PySide6.QtWidgets import QApplication
 
 from app.core.game_names import GameNames
 from app.core.hardware import GpuList, GpuRanks, HardwareDetector
@@ -34,7 +34,7 @@ class _Application:  # pylint: disable=too-few-public-methods
 
     def run(self) -> None:
         """
-        Wire everything and run the Tk event loop.
+        Wire everything and run the Qt event loop.
 
         :return: None
         """
@@ -48,31 +48,34 @@ class _Application:  # pylint: disable=too-few-public-methods
                 store=UserSettingsStore(),
             )
             translator: Translator = Translator(language=Translator.pick_language(saved=service.saved_language()))
-            self._enable_dpi_awareness()
-            root: tk.Tk = tk.Tk()
-            window: MainWindow = MainWindow(root=root, log_lines=self._logging.lines)
-            worker: Worker = Worker(root=root)
+            application: QApplication = QApplication(sys.argv)
+            sys.excepthook = self._log_unhandled
+            window: MainWindow = MainWindow(log_lines=self._logging.lines)
+            worker: Worker = Worker()
             presenter: Presenter = Presenter(
                 view=window, service=service, runner=worker, translator=translator, theme=service.saved_theme()
             )
-            window.connect(presenter=presenter)
+            window.attach(presenter=presenter)
             presenter.start()
+            window.show()
             try:
-                root.mainloop()
+                application.exec()
             finally:
                 worker.close()
 
     @staticmethod
-    def _enable_dpi_awareness() -> None:
+    def _log_unhandled(
+        exc_type: type[BaseException], exc_value: BaseException, traceback: TracebackType | None
+    ) -> None:
         """
-        Draw the window at the real screen resolution instead of letting Windows stretch it (blurry when scaled).
+        Log an error raised in a Qt slot, which would otherwise go to the missing stderr.
 
+        :param exc_type: exception type
+        :param exc_value: exception
+        :param traceback: traceback
         :return: None
         """
-        # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
-        set_awareness: Any = ctypes.WinDLL(name="shcore")["SetProcessDpiAwareness"]
-        # 1 = system DPI aware: Tk reads the scale once at start.
-        set_awareness(1)
+        logger.opt(exception=(exc_type, exc_value, traceback)).error("Unhandled error in the window")
 
 
 if __name__ == "__main__":
