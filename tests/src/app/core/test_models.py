@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.core.models import PresetsFile, Setting, SettingTranslation, Translations
+from app.core.models import GameSettings, PresetsFile, Setting, SettingTranslation, Translations
 
 __all__: tuple = ()
 
@@ -121,3 +121,30 @@ class TestTranslations:
         name: str = translations.value_name(language=language, setting=setting, value=value)
         # Assert
         assert name == expected
+
+
+class TestGameSettings:
+    """Tests of GameSettings.rows."""
+
+    def test_rows_translated(self) -> None:
+        """
+        Translates setting names and values, keeping values without a translation (numbers) as NVIDIA sends them.
+
+        :return: None
+        """
+        # Arrange
+        settings: GameSettings = GameSettings(
+            values=((Setting(name="Shadows", type="ENUM"), "High"), (Setting(name="Scale", type="FLOAT"), "1.000")),
+            translations=Translations(
+                languages={
+                    "ru_RU": {
+                        "Shadows": SettingTranslation(name="Тени", values={"High": "Высокое"}),
+                        "Scale": SettingTranslation(name="Масштаб", values={}),
+                    }
+                }
+            ),
+        )
+        # Act
+        rows: tuple[tuple[str, str], ...] = settings.rows(language="ru_RU")
+        # Assert
+        assert rows == (("Тени", "Высокое"), ("Масштаб", "1.000"))

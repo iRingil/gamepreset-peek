@@ -1,12 +1,17 @@
 """Data classes of the NVIDIA presets data, of the user's hardware and of the saved user settings."""
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 __all__: tuple[str, ...] = (
     "Compatibility",
+    "Game",
     "GamePresets",
+    "GameSettings",
     "Gpu",
     "Hardware",
+    "HardwareCheck",
+    "HardwareState",
     "PresetsFile",
     "RemoteFile",
     "ResolutionPreset",
@@ -36,6 +41,29 @@ class Hardware:
     os_version: str
 
 
+class HardwareState(StrEnum):
+    """Outcome of finding the hardware to request presets with."""
+
+    READY = "ready"
+    NO_NVIDIA_GPU = "no_nvidia_gpu"
+    CHOOSE_DETECTED_GPU = "choose_detected_gpu"
+    CHOOSE_LISTED_GPU = "choose_listed_gpu"
+    REJECTED = "rejected"
+
+
+@dataclass(frozen=True, slots=True)
+class HardwareCheck:
+    """Hardware ready for preset requests, or what the user has to do first.
+
+    READY carries the hardware; CHOOSE_DETECTED_GPU and CHOOSE_LISTED_GPU the GPUs to choose from (detected ones the
+    most powerful first); REJECTED the components NVIDIA rejected that no GPU choice can fix."""
+
+    state: HardwareState
+    hardware: Hardware | None = None
+    gpus: tuple[Gpu, ...] = ()
+    failed: tuple[str, ...] = ()
+
+
 @dataclass(frozen=True, slots=True)
 class Compatibility:
     """Result of NVIDIA's hardware compatibility check."""
@@ -51,6 +79,14 @@ class RemoteFile:
     url: str
     sha256: str
     size: int
+
+
+@dataclass(frozen=True, slots=True)
+class Game:
+    """A game of NVIDIA's catalog with its display name."""
+
+    game_id: str
+    name: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +170,29 @@ class Translations:
         """
         translation: SettingTranslation | None = self.languages.get(language, {}).get(setting)
         return (translation.values.get(value) if translation is not None else None) or value
+
+
+@dataclass(frozen=True, slots=True)
+class GameSettings:
+    """Settings of one preset with their values and the game's translations to show them in any UI language."""
+
+    values: tuple[tuple[Setting, str], ...]
+    translations: Translations
+
+    def rows(self, *, language: str) -> tuple[tuple[str, str], ...]:
+        """
+        Translate the settings and their values; a value missing from the translations is kept as NVIDIA sends it.
+
+        :param language: NVIDIA language code, e.g. "ru_RU"
+        :return: setting name and value pairs, in the order of settings
+        """
+        return tuple(
+            (
+                self.translations.setting_name(language=language, setting=setting.name),
+                self.translations.value_name(language=language, setting=setting.name, value=value),
+            )
+            for setting, value in self.values
+        )
 
 
 @dataclass(frozen=True, slots=True)
