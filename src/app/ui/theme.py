@@ -1,4 +1,4 @@
-"""The "OSD" ttk theme: graphite or steel-grey with a blue accent, the Windows app mode for AUTO, dark title bars."""
+"""The app ttk theme: a sea palette in light or dark with rounded elements; AUTO mode and dark title bars."""
 
 import ctypes
 import tkinter as tk
@@ -14,11 +14,122 @@ from app.core.models import ThemeMode
 __all__: tuple[str, ...] = ("Theme",)
 
 
-class Theme:  # pylint: disable=too-few-public-methods
-    """Styles every ttk widget of a Tk application in the light or dark palette, built on the "clam" theme.
+class _Shapes:
+    """Rounded rectangles drawn into named Tk images, antialiased against the color around them.
 
-    Fonts are in points, which Tk scales to the screen DPI itself; sizes in pixels (row height, paddings) are scaled
-    here. The style names for labels and buttons with a role are the class constants."""
+    Tk images have no partial transparency, so the edge pixels are blended with the color the shape sits on. An
+    image keeps its name when redrawn, so the ttk elements made from it follow a palette switch."""
+
+    _SAMPLES: int = 4
+
+    def __init__(self, *, root: tk.Tk) -> None:
+        """
+        Start with no images.
+
+        :param root: Tk root window
+        """
+        self._root: tk.Tk = root
+        self._images: dict[str, tk.PhotoImage] = {}
+
+    def draw(  # pylint: disable=too-many-arguments
+        self,
+        *,
+        name: str,
+        size: tuple[int, int],
+        radius: int,
+        fill: str,
+        outside: str,
+        border: str | None = None,
+        border_width: int = 0,
+    ) -> str:
+        """
+        Draw a rounded rectangle, replacing the image of that name if it exists.
+
+        :param name: image name, also used in ttk element definitions
+        :param size: width and height in pixels
+        :param radius: corner radius in pixels
+        :param fill: inner color
+        :param outside: color of the surface around the shape
+        :param border: border color, None for no border
+        :param border_width: border width in pixels
+        :return: the image name
+        """
+        width: int
+        height: int
+        width, height = size
+        image: tk.PhotoImage | None = self._images.get(name)
+        if image is None:
+            image = tk.PhotoImage(master=self._root, name=name, width=width, height=height)
+            self._images[name] = image
+        rows: list[str] = []
+        for y in range(height):
+            row: list[str] = []
+            for x in range(width):
+                outer: float = self._coverage(x=x, y=y, size=size, radius=radius, inset=0)
+                if border is None:
+                    row.append(self.mix(first=outside, second=fill, share=outer))
+                    continue
+                inner: float = self._coverage(x=x, y=y, size=size, radius=radius, inset=border_width)
+                edge: str = self.mix(first=outside, second=border, share=outer)
+                row.append(self.mix(first=edge, second=fill, share=inner))
+            rows.append("{" + " ".join(row) + "}")
+        image.put(" ".join(rows))
+        return name
+
+    @staticmethod
+    def mix(*, first: str, second: str, share: float) -> str:
+        """
+        Blend two colors.
+
+        :param first: color as #rrggbb
+        :param second: color as #rrggbb
+        :param share: share of the second color, 0 to 1
+        :return: blended color as #rrggbb
+        """
+        channels: list[int] = [
+            round(int(first[i : i + 2], 16) * (1 - share) + int(second[i : i + 2], 16) * share) for i in (1, 3, 5)
+        ]
+        return "#" + "".join(f"{channel:02x}" for channel in channels)
+
+    @classmethod
+    def _coverage(cls, *, x: int, y: int, size: tuple[int, int], radius: float, inset: float) -> float:
+        """
+        Measure how much of a pixel lies inside a rounded rectangle shrunk by an inset.
+
+        :param x: pixel column
+        :param y: pixel row
+        :param size: width and height of the rectangle
+        :param radius: corner radius before the inset
+        :param inset: distance the edges move inwards
+        :return: covered share of the pixel, 0 to 1
+        """
+        left: float = inset
+        top: float = inset
+        right: float = size[0] - inset
+        bottom: float = size[1] - inset
+        corner: float = max(radius - inset, 0.0)
+        inside: int = 0
+        for sub_x in range(cls._SAMPLES):
+            for sub_y in range(cls._SAMPLES):
+                point_x: float = x + (sub_x + 0.5) / cls._SAMPLES
+                point_y: float = y + (sub_y + 0.5) / cls._SAMPLES
+                # Distance to the nearest point of the inner rectangle the corners are drawn around.
+                near_x: float = min(max(point_x, left + corner), right - corner)
+                near_y: float = min(max(point_y, top + corner), bottom - corner)
+                if (
+                    left <= point_x <= right
+                    and top <= point_y <= bottom
+                    and (point_x - near_x) ** 2 + (point_y - near_y) ** 2 <= corner**2
+                ):
+                    inside += 1
+        return inside / cls._SAMPLES**2
+
+
+class Theme:
+    """Styles every ttk widget of a Tk application in the light or dark palette, on top of the "clam" theme.
+
+    Buttons, fields, lists, scrollbars and the slider are image elements with rounded corners, drawn for the palette
+    and the screen scale. Fonts are in points, which Tk scales to the DPI itself; pixel sizes are scaled here."""
 
     MUTED: str = "Muted.TLabel"
     SECTION: str = "Section.TLabel"
@@ -26,51 +137,66 @@ class Theme:  # pylint: disable=too-few-public-methods
     TITLE: str = "Title.TLabel"
     BIG: str = "Big.TLabel"
     ACCENT: str = "Accent.TButton"
-    STRONG_FONT: str = "OsdStrong"
-    LOG_FONT: str = "TkFixedFont"
+    STRONG_FONT: str = "AppStrong"
+    BODY_FONT: str = "AppBody"
+    MARKED_LIST: str = "Marked.Treeview"
+    # Text indent of a marked list item in pixels: the width of the clam tree indicator it replaces, which is unscaled.
+    MARKED_INDENT: int = 17
 
     _PERSONALIZE_KEY: str = r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
     _DWMWA_USE_IMMERSIVE_DARK_MODE: int = 20
     _BASE_DPI: float = 96.0
     _BASE: str = "clam"
+    # Sea palette: Oxford by Night #031830, Dark Eclipse #0a2943, Deadwind Pass #576e7d, Porch Ceiling #a4b2ba,
+    # Delicacy White #ede3e4, plus a turquoise accent the palette lacks.
     _PALETTES: dict[ThemeMode, dict[str, str]] = {
         ThemeMode.DARK: {
-            "bg": "#15171c",
-            "panel": "#1d2027",
-            "raised": "#262a33",
-            "fg": "#d6dae1",
-            "muted": "#868d9a",
-            "selected": "#2a303b",
-            "accent": "#4fb3ff",
-            "on_accent": "#0e1620",
-            "line": "#2b2f38",
+            "bg": "#031830",
+            "panel": "#0a2943",
+            "raised": "#163a57",
+            "fg": "#ede3e4",
+            "muted": "#a4b2ba",
+            "selected": "#576e7d",
+            "accent": "#5ec4e0",
+            "on_accent": "#031830",
+            "line": "#2a4a63",
         },
         ThemeMode.LIGHT: {
-            "bg": "#dcdfe4",
-            "panel": "#e8eaee",
-            "raised": "#f1f2f5",
-            "fg": "#20242b",
-            "muted": "#5d6470",
-            "selected": "#c9ced6",
-            "accent": "#1d6fb8",
-            "on_accent": "#f2f6fa",
-            "line": "#c7cbd2",
+            "bg": "#ede3e4",
+            "panel": "#e2dadc",
+            "raised": "#cdd3d8",
+            "fg": "#031830",
+            "muted": "#576e7d",
+            "selected": "#a4b2ba",
+            "accent": "#17708f",
+            "on_accent": "#f6f1f1",
+            "line": "#a4b2ba",
         },
     }
     # Named fonts: name -> (family, size in points); weights are separate families. Bahnschrift ships with Windows 10+.
     _FONTS: dict[str, tuple[str, int]] = {
-        "OsdBody": ("Segoe UI", 10),
+        BODY_FONT: ("Segoe UI", 10),
         STRONG_FONT: ("Segoe UI Semibold", 10),
-        "OsdSmall": ("Bahnschrift", 9),
-        "OsdSection": ("Bahnschrift SemiBold", 10),
-        "OsdHeadline": ("Bahnschrift SemiBold", 12),
-        "OsdTitle": ("Bahnschrift SemiBold", 17),
-        "OsdBig": ("Bahnschrift SemiBold", 26),
+        "AppSmall": ("Bahnschrift", 9),
+        "AppSection": ("Bahnschrift SemiBold", 10),
+        "AppHeadline": ("Bahnschrift SemiBold", 12),
+        "AppTitle": ("Bahnschrift SemiBold", 17),
+        "AppBig": ("Bahnschrift SemiBold", 26),
     }
     # Pixel sizes at 96 DPI.
-    _ROW_PADDING: int = 8
-    _SLIDER_SIZE: int = 18
-    _ARROW_SIZE: int = 12
+    _RADIUS: int = 6
+    _ROW_PADDING: int = 10
+    _KNOB: int = 18
+    _TRACK: int = 6
+    _THUMB: int = 10
+    # Element names of the rounded shapes, created once per Tk application.
+    _BUTTON: str = "App.Button.border"
+    _ACCENT_BUTTON: str = "App.Accent.border"
+    _FIELD: str = "App.Field.field"
+    _CARD: str = "App.Card.field"
+    _THUMB_ELEMENT: str = "App.Scrollbar.thumb"
+    _TRACK_ELEMENT: str = "App.Scale.trough"
+    _KNOB_ELEMENT: str = "App.Scale.slider"
 
     def __init__(self, *, root: tk.Tk) -> None:
         """
@@ -84,6 +210,7 @@ class Theme:  # pylint: disable=too-few-public-methods
         self._fonts: list[tkfont.Font] = [
             tkfont.Font(root=root, name=name, family=family, size=size) for name, (family, size) in self._FONTS.items()
         ]
+        self._shapes: _Shapes = _Shapes(root=root)
         self._colors: dict[str, str] = self._PALETTES[ThemeMode.DARK]
 
     def apply(self, *, mode: ThemeMode) -> ThemeMode:
@@ -97,13 +224,20 @@ class Theme:  # pylint: disable=too-few-public-methods
         self._colors = self._PALETTES[resolved]
         style: ttk.Style = ttk.Style(master=self._root)
         style.theme_use(self._BASE)
+        self._draw_shapes()
+        if self._BUTTON not in style.element_names():
+            self._create_elements(style=style)
         self._style_text(style=style)
         self._style_controls(style=style)
         self._style_lists(style=style)
         self._root.configure(background=self.color(name="bg"))
-        for option, name in (("background", "panel"), ("foreground", "fg"), ("selectBackground", "selected")):
+        for option, name in (
+            ("background", "panel"),
+            ("foreground", "fg"),
+            ("selectBackground", "selected"),
+            ("selectForeground", "fg"),
+        ):
             self._root.option_add(f"*TCombobox*Listbox.{option}", self.color(name=name))
-        self._root.option_add("*TCombobox*Listbox.selectForeground", self.color(name="fg"))
         logger.info("Theme: {} ({}), scale {}", resolved.value, mode.value, self.scale)
         return resolved
 
@@ -149,6 +283,188 @@ class Theme:  # pylint: disable=too-few-public-methods
             ctypes.sizeof(value),
         )
 
+    def _px(self, *, size: float) -> int:
+        """
+        Scale a size in pixels at 96 DPI to the screen.
+
+        :param size: size at 96 DPI
+        :return: size on the screen, at least 1
+        """
+        return max(1, round(size * self.scale))
+
+    def _draw_shapes(self) -> None:
+        """
+        Draw the images of the rounded elements in the palette applied.
+
+        :return: None
+        """
+        radius: int = self._px(size=self._RADIUS)
+        box: tuple[int, int] = (2 * radius + 6, 2 * radius + 6)
+        bg: str = self.color(name="bg")
+        accent: str = self.color(name="accent")
+        boxes: dict[str, str] = {
+            "app_button": self.color(name="raised"),
+            "app_button_active": self.color(name="selected"),
+            "app_accent": accent,
+            "app_accent_active": _Shapes.mix(first=accent, second=self.color(name="fg"), share=0.15),
+            "app_card": self.color(name="panel"),
+        }
+        for name, fill in boxes.items():
+            self._shapes.draw(name=name, size=box, radius=radius, fill=fill, outside=bg)
+        for name, border in (("app_field", self.color(name="line")), ("app_field_focus", accent)):
+            self._shapes.draw(
+                name=name,
+                size=box,
+                radius=radius,
+                fill=self.color(name="panel"),
+                outside=bg,
+                border=border,
+                border_width=self._px(size=1),
+            )
+        thumb: int = self._px(size=self._THUMB)
+        self._shapes.draw(
+            name="app_thumb",
+            size=(thumb, thumb + 6),
+            radius=thumb // 2,
+            fill=self.color(name="selected"),
+            outside=bg,
+        )
+        track: int = self._px(size=self._TRACK)
+        self._shapes.draw(
+            name="app_track",
+            size=(track * 3, track),
+            radius=track // 2,
+            fill=self.color(name="selected"),
+            outside=bg,
+        )
+        knob: int = self._px(size=self._KNOB)
+        self._shapes.draw(name="app_knob", size=(knob, knob), radius=knob // 2, fill=accent, outside=bg)
+
+    def _create_elements(self, *, style: ttk.Style) -> None:
+        """
+        Make the rounded image elements and the layouts that use them.
+
+        :param style: ttk style of the application
+        :return: None
+        """
+        # The border is the part of an image that doesn't stretch: just past the corner, below half the image.
+        corner: int = self._px(size=self._RADIUS) + 1
+        style.element_create(
+            self._BUTTON,
+            "image",
+            "app_button",
+            ("pressed", "app_button_active"),
+            ("active", "app_button_active"),
+            border=corner,
+            sticky="nsew",
+        )
+        style.element_create(
+            self._ACCENT_BUTTON,
+            "image",
+            "app_accent",
+            ("disabled", "app_button"),
+            ("active", "app_accent_active"),
+            border=corner,
+            sticky="nsew",
+        )
+        style.element_create(
+            self._FIELD, "image", "app_field", ("focus", "app_field_focus"), border=corner, sticky="nsew"
+        )
+        style.element_create(self._CARD, "image", "app_card", border=corner, sticky="nsew")
+        half_thumb: int = self._px(size=self._THUMB) // 2
+        style.element_create(self._THUMB_ELEMENT, "image", "app_thumb", border=half_thumb, sticky="ns")
+        style.element_create(
+            self._TRACK_ELEMENT, "image", "app_track", border=(self._px(size=self._TRACK), 0), sticky="ew"
+        )
+        style.element_create(self._KNOB_ELEMENT, "image", "app_knob", sticky="")
+        label: list[Any] = [("Button.padding", {"sticky": "nsew", "children": [("Button.label", {"sticky": "nsew"})]})]
+        style.layout("TButton", [(self._BUTTON, {"sticky": "nsew", "children": label})])
+        style.layout(self.ACCENT, [(self._ACCENT_BUTTON, {"sticky": "nsew", "children": label})])
+        style.layout(
+            "TEntry",
+            [
+                (
+                    self._FIELD,
+                    {
+                        "sticky": "nsew",
+                        "children": [
+                            ("Entry.padding", {"sticky": "nsew", "children": [("Entry.textarea", {"sticky": "nsew"})]})
+                        ],
+                    },
+                )
+            ],
+        )
+        style.layout(
+            "TCombobox",
+            [
+                (
+                    self._FIELD,
+                    {
+                        "sticky": "nsew",
+                        "children": [
+                            ("Combobox.downarrow", {"side": "right", "sticky": "ns"}),
+                            (
+                                "Combobox.padding",
+                                {"sticky": "nsew", "children": [("Combobox.textarea", {"sticky": "nsew"})]},
+                            ),
+                        ],
+                    },
+                )
+            ],
+        )
+        style.layout(
+            "Treeview",
+            [
+                (
+                    self._CARD,
+                    {
+                        "sticky": "nsew",
+                        "children": [
+                            (
+                                "Treeview.padding",
+                                {"sticky": "nsew", "children": [("Treeview.treearea", {"sticky": "nsew"})]},
+                            )
+                        ],
+                    },
+                )
+            ],
+        )
+        style.layout(self.MARKED_LIST, style.layout("Treeview"))
+        # A flat list has no tree indicator; the item image follows the text as a mark after it.
+        style.layout(
+            f"{self.MARKED_LIST}.Item",
+            [
+                (
+                    "Treeitem.padding",
+                    {
+                        "sticky": "nsew",
+                        "children": [
+                            ("Treeitem.text", {"side": "left", "sticky": ""}),
+                            ("Treeitem.image", {"side": "left", "sticky": ""}),
+                        ],
+                    },
+                )
+            ],
+        )
+        style.layout(
+            "Vertical.TScrollbar",
+            [
+                (
+                    "Vertical.Scrollbar.trough",
+                    {"sticky": "ns", "children": [(self._THUMB_ELEMENT, {"sticky": "nswe"})]},
+                )
+            ],
+        )
+        style.layout(
+            "Horizontal.TScale",
+            [
+                (
+                    self._TRACK_ELEMENT,
+                    {"sticky": "ew", "children": [(self._KNOB_ELEMENT, {"side": "left", "sticky": ""})]},
+                )
+            ],
+        )
+
     def _style_text(self, *, style: ttk.Style) -> None:
         """
         Style the base of every widget and the labels.
@@ -160,8 +476,8 @@ class Theme:  # pylint: disable=too-few-public-methods
             ".",
             background=self.color(name="bg"),
             foreground=self.color(name="fg"),
-            font="OsdBody",
-            troughcolor=self.color(name="panel"),
+            font=self.BODY_FONT,
+            troughcolor=self.color(name="bg"),
             fieldbackground=self.color(name="panel"),
             selectbackground=self.color(name="selected"),
             selectforeground=self.color(name="fg"),
@@ -170,80 +486,38 @@ class Theme:  # pylint: disable=too-few-public-methods
             **self._flat(name="bg"),
         )
         style.map(".", foreground=[("disabled", self.color(name="muted"))])
-        style.configure(self.MUTED, foreground=self.color(name="muted"), font="OsdSmall")
-        style.configure(self.SECTION, foreground=self.color(name="muted"), font="OsdSection")
-        style.configure(self.HEADLINE, font="OsdHeadline")
-        style.configure(self.TITLE, font="OsdTitle")
-        style.configure(self.BIG, foreground=self.color(name="accent"), font="OsdBig")
+        style.configure(self.MUTED, foreground=self.color(name="muted"), font="AppSmall")
+        style.configure(self.SECTION, foreground=self.color(name="muted"), font="AppSection")
+        style.configure(self.HEADLINE, font="AppHeadline")
+        style.configure(self.TITLE, font="AppTitle")
+        style.configure(self.BIG, foreground=self.color(name="accent"), font="AppBig")
 
     def _style_controls(self, *, style: ttk.Style) -> None:
         """
-        Style the buttons, the entry, the comboboxes and the slider: flat, filled, no 3D borders.
+        Style the buttons, the entry and the comboboxes; their shapes are the rounded elements.
 
         :param style: ttk style of the application
         :return: None
         """
-        padding: tuple[int, int] = (round(12 * self.scale), round(5 * self.scale))
-        style.configure(
-            "TButton",
-            background=self.color(name="raised"),
-            padding=padding,
-            focuscolor=self.color(name="raised"),
-            **self._flat(name="raised"),
-        )
-        style.map(
-            "TButton", background=[("pressed", self.color(name="selected")), ("active", self.color(name="selected"))]
-        )
-        style.configure(
-            self.ACCENT,
-            background=self.color(name="accent"),
-            foreground=self.color(name="on_accent"),
-            font=self.STRONG_FONT,
-            focuscolor=self.color(name="accent"),
-            **self._flat(name="accent"),
-        )
-        style.map(
-            self.ACCENT,
-            background=[("disabled", self.color(name="raised")), ("active", self.color(name="accent"))],
-            foreground=[("disabled", self.color(name="muted")), ("active", self.color(name="on_accent"))],
-        )
-        field: dict[str, Any] = {
-            "fieldbackground": self.color(name="panel"),
-            "padding": round(4 * self.scale),
-            "bordercolor": self.color(name="line"),
-            "lightcolor": self.color(name="panel"),
-            "darkcolor": self.color(name="panel"),
-        }
-        style.configure("TEntry", **field)
-        style.map(
-            "TEntry",
-            bordercolor=[("focus", self.color(name="accent"))],
-            lightcolor=[("focus", self.color(name="accent"))],
-        )
+        padding: tuple[int, int] = (self._px(size=14), self._px(size=6))
+        style.configure("TButton", foreground=self.color(name="fg"), padding=padding)
+        style.configure(self.ACCENT, foreground=self.color(name="on_accent"), font=self.STRONG_FONT, padding=padding)
+        style.map(self.ACCENT, foreground=[("disabled", self.color(name="muted"))])
+        style.configure("TEntry", padding=(self._px(size=8), self._px(size=5)))
         style.configure(
             "TCombobox",
-            background=self.color(name="panel"),
+            padding=(self._px(size=8), self._px(size=4)),
             arrowcolor=self.color(name="muted"),
+            background=self.color(name="panel"),
             selectbackground=self.color(name="panel"),
             selectforeground=self.color(name="fg"),
-            **field,
+            **self._flat(name="panel"),
         )
         style.map(
             "TCombobox",
             fieldbackground=[("readonly", self.color(name="panel"))],
             background=[("readonly", self.color(name="panel"))],
             foreground=[("readonly", self.color(name="fg"))],
-        )
-        style.configure(
-            "Horizontal.TScale",
-            background=self.color(name="accent"),
-            troughcolor=self.color(name="raised"),
-            sliderlength=round(self._SLIDER_SIZE * self.scale),
-            sliderthickness=round(self._SLIDER_SIZE * self.scale),
-            gripcount=0,
-            bordercolor=self.color(name="raised"),
-            lightcolor=self.color(name="accent"),
-            darkcolor=self.color(name="accent"),
         )
 
     def _style_lists(self, *, style: ttk.Style) -> None:
@@ -253,38 +527,32 @@ class Theme:  # pylint: disable=too-few-public-methods
         :param style: ttk style of the application
         :return: None
         """
-        body: tkfont.Font = tkfont.nametofont(name="OsdBody", root=self._root)
+        body: tkfont.Font = self._fonts[0]
         style.configure(
             "Treeview",
             background=self.color(name="panel"),
             fieldbackground=self.color(name="panel"),
-            rowheight=int(body.metrics("linespace")) + round(self._ROW_PADDING * self.scale),
-            borderwidth=0,
-            **self._flat(name="panel"),
+            foreground=self.color(name="fg"),
+            rowheight=int(body.metrics("linespace")) + self._px(size=self._ROW_PADDING),
+            padding=self._px(size=4),
         )
         style.map(
             "Treeview",
             background=[("selected", self.color(name="selected"))],
             foreground=[("selected", self.color(name="fg"))],
         )
+        style.configure(f"{self.MARKED_LIST}.Item", padding=(self.MARKED_INDENT, 0, 0, 0))
         style.configure(
             "Treeview.Heading",
+            background=self.color(name="panel"),
             foreground=self.color(name="muted"),
-            font="OsdSection",
+            font="AppSection",
             relief="flat",
-            padding=(round(6 * self.scale), round(4 * self.scale)),
-        )
-        style.map("Treeview.Heading", background=[("active", self.color(name="bg"))])
-        style.configure(
-            "Vertical.TScrollbar",
-            background=self.color(name="raised"),
-            troughcolor=self.color(name="panel"),
-            arrowcolor=self.color(name="muted"),
-            gripcount=0,
-            arrowsize=round(self._ARROW_SIZE * self.scale),
+            padding=(self._px(size=6), self._px(size=4)),
             **self._flat(name="panel"),
         )
-        style.map("Vertical.TScrollbar", background=[("active", self.color(name="selected"))])
+        style.map("Treeview.Heading", background=[("active", self.color(name="panel"))])
+        style.configure("Vertical.TScrollbar", troughcolor=self.color(name="bg"), **self._flat(name="bg"))
 
     def _flat(self, *, name: str) -> dict[str, str]:
         """

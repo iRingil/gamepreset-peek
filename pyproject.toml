@@ -148,5 +148,7 @@ ignore_missing_imports = true
 
 
 [tool.pytest.ini_options]
+# Capture at the Python level only: swapping the standard file descriptors breaks Tcl's file reads in Tk tests.
+addopts = "--capture=sys"
 pythonpath = ["src"]
 python_files = ["tests/**/*.py"]

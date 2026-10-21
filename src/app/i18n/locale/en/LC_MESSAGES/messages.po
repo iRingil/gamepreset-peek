@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-21 09:26+0300\n"
+"POT-Creation-Date: 2026-10-21 15:54+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -114,9 +114,8 @@ msgid "Choose a graphics card first."
 msgstr "Choose a graphics card first."
 
 #. RESOLUTION_BELOW_MIN_SPEC
-#, python-brace-format
-msgid "{resolution} (below minimum requirements)"
-msgstr "{resolution} (below minimum requirements)"
+msgid "This PC is below the minimum requirements for this resolution: even the lowest settings may stutter."
+msgstr "This PC is below the minimum requirements for this resolution: even the lowest settings may stutter."
 
 #. PERFORMANCE
 msgid "Performance"

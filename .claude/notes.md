@@ -33,8 +33,13 @@
   `ui/main_window.py`, `ui/log_panel.py`, `__main__.py`; service: `all_gpus`, `saved_language`, `save_language`,
   `game_settings` returns all presets (`GameSettings.rows(index=...)`); 10 new UI texts.
 - 2026-10-21: theme: Sun Valley (`sv-ttk`) tried and rejected by the user (light too bright, dark dull); own "OSD"
-  theme on `clam` (`ui/theme.py`), Auto / Light / Dark saved in settings, game search, settings title, rows that
-  differ from the recommended preset highlighted, DPI awareness.
+  theme on `clam`, Auto / Light / Dark saved in settings, game search, settings title, rows that differ from the
+  recommended preset highlighted, DPI awareness (commit `3d7ebf6`).
+- 2026-10-21: Azure (rdbende) tried with the OSD palette and dropped; back to the own `clam` theme with a "sea"
+  palette (user's choice, from palettepoint.com) and rounded elements drawn as generated images; pytest capture set
+  to `sys` (flaky Tcl file reads).
+- 2026-10-21: `belowMinSpec` resolutions get a colored warning sign (`ui/icons.py`) with the explanation in a popup
+  on hover instead of a text suffix (users read "below minimum" as being about the resolution).
 
 ## Decisions and findings
 
@@ -343,7 +348,51 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
   for the window's thread: launch it with `Popen` from the Tk thread, never wait on it there (deadlock), one capture
   per run. `CopyFromScreen` needs the window visible on top. The earlier white screenshots were a covered or
   minimized window, not a locked desktop.
-- Tk tests: pytest swaps the standard file descriptors between fixture setup and the test call; a Tcl interpreter
-  created in a fixture then fails to read files (`couldn't read file ... No error`), so Tk roots are created inside
-  the test. A rare Tcl init failure (`tcl_findLibrary`, about 1 in 30 full runs, not reproduced in 20 runs later)
-  remains unexplained.
+- Tk tests: pytest's default fd-level capture swaps the standard file descriptors, and Tcl then fails to read files
+  now and then (`couldn't read file ... No error`, `tcl_findLibrary`; about 4 in 20 runs of the theme tests, 0 in
+  20 with `-s` or `--capture=sys`). `pyproject.toml` sets `addopts = "--capture=sys"`: Python output is still
+  captured. Tk roots are also made inside each test, not in fixtures.
+
+### Sea palette and rounded elements (2026-10-21)
+
+- Tried and dropped in this order: Sun Valley (`sv-ttk`), own OSD palette (graphite / amber, then blue), Azure
+  (rdbende; light is pure white, dark `#333`; its image widgets keep their colors under another palette). The user
+  liked Azure's rounded corners only.
+- Palette: Oxford by Night `#031830`, Dark Eclipse `#0a2943`, Deadwind Pass `#576e7d`, Porch Ceiling `#a4b2ba`,
+  Delicacy White `#ede3e4` (dark: background, panels, selection, secondary text, text; light reversed) plus a
+  turquoise accent `#5ec4e0` / `#17708f` the palette lacks. All in `Theme._PALETTES`.
+- `clam` has no corner radius: buttons, fields, comboboxes, list backgrounds, scrollbar thumbs, the slider track
+  and knob are ttk image elements (9-slice). `_Shapes` draws rounded rectangles into named `PhotoImage`s, 4x4
+  supersampled. Tk images have no partial alpha, so edges are blended with the color around the shape (the window
+  background); a redraw under the same name updates every element on a palette switch, the elements are created once.
+- 9-slice: the image `border` (the part that doesn't stretch) must stay below half the image size, otherwise the
+  middle is empty and only the corners show (box image `2r + 6`, border `r + 1`). Pills (thumb, track) keep round
+  ends by not stretching along their short side.
+- A ttk Scrollbar finds its thumb by an element name ending in `.thumb` (`App.Scrollbar.thumb` works).
+- typeshed's `_Layout` wants `expand` as bool; a dict mixing str and bool infers `dict[str, object]`: leave
+  `expand` out (the thumb is sized by the scrollbar anyway).
+- Azure finding kept for reference: its `set_theme` proc calls `tk_setPalette`, which writes colors into every
+  widget (ttk labels too) and overrides label styles.
+
+### Warning sign on resolutions (2026-10-21)
+
+- `belowMinSpec` is about the hardware, not the resolution: the text suffix "(below minimum requirements)" was read
+  as "the highest resolution is below something" and got cut off in the narrow list. Now a sign plus a hover popup.
+- Tk 8.6 photo `put` takes no alpha (`#rrggbbaa` fails to parse); partly transparent pixels only come from PNG data,
+  so `Icons` encodes RGBA PNG in code (no Pillow) and the sign blends with any row background, selected included.
+- The sign goes after the text, one space apart (user's call: a sign before the text shifted every resolution of a
+  game with a sign). Theme style `Marked.Treeview` has an item layout of text then image, without the tree
+  indicator; its item padding (`MARKED_INDENT` = 17 px, clam's indicator width, unscaled) keeps the text where the
+  default layout puts it. The space is a transparent gap inside the image, as wide as a space of the body font.
+- `Treeview.identify_element` doesn't work for a custom item layout (reports "padding" everywhere), so the hover
+  finds the sign from the item bbox, the indent and the measured text width.
+- Design (2026-10-21, frontend-design pass): an "attention" triangle, not a "stop" sign, because the resolution
+  stays usable and NVIDIA still gives a preset for it.
+- Plain amber `#F5A623` vanishes on the light theme (1.5:1 on `#e2dadc`) and on selected rows of both themes, so
+  the sign is road-sign style: amber `#FFC24B` with a rim and "!" in palette navy `#031830`, one image for both themes.
+- Rounded corners and a capsule bar match the rounded shapes of the theme. At 16 px the dot merged with the rim:
+  the sign is 18 px at 96 DPI and its geometry was tuned for that grid (checked at 18 and 27 px on all four row
+  backgrounds, and in a live list with the popup in both themes).
+- Popup: a semibold title ("Too demanding for this PC") over a one-sentence text, 350 ms delay like Windows
+  tooltips, flipped to stay on screen. The texts are only in `UiText`: the catalog tests fail until the translation
+  pass.

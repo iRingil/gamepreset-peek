@@ -122,8 +122,8 @@ tests/src/app/...
   (15 lines, scrollable).
 - [x] Presenter with the worker thread; switching game or resolution clears the table and shows the button again.
   No recommendation -> "No recommendations"; NVIDIA rejects the CPU -> message only (CPU choice is a future feature).
-- [x] Own "OSD" ttk theme (Auto / Light / Dark, saved), DPI awareness, game search, settings title, highlight of
-  values that differ from the recommended preset.
+- [x] Own ttk theme: sea palette, rounded elements (Auto / Light / Dark, saved), DPI awareness, game search,
+  settings title, highlight of values that differ from the recommended preset.
 - [x] Saving the language chosen in the dropdown (`UserSettingsStore`, keeping the saved GPU); `UiText` members are
   added as the window needs them (then `make_pot`, `pybabel update`, translate, `compile`).
 
