@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.core.models import Gpu, UserSettings
+from app.core.models import Gpu, ThemeMode, UserSettings
 from app.core.user_settings import UserSettingsStore
 
 __all__: tuple = ()
@@ -38,7 +38,9 @@ class TestUserSettingsStore:
     @pytest.mark.parametrize(
         argnames="settings",
         argvalues=[
-            UserSettings(language="ru", gpu=Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507")),
+            UserSettings(
+                language="ru", gpu=Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"), theme=ThemeMode.DARK
+            ),
             UserSettings(language="de"),
             UserSettings(),
         ],
@@ -69,8 +71,19 @@ class TestUserSettingsStore:
             '{"gpu": "NVIDIA GeForce RTX 3050"}',
             '{"gpu": {"name": "NVIDIA GeForce RTX 3050"}}',
             '{"gpu": {"name": "NVIDIA GeForce RTX 3050", "device_id": 9479}}',
+            '{"theme": "sepia"}',
+            '{"theme": 1}',
         ],
-        ids=["not json", "not an object", "language not a string", "gpu not an object", "no device id", "int id"],
+        ids=[
+            "not json",
+            "not an object",
+            "language not a string",
+            "gpu not an object",
+            "no device id",
+            "int id",
+            "unknown theme",
+            "theme not a string",
+        ],
     )
     def test_broken_file(self, path: Path, content: str) -> None:
         """
@@ -87,3 +100,18 @@ class TestUserSettingsStore:
         settings: UserSettings = UserSettingsStore(path=path).load()
         # Assert
         assert settings == UserSettings()
+
+    def test_file_without_theme(self, path: Path) -> None:
+        """
+        Reads a file saved before the theme existed with the AUTO theme.
+
+        :param path: settings file path
+        :return: None
+        """
+        # Arrange
+        path.parent.mkdir(parents=True)
+        path.write_text(data='{"language": "de", "gpu": null}', encoding="utf-8")
+        # Act
+        settings: UserSettings = UserSettingsStore(path=path).load()
+        # Assert
+        assert settings == UserSettings(language="de", theme=ThemeMode.AUTO)

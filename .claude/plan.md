@@ -115,10 +115,16 @@ tests/src/app/...
 - [x] Test: every `UiText` member translated in every language.
 
 ### 8. GUI
-- [ ] Main window: games list, "Load games" button on catalog failure, resolutions list, "Show settings" button,
-  settings table, language dropdown, GPU choice dialog, "Show logs" panel (15 lines, scrollable).
-- [ ] Presenter with the worker thread; switching game or resolution clears the table and shows the button again.
-- [ ] Saving the language chosen in the dropdown (`UserSettingsStore`, keeping the saved GPU); `UiText` members are
+- [x] Main window: games list, "Load games" button on catalog failure, resolutions list (sorted by size, below-spec
+  ones marked), "Show settings" button, settings table, quality slider over all presets of the game (starts at the
+  recommended one, "optimal" caption, "Back to optimal" button), target FPS (`rate`), language dropdown, GPU choice
+  dialog, "Change graphics card" button (any GPU: detected ones first, then the bundled list), "Show logs" panel
+  (15 lines, scrollable).
+- [x] Presenter with the worker thread; switching game or resolution clears the table and shows the button again.
+  No recommendation -> "No recommendations"; NVIDIA rejects the CPU -> message only (CPU choice is a future feature).
+- [x] Own "OSD" ttk theme (Auto / Light / Dark, saved), DPI awareness, game search, settings title, highlight of
+  values that differ from the recommended preset.
+- [x] Saving the language chosen in the dropdown (`UserSettingsStore`, keeping the saved GPU); `UiText` members are
   added as the window needs them (then `make_pot`, `pybabel update`, translate, `compile`).
 
 ### 9. Build
@@ -137,15 +143,13 @@ Not part of the current plan; research findings are in `.claude/notes.md` ("Game
   config path and the setting -> key mapping per game, both available only inside NVIDIA's compiled Lua wrappers.
   First step: research (decompile wrappers with e.g. `unluac`, check coverage across games), then decide.
 
+- [ ] Manual CPU choice when NVIDIA rejects the detected CPU (rare: a CPU newer than NVIDIA's database, a virtual
+  machine). The CPU changes the presets a lot, so a stub CPU is no option. Needs a bundled list of exact Windows
+  `ProcessorNameString` names NVIDIA accepts: NVIDIA matches the full name case-insensitively (clock included,
+  repeated spaces ignored), no NVIDIA endpoint lists CPUs. Findings in `.claude/notes.md` ("CPU influence").
+
 ## Open questions
 
 Decided in step 6: the service passes `belowMinSpec` and `rate` through, FLOAT values are shown as NVIDIA sends
-them, empty `ops` is a "no recommendation" result (not an error), `forget_gpu()` re-detects the GPU. Left for the GUI
-(step 8):
-
-- How to show a resolution whose answer has `belowMinSpec: true`?
-- Show `rate` (most likely target FPS) or ignore it?
-- What text to show when a game has no recommendation (empty `ops`, 375 games, or a too weak GPU)?
-- Is there a menu item / button for `forget_gpu()`?
-- What to show when NVIDIA rejects the CPU (`REJECTED`): no GPU choice fixes it, and presets answer 404 for an
-  unknown CPU.
+them, empty `ops` is a "no recommendation" result (not an error), `forget_gpu()` re-detects the GPU. Decided before
+step 8: see the step 8 items above and the CPU choice in "Future features". No open questions left.

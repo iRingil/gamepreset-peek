@@ -17,6 +17,7 @@ __all__: tuple[str, ...] = (
     "ResolutionPreset",
     "Setting",
     "SettingTranslation",
+    "ThemeMode",
     "Translations",
     "UserSettings",
 )
@@ -39,6 +40,14 @@ class Hardware:
     gpu_device_id: str
     memory_gb: int
     os_version: str
+
+
+class ThemeMode(StrEnum):
+    """Color theme of the UI; AUTO follows the Windows app mode."""
+
+    AUTO = "auto"
+    LIGHT = "light"
+    DARK = "dark"
 
 
 class HardwareState(StrEnum):
@@ -174,15 +183,27 @@ class Translations:
 
 @dataclass(frozen=True, slots=True)
 class GameSettings:
-    """Settings of one preset with their values and the game's translations to show them in any UI language."""
+    """All presets of a game with its translations, to show any preset in any UI language.
 
-    values: tuple[tuple[Setting, str], ...]
+    The presets go from the lowest to the highest quality; NVIDIA App's quality slider moves between them."""
+
+    presets: PresetsFile
     translations: Translations
 
-    def rows(self, *, language: str) -> tuple[tuple[str, str], ...]:
+    @property
+    def count(self) -> int:
         """
-        Translate the settings and their values; a value missing from the translations is kept as NVIDIA sends it.
+        Count the presets.
 
+        :return: number of presets, the highest 1-based preset index
+        """
+        return len(self.presets.presets)
+
+    def rows(self, *, index: int, language: str) -> tuple[tuple[str, str], ...]:
+        """
+        Translate the settings of a preset and their values; a value missing from the translations is kept as is.
+
+        :param index: 1-based preset index, as in ResolutionPreset.preset_index
         :param language: NVIDIA language code, e.g. "ru_RU"
         :return: setting name and value pairs, in the order of settings
         """
@@ -191,13 +212,14 @@ class GameSettings:
                 self.translations.setting_name(language=language, setting=setting.name),
                 self.translations.value_name(language=language, setting=setting.name, value=value),
             )
-            for setting, value in self.values
+            for setting, value in self.presets.values(index=index)
         )
 
 
 @dataclass(frozen=True, slots=True)
 class UserSettings:
-    """Settings kept between runs: UI language code and the GPU the user chose; None when not chosen yet."""
+    """Settings kept between runs: UI language code, the GPU the user chose (None when not chosen yet) and the theme."""
 
     language: str | None = None
     gpu: Gpu | None = None
+    theme: ThemeMode = ThemeMode.AUTO

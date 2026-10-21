@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-21 04:33+0300\n"
+"POT-Creation-Date: 2026-10-21 09:26+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -29,6 +29,31 @@ msgstr "Résolution"
 #. LANGUAGE
 msgid "Language"
 msgstr "Langue"
+
+#. THEME
+msgid "Theme"
+msgstr "Thème"
+
+#. THEME_AUTO
+msgid "Auto"
+msgstr "Automatique"
+
+#. THEME_LIGHT
+msgid "Light"
+msgstr "Clair"
+
+#. THEME_DARK
+msgid "Dark"
+msgstr "Sombre"
+
+#. SEARCH
+msgid "Search"
+msgstr "Rechercher"
+
+#. SETTINGS_SUBTITLE
+#, python-brace-format
+msgid "{resolution}, target {rate} FPS"
+msgstr "{resolution}, objectif {rate} FPS"
 
 #. SETTING
 msgid "Setting"
@@ -81,12 +106,46 @@ msgid "Could not get data from NVIDIA: {error}"
 msgstr "Impossible d’obtenir les données de NVIDIA : {error}"
 
 #. NO_RECOMMENDATION
-msgid "NVIDIA has no recommended settings for this game on your hardware."
-msgstr "NVIDIA ne propose pas de paramètres recommandés pour ce jeu sur votre matériel."
+msgid "No recommendations"
+msgstr "Aucune recommandation"
 
-#. BELOW_MIN_SPEC
-msgid "below minimum requirements"
-msgstr "sous la configuration minimale"
+#. NO_HARDWARE
+msgid "Choose a graphics card first."
+msgstr "Choisissez d’abord une carte graphique."
+
+#. RESOLUTION_BELOW_MIN_SPEC
+#, python-brace-format
+msgid "{resolution} (below minimum requirements)"
+msgstr "{resolution} (sous la configuration minimale)"
+
+#. PERFORMANCE
+msgid "Performance"
+msgstr "Performances"
+
+#. QUALITY
+msgid "Quality"
+msgstr "Qualité"
+
+#. PRESET
+msgid "preset"
+msgstr "préréglage"
+
+#. OPTIMAL_PRESET
+msgid "optimal preset"
+msgstr "préréglage optimal"
+
+#. BACK_TO_OPTIMAL
+msgid "Back to optimal"
+msgstr "Revenir à l’optimal"
+
+#. CURRENT_GPU
+#, python-brace-format
+msgid "Graphics card: {gpu}"
+msgstr "Carte graphique : {gpu}"
+
+#. GPU_NOT_CHOSEN
+msgid "No graphics card chosen."
+msgstr "Aucune carte graphique choisie."
 
 #. NO_NVIDIA_GPU
 msgid "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only."
@@ -124,4 +183,8 @@ msgstr "Plusieurs cartes graphiques NVIDIA trouvées. Choisissez celle avec laqu
 #. CHOOSE_LISTED_GPU
 msgid "NVIDIA does not know your graphics card. Choose the closest one from the list."
 msgstr "NVIDIA ne connaît pas votre carte graphique. Choisissez la plus proche dans la liste."
+
+#. CHOOSE_ANY_GPU
+msgid "Choose the graphics card to get recommended settings for."
+msgstr "Choisissez la carte graphique pour laquelle obtenir les paramètres recommandés."
 

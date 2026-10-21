@@ -27,6 +27,14 @@
   `HardwareState`; tests with autospec mocks of `OpsApi` and `HardwareDetector`.
 - 2026-10-21: step 7: `i18n/ui_text.py` (`UiText`, 26 texts), `i18n/translator.py` (`Translator`),
   `tools/make_pot.py`, `.po` for en, ru, de, fr, es; language constants in `config.py`.
+- 2026-10-21: NVIDIA App's quality slider, `rate`, `belowMinSpec` and battery mode researched; CPU influence probed
+  (`research/stage8_cpu_probe.py`): the CPU changes presets, a manual CPU choice became a future feature.
+- 2026-10-21: step 8: `ui/worker.py` (`Worker`), `ui/presenter.py` (`Presenter`, `MainView`, `SettingsView`),
+  `ui/main_window.py`, `ui/log_panel.py`, `__main__.py`; service: `all_gpus`, `saved_language`, `save_language`,
+  `game_settings` returns all presets (`GameSettings.rows(index=...)`); 10 new UI texts.
+- 2026-10-21: theme: Sun Valley (`sv-ttk`) tried and rejected by the user (light too bright, dark dull); own "OSD"
+  theme on `clam` (`ui/theme.py`), Auto / Light / Dark saved in settings, game search, settings title, rows that
+  differ from the recommended preset highlighted, DPI awareness.
 
 ## Decisions and findings
 
@@ -67,7 +75,8 @@
   unknown). The other 12 parameters didn't change the answer for baldurs_gate_3.
 - `gpu.deviceID` picks the performance tier (4090 id 2684 gives higher presets); `gpu.name` picks the profile: a name
   NVIDIA doesn't know as RTX falls back to `regular` / `ops.json`. `cpu.name` must be a CPU NVIDIA knows (404 for
-  "xyz" and for a shortened "Intel(R) Core(TM) i3-10100"), but 7 different known CPUs gave identical presets.
+  "xyz" and for a shortened "Intel(R) Core(TM) i3-10100"). The 7 known CPUs here gave identical presets, but the
+  wider probe of step 8 shows the CPU does change them (see "CPU influence").
 - The answer has a single key, the profile; the resolution list differs per game (6 to 9 entries).
 - `/v4/ops-compatibility` returns `criteria.overallState` and, when false, per-component `states` (cpu/gpu/memory):
   usable to validate detected hardware.
@@ -253,3 +262,88 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
 - Texts for the GUI were written ahead from the step 8 plan (incl. `REJECTED` components and `belowMinSpec`); the
   wording is not final and is changed in step 8 with the window.
 - `pybabel` options go before the subcommand for `-q` (`pybabel -q init`), not after it.
+
+### Slider, rate, belowMinSpec, battery (2026-10-21, NVIDIA App cache and `research/stage3_cache`)
+
+- NVIDIA App's quality slider is the preset list of the presets file: `ApplicationState/<localId>.json` of
+  baldurs_gate_3 keeps `CurrentACPosition.Position: 15` at 2560x1600, where the answer recommends `pops: 16`, and the
+  saved settings match preset 16: the slider position is the 0-based preset index, the "optimal" mark is `pops`.
+- Presets go from lowest to highest quality: a higher resolution gets a lower index (baldurs_gate_3: 8K -> 1,
+  1360x768 -> 19 of 19).
+- `belowMinSpec: true` (170 entries, 79 games, RTX 4060 Laptop) always comes with `pops: 1`: even the lowest preset
+  is not enough for that resolution on the hardware.
+- `rate` is 40 almost everywhere; other values belong to old games with frame-locked engines (`street_fighter_v` 60,
+  `fifa_15` 30 / 35, `shogun_2_total_war` 50): most likely the target FPS the preset is chosen for. Not confirmed.
+- Power: the state file keeps `CurrentACPosition` (slider on mains) and a separate `CurrentDCState` / `TargetDCState`
+  (0/1, on battery) plus `CurrentPowerMode`. `backend.log` shows a single `/v3/ops/<game>/` request per game, so
+  NVIDIA sends no separate battery presets; what DC state 1 does (likely Battery Boost: a driver frame cap) is
+  unknown. `ApplicationStorage.json` has a `QuietModePopsFactor` key per application (empty in this cache).
+
+### CPU influence (2026-10-21, `research/stage8_cpu_probe.py`, answers in `research/stage8_cache/`)
+
+- 58 CPU names (Celeron N4020 and Core 2 Duo to Ryzen 9 9950X3D and Core Ultra 9 285K) x 3 GPUs (GTX 1050, RTX 4060
+  Laptop, RTX 4090) x 8 games (incl. CPU-heavy ones: MSFS 2024, Cities: Skylines II, Total War: Warhammer III).
+- The CPU changes the presets a lot: 4 to 11 distinct answers per GPU + game, e.g. MSFS 2024 at 4K on an RTX 4090:
+  preset 1, 14, 16, 17 or 42 depending on the CPU; weak CPUs (Celeron, Core 2, Athlon II) get `ops: []`. The
+  stage 0 finding "the CPU doesn't matter" held only for those 7 CPUs. A stub CPU would give wrong presets.
+- NVIDIA matches the exact Windows `ProcessorNameString`: every real name tried was accepted (also old and mobile
+  ones), a trailing space is tolerated, but "AMD Ryzen 7 7800X3D" (no "8-Core Processor") and "Intel Core
+  i9-13900HX" fail (compatibility cpu false, presets 404). 14th gen Intel names have no "14th Gen" prefix
+  ("Intel(R) Core(TM) i7-14700K"); with the prefix they are unknown.
+- So a rejected CPU should be rare: a CPU newer than NVIDIA's database, or a virtual machine's CPU name.
+- Matching (checked on the compatibility endpoint): case-insensitive and repeated spaces ignored, but the full name
+  is needed: a wrong clock ("@ 3.60GHz" for an i7-8700K), a missing "CPU @ ..." tail, a missing "(R)" / "(TM)" or a
+  wrong core count ("3600 8-Core") fail. Xeons pass; "Common KVM processor" and "QEMU Virtual CPU" fail.
+- User's decision: a rejected CPU gives a message only; a manual CPU choice is a future feature.
+
+### GUI (2026-10-21, step 8)
+
+- `Worker`: one daemon thread runs the tasks in submit order, so the service needs no locks (saving the language goes
+  through it too: it writes `settings.json` like `choose_gpu`). Tk is not thread-safe: the thread only fills a callback
+  queue that the Tk thread drains with `after` every 50 ms; the next pickup is scheduled in `finally`, so a failing
+  callback doesn't stop it. Task errors are logged by the worker with the traceback, the presenter shows the message.
+- The presenter has no tkinter import: it talks to `MainView` (a Protocol); tests use a fake view and a runner that
+  runs tasks in place (or keeps them to test stale answers). The window and the log panel have no tests.
+- Every presets / settings request gets a number; choosing another game or resolution makes earlier answers stale.
+- Texts shown are kept as functions (`Callable[[], str]`), so a language switch re-renders the hardware line, the
+  status, the resolution captions and the settings rows without requests.
+- Resolutions are sorted by pixel count, the largest first (NVIDIA's order is arbitrary).
+- Slider: `tk.Scale` (`ttk.Scale` has no integer step). Setting its position calls its command too; the presenter
+  ignores a move to the preset it shows. Tk can't mark a tick, so the "(optimal)" caption and the "Back to optimal"
+  button (disabled on the optimal preset) stand for NVIDIA App's mark. Target FPS is the resolution's `rate`.
+- "Change graphics card" is always enabled, also with no NVIDIA GPU: the list is the detected GPUs, then the bundled
+  ones (`all_gpus`), the GPU in use preselected. A cancel keeps the GPU in use; a cancel of the first choice at start
+  leaves "No graphics card chosen.". A new GPU clears the resolutions and requests the presets of the game again.
+- Listboxes need `exportselection=False`: otherwise selecting in one list clears the selection of the other.
+- `pybabel update --ignore-obsolete`, otherwise a removed `UiText` stays in the `.po` as an obsolete `#~` entry.
+- Live check 2026-10-21 (driver script in the session scratchpad, real NVIDIA data, baldurs_gate_3): 1763 games,
+  10 resolutions, preset 3 of 19 at 3440x1440, slider to 19, switch to Russian; all widget texts as expected.
+  Screenshots of the app window: see "Theme (OSD)" below.
+
+### Theme (OSD) (2026-10-21)
+
+- Themes compared (GitHub stars, PyPI downloads per month, 2026-10): CustomTkinter 13.6k / 630k (own widget set, no
+  table or list widget), ttkbootstrap 2.7k / 82k (Bootstrap look), sv-ttk 2.6k / 41k (Windows 11 look), ttkthemes
+  0.4k / 30k (GPL-3.0). sv-ttk was applied first and rejected by the user after a live look.
+- Own theme on the built-in `clam` (every color configurable, no image sprites): graphite (dark) or steel grey
+  (light, deliberately not white) with a blue accent (`#4fb3ff` dark, `#1d6fb8` light; amber was the first choice,
+  the user preferred blue). Palettes in `Theme._PALETTES`; a sketch script lives only in the session scratchpad.
+- Fonts: Segoe UI for body text, Bahnschrift (Windows 10+) for headings, the big "16 / 19" preset number and
+  captions. Named fonts in points, so Tk scales them to the DPI once the process is DPI aware (`__main__`); pixel
+  sizes (row height, paddings, slider) are multiplied by `Theme.scale` (`winfo_fpixels("1i") / 96`).
+- A `tkinter.font.Font` deletes its named font when garbage-collected: `Theme` keeps the objects referenced.
+- AUTO reads `AppsUseLightTheme` (HKCU Personalize) and the window re-checks it every 2 s. Dark title bars via
+  `DwmSetWindowAttribute(20)` on the parent of `winfo_id()`.
+- tk widgets outside ttk take colors by hand: the log `Text` (`LogPanel.apply_colors`) and the combobox drop-down
+  lists (option database for new ones, `ttk::combobox::PopdownWindow` for those already opened).
+- Lists are `ttk.Treeview` (themed) instead of `Listbox`; programmatic selection fires `<<TreeviewSelect>>`, so the
+  presenter ignores a selection of the game / resolution already chosen. The slider is `ttk.Scale` (continuous):
+  positions are rounded, a move to the shown preset is ignored.
+- Window screenshots: `PrintWindow` (PowerShell, `PW_RENDERFULLCONTENT`) captures a covered window, but it waits
+  for the window's thread: launch it with `Popen` from the Tk thread, never wait on it there (deadlock), one capture
+  per run. `CopyFromScreen` needs the window visible on top. The earlier white screenshots were a covered or
+  minimized window, not a locked desktop.
+- Tk tests: pytest swaps the standard file descriptors between fixture setup and the test call; a Tcl interpreter
+  created in a fixture then fails to read files (`couldn't read file ... No error`), so Tk roots are created inside
+  the test. A rare Tcl init failure (`tcl_findLibrary`, about 1 in 30 full runs, not reproduced in 20 runs later)
+  remains unexplained.

@@ -18,6 +18,7 @@ from app.core.models import (
     ResolutionPreset,
     Setting,
     SettingTranslation,
+    ThemeMode,
     Translations,
     UserSettings,
 )
@@ -334,9 +335,9 @@ class TestGameSettings:
         assert result == presets
         game_ops.game_presets.assert_called_once_with(game_id="mordhau", hardware=hardware)
 
-    def test_settings_of_resolution(self, game_ops: MagicMock, service: PresetService, presets: GamePresets) -> None:
+    def test_settings_of_game(self, game_ops: MagicMock, service: PresetService, presets: GamePresets) -> None:
         """
-        Gives the preset of the resolution with the game's translations.
+        Gives all presets of the game with its translations.
 
         :param game_ops: NVIDIA endpoints mock with game answers
         :param service: service under test
@@ -344,11 +345,9 @@ class TestGameSettings:
         :return: None
         """
         # Arrange & Act
-        settings: GameSettings = service.game_settings(
-            game_id="mordhau", presets=presets, resolution=presets.resolutions[0]
-        )
+        settings: GameSettings = service.game_settings(game_id="mordhau", presets=presets)
         # Assert
-        assert settings.rows(language="ru_RU") == (("Тени", "Высокое"),)
+        assert (settings.count, settings.rows(index=2, language="ru_RU")) == (2, (("Тени", "Высокое"),))
         game_ops.presets_file.assert_called_once_with(file=self._PRESETS_FILE)
         game_ops.translation_file.assert_called_once_with(game_id="mordhau", profile="regular")
         game_ops.translations.assert_called_once_with(file=self._TRANSLATION_FILE)
@@ -357,7 +356,7 @@ class TestGameSettings:
         self, game_ops: MagicMock, service: PresetService, presets: GamePresets
     ) -> None:
         """
-        Downloads a game's files once for all its resolutions.
+        Downloads a game's files once however often its settings are asked for.
 
         :param game_ops: NVIDIA endpoints mock with game answers
         :param service: service under test
@@ -365,13 +364,11 @@ class TestGameSettings:
         :return: None
         """
         # Arrange
-        service.game_settings(game_id="mordhau", presets=presets, resolution=presets.resolutions[0])
+        first: GameSettings = service.game_settings(game_id="mordhau", presets=presets)
         # Act
-        settings: GameSettings = service.game_settings(
-            game_id="mordhau", presets=presets, resolution=presets.resolutions[1]
-        )
+        second: GameSettings = service.game_settings(game_id="mordhau", presets=presets)
         # Assert
-        assert settings.rows(language="ru_RU") == (("Тени", "Low"),)
+        assert second is first
         assert (game_ops.presets_file.call_count, game_ops.translations.call_count) == (1, 1)
 
     def test_files_downloaded_for_other_game(
@@ -386,8 +383,101 @@ class TestGameSettings:
         :return: None
         """
         # Arrange
-        service.game_settings(game_id="mordhau", presets=presets, resolution=presets.resolutions[0])
+        service.game_settings(game_id="mordhau", presets=presets)
         # Act
-        service.game_settings(game_id="baldurs_gate_3", presets=presets, resolution=presets.resolutions[0])
+        service.game_settings(game_id="baldurs_gate_3", presets=presets)
         # Assert
         assert (game_ops.presets_file.call_count, game_ops.translations.call_count) == (2, 2)
+
+
+class TestAllGpus:
+    """Tests of PresetService.all_gpus."""
+
+    def test_detected_first(self, detector: MagicMock, service: PresetService) -> None:
+        """
+        Lists the detected GPUs first, then the bundled ones, each device id once.
+
+        :param detector: hardware detection mock
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        detector.nvidia_gpus.return_value = (_DESKTOP_GPU, Gpu(name="NVIDIA GeForce RTX 3050 OEM", device_id="2507"))
+        # Act
+        gpus: tuple[Gpu, ...] = service.all_gpus()
+        # Assert
+        assert gpus == (_DESKTOP_GPU, Gpu(name="NVIDIA GeForce RTX 3050 OEM", device_id="2507"))
+
+    def test_nothing_detected(self, service: PresetService) -> None:
+        """
+        Lists the bundled GPUs when no NVIDIA GPU is installed.
+
+        :param service: service under test
+        :return: None
+        """
+        # Arrange & Act
+        gpus: tuple[Gpu, ...] = service.all_gpus()
+        # Assert
+        assert gpus == (_LISTED_GPU,)
+
+
+class TestLanguage:
+    """Tests of PresetService.saved_language and save_language."""
+
+    def test_nothing_saved(self, service: PresetService) -> None:
+        """
+        Gives no language before one is saved.
+
+        :param service: service under test
+        :return: None
+        """
+        # Arrange & Act
+        language: str | None = service.saved_language()
+        # Assert
+        assert language is None
+
+    def test_saved_keeping_gpu(self, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Saves the language and keeps the saved GPU.
+
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(language="en", gpu=_LISTED_GPU))
+        # Act
+        service.save_language(language="fr")
+        # Assert
+        assert (service.saved_language(), store.load()) == ("fr", UserSettings(language="fr", gpu=_LISTED_GPU))
+
+
+class TestTheme:
+    """Tests of PresetService.saved_theme and save_theme."""
+
+    def test_nothing_saved(self, service: PresetService) -> None:
+        """
+        Gives AUTO before a theme is saved.
+
+        :param service: service under test
+        :return: None
+        """
+        # Arrange & Act
+        theme: ThemeMode = service.saved_theme()
+        # Assert
+        assert theme is ThemeMode.AUTO
+
+    def test_saved_keeping_others(self, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Saves the theme and keeps the language and the GPU.
+
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(language="ru", gpu=_LISTED_GPU))
+        # Act
+        service.save_theme(theme=ThemeMode.LIGHT)
+        # Assert
+        assert store.load() == UserSettings(language="ru", gpu=_LISTED_GPU, theme=ThemeMode.LIGHT)

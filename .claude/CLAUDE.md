@@ -19,13 +19,14 @@ mypy src
 pylint src                                                        # must score 10 (fail-under = 10)
 pytest                                                            # all tests
 pytest tests/src/<pkg>/test_x.py::TestClass::test_name            # single test
+$env:PYTHONPATH="src"; python -m app                               # run the app (needs compiled .mo)
 ```
 
 UI translations (`.po` are committed; `.pot` and `.mo` are git-ignored build output):
 
 ```shell
 $env:PYTHONPATH="src"; python tools/make_pot.py                                    # messages.pot from the UiText enum
-pybabel update -i src/app/i18n/locale/messages.pot -d src/app/i18n/locale -D messages -w 120
+pybabel update -i src/app/i18n/locale/messages.pot -d src/app/i18n/locale -D messages -w 120 --ignore-obsolete
 pybabel compile -d src/app/i18n/locale -D messages --statistics                    # .mo, needed to run the app
 ```
 

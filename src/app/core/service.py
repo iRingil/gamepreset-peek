@@ -16,10 +16,8 @@ from app.core.models import (
     Hardware,
     HardwareCheck,
     HardwareState,
-    PresetsFile,
     RemoteFile,
-    ResolutionPreset,
-    Translations,
+    ThemeMode,
 )
 from app.core.ops_api import OpsApi
 from app.core.user_settings import UserSettingsStore
@@ -41,8 +39,7 @@ class _GameFiles:
     """Downloaded presets and translations of a game, with the key they were requested by."""
 
     key: tuple[str, str, RemoteFile]
-    presets: PresetsFile
-    translations: Translations
+    settings: GameSettings
 
 
 class PresetService:
@@ -132,6 +129,50 @@ class PresetService:
         self._store.save(settings=replace(self._store.load(), gpu=None))
         return self.check_hardware()
 
+    def all_gpus(self) -> tuple[Gpu, ...]:
+        """
+        List every GPU the user can choose: the installed NVIDIA ones, then the bundled list.
+
+        :return: detected GPUs the most powerful first, then the bundled ones not detected, in list order
+        """
+        detected: tuple[Gpu, ...] = self._detector.nvidia_gpus(ranks=self._ranks)
+        detected_ids: set[str] = {gpu.device_id for gpu in detected}
+        return detected + tuple(gpu for gpu in self._gpu_list.gpus if gpu.device_id not in detected_ids)
+
+    def saved_language(self) -> str | None:
+        """
+        Read the saved UI language.
+
+        :return: language code, or None when none was saved
+        """
+        return self._store.load().language
+
+    def save_language(self, *, language: str) -> None:
+        """
+        Save the UI language, keeping the saved GPU.
+
+        :param language: language code, e.g. "ru"
+        :return: None
+        """
+        self._store.save(settings=replace(self._store.load(), language=language))
+
+    def saved_theme(self) -> ThemeMode:
+        """
+        Read the saved theme.
+
+        :return: theme mode, AUTO when none was saved
+        """
+        return self._store.load().theme
+
+    def save_theme(self, *, theme: ThemeMode) -> None:
+        """
+        Save the theme, keeping the other settings.
+
+        :param theme: theme mode
+        :return: None
+        """
+        self._store.save(settings=replace(self._store.load(), theme=theme))
+
     def game_presets(self, *, game_id: str, hardware: Hardware) -> GamePresets:
         """
         Request the presets NVIDIA recommends for a game.
@@ -142,17 +183,26 @@ class PresetService:
         """
         return self._api.game_presets(game_id=game_id, hardware=hardware)
 
-    def game_settings(self, *, game_id: str, presets: GamePresets, resolution: ResolutionPreset) -> GameSettings:
+    def game_settings(self, *, game_id: str, presets: GamePresets) -> GameSettings:
         """
-        Get the settings NVIDIA recommends for a resolution, downloading the game's files unless cached.
+        Get all presets of a game with its translations, downloading them unless they are the cached ones.
 
         :param game_id: game identifier, e.g. "baldurs_gate_3"
         :param presets: presets of the game from game_presets()
-        :param resolution: one of presets.resolutions
-        :return: settings with their values and translations
+        :return: presets and translations
         """
-        files: _GameFiles = self._game_files(game_id=game_id, presets=presets)
-        return GameSettings(values=files.presets.values(index=resolution.preset_index), translations=files.translations)
+        key: tuple[str, str, RemoteFile] = (game_id, presets.profile, presets.presets_file)
+        if self._files is None or self._files.key != key:
+            self._files = _GameFiles(
+                key=key,
+                settings=GameSettings(
+                    presets=self._api.presets_file(file=presets.presets_file),
+                    translations=self._api.translations(
+                        file=self._api.translation_file(game_id=game_id, profile=presets.profile)
+                    ),
+                ),
+            )
+        return self._files.settings
 
     @cached_property
     def _system(self) -> _System:
@@ -188,22 +238,3 @@ class PresetService:
             return HardwareCheck(state=HardwareState.CHOOSE_LISTED_GPU, gpus=self._gpu_list.gpus)
         logger.warning("NVIDIA rejected the hardware: {}", compatibility.failed)
         return HardwareCheck(state=HardwareState.REJECTED, failed=compatibility.failed)
-
-    def _game_files(self, *, game_id: str, presets: GamePresets) -> _GameFiles:
-        """
-        Get the presets file and translations of a game, downloading them when the last game shown was another one.
-
-        :param game_id: game identifier
-        :param presets: presets of the game from game_presets()
-        :return: the game's files
-        """
-        key: tuple[str, str, RemoteFile] = (game_id, presets.profile, presets.presets_file)
-        if self._files is None or self._files.key != key:
-            self._files = _GameFiles(
-                key=key,
-                presets=self._api.presets_file(file=presets.presets_file),
-                translations=self._api.translations(
-                    file=self._api.translation_file(game_id=game_id, profile=presets.profile)
-                ),
-            )
-        return self._files
