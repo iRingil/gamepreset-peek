@@ -1,0 +1,127 @@
+# Russian translations for GamePresetPeek.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the GamePresetPeek project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: GamePresetPeek VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-10-21 04:33+0300\n"
+"PO-Revision-Date: 2026-10-21 04:34+0300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: ru\n"
+"Language-Team: ru <LL@li.org>\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#. GAME
+msgid "Game"
+msgstr "Игра"
+
+#. RESOLUTION
+msgid "Resolution"
+msgstr "Разрешение"
+
+#. LANGUAGE
+msgid "Language"
+msgstr "Язык"
+
+#. SETTING
+msgid "Setting"
+msgstr "Настройка"
+
+#. VALUE
+msgid "Value"
+msgstr "Значение"
+
+#. LOAD_GAMES
+msgid "Load games"
+msgstr "Загрузить игры"
+
+#. SHOW_SETTINGS
+msgid "Show settings"
+msgstr "Показать настройки"
+
+#. SHOW_LOGS
+msgid "Show logs"
+msgstr "Показать журнал"
+
+#. HIDE_LOGS
+msgid "Hide logs"
+msgstr "Скрыть журнал"
+
+#. CHANGE_GPU
+msgid "Change graphics card"
+msgstr "Сменить видеокарту"
+
+#. OK
+msgid "OK"
+msgstr "OK"
+
+#. CANCEL
+msgid "Cancel"
+msgstr "Отмена"
+
+#. LOADING
+msgid "Loading…"
+msgstr "Загрузка…"
+
+#. GAMES_FAILED
+#, python-brace-format
+msgid "Could not load the game list: {error}"
+msgstr "Не удалось загрузить список игр: {error}"
+
+#. REQUEST_FAILED
+#, python-brace-format
+msgid "Could not get data from NVIDIA: {error}"
+msgstr "Не удалось получить данные от NVIDIA: {error}"
+
+#. NO_RECOMMENDATION
+msgid "NVIDIA has no recommended settings for this game on your hardware."
+msgstr "У NVIDIA нет рекомендуемых настроек этой игры для вашего железа."
+
+#. BELOW_MIN_SPEC
+msgid "below minimum requirements"
+msgstr "ниже минимальных требований"
+
+#. NO_NVIDIA_GPU
+msgid "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only."
+msgstr "Видеокарта NVIDIA не найдена. NVIDIA рекомендует настройки только для видеокарт NVIDIA."
+
+#. HARDWARE_REJECTED
+#, python-brace-format
+msgid "NVIDIA does not support this computer: {components}."
+msgstr "NVIDIA не поддерживает этот компьютер: {components}."
+
+#. COMPONENT_CPU
+msgid "processor"
+msgstr "процессор"
+
+#. COMPONENT_GPU
+msgid "graphics card"
+msgstr "видеокарта"
+
+#. COMPONENT_MEMORY
+msgid "memory"
+msgstr "память"
+
+#. COMPONENT_OS
+msgid "Windows version"
+msgstr "версия Windows"
+
+#. CHOOSE_GPU_TITLE
+msgid "Graphics card"
+msgstr "Видеокарта"
+
+#. CHOOSE_DETECTED_GPU
+msgid "Several NVIDIA graphics cards found. Choose the one you play on."
+msgstr "Найдено несколько видеокарт NVIDIA. Выберите ту, на которой играете."
+
+#. CHOOSE_LISTED_GPU
+msgid "NVIDIA does not know your graphics card. Choose the closest one from the list."
+msgstr "NVIDIA не знает вашу видеокарту. Выберите самую похожую из списка."
+

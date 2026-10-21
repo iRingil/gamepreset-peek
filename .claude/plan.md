@@ -110,14 +110,16 @@ tests/src/app/...
 - [x] Tests.
 
 ### 7. i18n
-- [ ] `i18n/ui_text.py`, `i18n/translator.py` (Windows UI language -> one of the 5, default en).
-- [ ] `tools/make_pot.py`; `.po` for en, ru, de, fr, es; compiled `.mo`.
-- [ ] Test: every `UiText` member translated in every language.
+- [x] `i18n/ui_text.py`, `i18n/translator.py` (Windows UI language -> one of the 5, default en).
+- [x] `tools/make_pot.py`; `.po` for en, ru, de, fr, es; compiled `.mo`.
+- [x] Test: every `UiText` member translated in every language.
 
 ### 8. GUI
 - [ ] Main window: games list, "Load games" button on catalog failure, resolutions list, "Show settings" button,
   settings table, language dropdown, GPU choice dialog, "Show logs" panel (15 lines, scrollable).
 - [ ] Presenter with the worker thread; switching game or resolution clears the table and shows the button again.
+- [ ] Saving the language chosen in the dropdown (`UserSettingsStore`, keeping the saved GPU); `UiText` members are
+  added as the window needs them (then `make_pot`, `pybabel update`, translate, `compile`).
 
 ### 9. Build
 - [ ] Nuitka onefile build script with data files (`data/*.json`, `.mo`, `fake_useragent` package data); check the

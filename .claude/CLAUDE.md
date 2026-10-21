@@ -21,6 +21,14 @@ pytest                                                            # all tests
 pytest tests/src/<pkg>/test_x.py::TestClass::test_name            # single test
 ```
 
+UI translations (`.po` are committed; `.pot` and `.mo` are git-ignored build output):
+
+```shell
+$env:PYTHONPATH="src"; python tools/make_pot.py                                    # messages.pot from the UiText enum
+pybabel update -i src/app/i18n/locale/messages.pot -d src/app/i18n/locale -D messages -w 120
+pybabel compile -d src/app/i18n/locale -D messages --statistics                    # .mo, needed to run the app
+```
+
 - `src` is on the import path for both pytest (`pythonpath`) and pylint (`init-hook`); import modules as top-level
   packages, not `src.xxx`.
 - pytest collects only `tests/**/*.py`.

@@ -25,6 +25,8 @@
   tests with a fake registry. Compatibility re-checked: the gpu state depends on `gpu.deviceID`, not the name.
 - 2026-10-21: step 6: `core/service.py` (`PresetService`), models `Game`, `GameSettings`, `HardwareCheck`,
   `HardwareState`; tests with autospec mocks of `OpsApi` and `HardwareDetector`.
+- 2026-10-21: step 7: `i18n/ui_text.py` (`UiText`, 26 texts), `i18n/translator.py` (`Translator`),
+  `tools/make_pot.py`, `.po` for en, ru, de, fr, es; language constants in `config.py`.
 
 ## Decisions and findings
 
@@ -232,3 +234,22 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
 - `GameSettings.rows(language=NVIDIA code)` translates on demand, so a UI language switch re-renders without requests.
   Mapping UI language -> NVIDIA code (`ru` -> `ru_RU`) belongs to step 7.
 - `dataclasses.replace` is called with the instance positionally: its first parameter is positional-only.
+
+### i18n (2026-10-21, step 7)
+
+- `.gitignore` (from the Python template) ignores `*.mo` and `*.pot`: only `.po` are committed. Running the app from
+  source needs `pybabel compile`; the build (step 9) must compile them too. Tests compile the `.po` into `tmp_path`
+  with Babel's `write_mo`, so they don't depend on local `.mo` files.
+- `UI_LANGUAGES` in `config.py` maps UI code -> NVIDIA code (`ru` -> `ru_RU`); `TRANSLATION_LANGUAGES` is derived from
+  it. Language names in the dropdown are in the language itself (`LANGUAGE_NAMES`), never translated.
+- `en.po` has `msgstr` = `msgid`, so every catalog passes the same completeness test (non-empty, not fuzzy, same
+  `{placeholders}` as the source, msgids == enum values: a stale `.po` fails).
+- The `.pot` has the member name as an extracted comment (`#. GAME`) and `python-brace-format` on texts with `{...}`.
+- `Translator.text(item=..., **values)` formats with `str.format`; a missing catalog gives English with a warning.
+- Language choice: saved (if supported) -> Windows UI language (`GetUserDefaultUILanguage` + `locale.windows_locale`,
+  language part of `ru_RU`) -> `en`.
+- Setting names and values have no per-language request: the `.translation` file holds all languages; a missing
+  translation falls back to NVIDIA's name, which is English (`en_US` translations equal the names).
+- Texts for the GUI were written ahead from the step 8 plan (incl. `REJECTED` components and `belowMinSpec`); the
+  wording is not final and is changed in step 8 with the window.
+- `pybabel` options go before the subcommand for `-q` (`pybabel -q init`), not after it.
