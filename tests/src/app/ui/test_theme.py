@@ -1,13 +1,7 @@
-"""Tests of the theme: the Windows app mode for AUTO and the palette and fonts on a real Tk root."""
-
-import tkinter as tk
-import winreg
-from contextlib import contextmanager
-from tkinter import font as tkfont
-from tkinter import ttk
-from typing import Any, Iterator
+"""Tests of app.ui.theme."""
 
 import pytest
+from PySide6.QtCore import Qt
 
 from app.core.models import ThemeMode
 from app.ui.theme import Theme
@@ -15,192 +9,27 @@ from app.ui.theme import Theme
 __all__: tuple = ()
 
 
-class TestResolve:
-    """Tests of Theme.resolve."""
-
-    @staticmethod
-    def _registry(*, monkeypatch: pytest.MonkeyPatch, value: Any) -> None:
-        """
-        Fake the Windows app mode setting.
-
-        :param monkeypatch: pytest monkeypatch
-        :param value: AppsUseLightTheme value, None when the setting is missing
-        :return: None
-        """
-
-        class _Key:
-            """An open registry key as a context manager."""
-
-            def __enter__(self) -> "_Key":
-                """
-                Enter the key.
-
-                :return: the key
-                """
-                return self
-
-            def __exit__(self, *args: object) -> None:
-                """
-                Close the key.
-
-                :param args: exception details
-                :return: None
-                """
-
-        def query(key: _Key, name: str) -> tuple[Any, int]:
-            """
-            Read the faked value.
-
-            :param key: open key
-            :param name: value name
-            :return: value and type
-            """
-            if value is None:
-                raise FileNotFoundError(name)
-            return value, winreg.REG_DWORD
-
-        monkeypatch.setattr(target=winreg, name="OpenKey", value=lambda root, path: _Key())
-        monkeypatch.setattr(target=winreg, name="QueryValueEx", value=query)
-
-    @pytest.mark.parametrize(
-        argnames=("value", "expected"),
-        argvalues=[(0, ThemeMode.DARK), (1, ThemeMode.LIGHT), (None, ThemeMode.LIGHT)],
-        ids=["windows dark", "windows light", "setting missing"],
-    )
-    def test_auto(self, monkeypatch: pytest.MonkeyPatch, value: Any, expected: ThemeMode) -> None:
-        """
-        Takes the Windows app mode for AUTO, light when it can't be read.
-
-        :param monkeypatch: pytest monkeypatch
-        :param value: AppsUseLightTheme value
-        :param expected: resolved mode
-        :return: None
-        """
-        # Arrange
-        self._registry(monkeypatch=monkeypatch, value=value)
-        # Act
-        mode: ThemeMode = Theme.resolve(mode=ThemeMode.AUTO)
-        # Assert
-        assert mode is expected
-
-    @pytest.mark.parametrize(argnames="mode", argvalues=[ThemeMode.LIGHT, ThemeMode.DARK])
-    def test_explicit(self, monkeypatch: pytest.MonkeyPatch, mode: ThemeMode) -> None:
-        """
-        Keeps an explicit mode whatever Windows uses.
-
-        :param monkeypatch: pytest monkeypatch
-        :param mode: chosen mode
-        :return: None
-        """
-        # Arrange
-        self._registry(monkeypatch=monkeypatch, value=0 if mode is ThemeMode.LIGHT else 1)
-        # Act
-        resolved: ThemeMode = Theme.resolve(mode=mode)
-        # Assert
-        assert resolved is mode
-
-
-class TestApply:
-    """Tests of Theme.apply and Theme.color on a hidden Tk root.
-
-    The root is made inside each test: pytest swaps the standard file descriptors between fixture setup and the
-    test, and a Tcl interpreter created before the swap fails to read files after it."""
-
-    @staticmethod
-    @contextmanager
-    def _hidden_root() -> Iterator[tk.Tk]:
-        """
-        Create a hidden Tk root for the duration of a block.
-
-        :return: context manager giving the root, destroyed at the end
-        """
-        root: tk.Tk = tk.Tk()
-        root.withdraw()
-        try:
-            yield root
-        finally:
-            root.destroy()
+class TestTheme:
+    """Tests of Theme."""
 
     @pytest.mark.parametrize(
         argnames=("mode", "expected"),
         argvalues=[
-            (ThemeMode.DARK, ("#031830", "#ede3e4", "#5ec4e0")),
-            (ThemeMode.LIGHT, ("#ede3e4", "#031830", "#17708f")),
+            (ThemeMode.AUTO, Qt.ColorScheme.Unknown),
+            (ThemeMode.LIGHT, Qt.ColorScheme.Light),
+            (ThemeMode.DARK, Qt.ColorScheme.Dark),
         ],
-        ids=["dark", "light"],
+        ids=["auto", "light", "dark"],
     )
-    def test_palette_applied(self, mode: ThemeMode, expected: tuple[str, str, str]) -> None:
+    def test_scheme(self, mode: ThemeMode, expected: Qt.ColorScheme) -> None:
         """
-        Styles the widgets in the palette of the mode and gives its colors.
+        Maps AUTO to the scheme Qt takes from Windows and the others to their own scheme.
 
         :param mode: theme mode
-        :param expected: background, text and accent colors
+        :param expected: Qt color scheme
         :return: None
         """
-        with self._hidden_root() as root:
-            # Arrange
-            theme: Theme = Theme(root=root)
-            # Act
-            applied: ThemeMode = theme.apply(mode=mode)
-            colors: tuple[str, str, str] = (
-                theme.color(name="bg"),
-                theme.color(name="fg"),
-                theme.color(name="accent"),
-            )
-            styled: tuple[str, str] = (
-                str(ttk.Style(master=root).lookup(style="TLabel", option="background")),
-                str(ttk.Style(master=root).theme_use()),
-            )
+        # Arrange & Act
+        scheme: Qt.ColorScheme = Theme.scheme(mode=mode)
         # Assert
-        assert (applied, colors, styled) == (mode, expected, (expected[0], "clam"))
-
-    @pytest.mark.parametrize(argnames="mode", argvalues=[ThemeMode.DARK, ThemeMode.LIGHT], ids=["dark", "light"])
-    def test_rounded_shapes(self, mode: ThemeMode) -> None:
-        """
-        Draws the rounded list background in the palette: the corner shows the window color, the middle the fill.
-
-        :param mode: theme mode
-        :return: None
-        """
-        with self._hidden_root() as root:
-            # Arrange
-            theme: Theme = Theme(root=root)
-            theme.apply(mode=ThemeMode.LIGHT if mode is ThemeMode.DARK else ThemeMode.DARK)
-            # Act
-            theme.apply(mode=mode)
-            size: int = int(root.tk.call("image", "width", "app_card"))
-            corner: str = self._pixel(root=root, image="app_card", x=0, y=0)
-            middle: str = self._pixel(root=root, image="app_card", x=size // 2, y=size // 2)
-            expected: tuple[str, str] = (theme.color(name="bg"), theme.color(name="panel"))
-        # Assert
-        assert (corner, middle) == expected
-
-    @staticmethod
-    def _pixel(*, root: tk.Tk, image: str, x: int, y: int) -> str:
-        """
-        Read a pixel of a Tk image.
-
-        :param root: Tk root
-        :param image: image name
-        :param x: column
-        :param y: row
-        :return: color as #rrggbb
-        """
-        red: Any
-        green: Any
-        blue: Any
-        red, green, blue = root.tk.splitlist(root.tk.call(image, "get", x, y))
-        return f"#{int(red):02x}{int(green):02x}{int(blue):02x}"
-
-    def test_fonts_created(self) -> None:
-        """
-        Creates the named fonts the styles refer to, in points so that Tk scales them to the screen.
-
-        :return: None
-        """
-        with self._hidden_root() as root:
-            # Arrange & Act
-            theme: Theme = Theme(root=root)
-            size: Any = tkfont.nametofont(name=Theme.STRONG_FONT, root=root).cget(option="size")
-        # Assert
-        assert (size, theme.scale > 0) == (10, True)
+        assert scheme == expected

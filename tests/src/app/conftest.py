@@ -1,11 +1,14 @@
-"""Fixtures shared by the app tests: the UI catalogs, read from the source tree and compiled."""
+"""Fixtures shared by the app tests: the UI catalogs, read from the source tree and compiled, and the Qt application."""
 
+import os
 from pathlib import Path
+from typing import Iterator
 
 import pytest
 from babel.messages.catalog import Catalog
 from babel.messages.mofile import write_mo
 from babel.messages.pofile import read_po
+from PySide6.QtWidgets import QApplication
 
 from app.config import GETTEXT_DOMAIN, LOCALE_DIR, UI_LANGUAGES
 
@@ -41,3 +44,15 @@ def _locale_dir(tmp_path: Path, catalogs: dict[str, Catalog]) -> Path:
         with path.open(mode="wb") as file:
             write_mo(fileobj=file, catalog=catalog)
     return tmp_path
+
+
+@pytest.fixture(name="qt_app", scope="session")
+def _qt_app() -> Iterator[QApplication]:
+    """
+    Create one Qt application for the session, drawing off screen.
+
+    :return: the application
+    """
+    os.environ["QT_QPA_PLATFORM"] = "offscreen"
+    application: QApplication = QApplication.instance() or QApplication([])  # type: ignore[assignment]
+    yield application

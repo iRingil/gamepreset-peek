@@ -40,6 +40,12 @@
   to `sys` (flaky Tcl file reads).
 - 2026-10-21: `belowMinSpec` resolutions get a colored warning sign (`ui/icons.py`) with the explanation in a popup
   on hover instead of a text suffix (users read "below minimum" as being about the resolution).
+- 2026-10-21: Tk work committed on `master` (`1449767`); branch `qt-ui`: the UI layer moved to PySide6 on Qt's
+  standard `windows11` style (user's call after Tk's slow redraws), to be judged by the user; PyQtDarkTheme next if
+  the standard style is kept.
+- 2026-10-21: Qt kept (user's call); the style is PyQtDarkTheme from the `pyqtdarktheme-fork` 2.3.6 copied into
+  `src/app/ui/vendor/qdarktheme` after a diff against the original and a code review; `darkdetect` added.
+  Back on `master` with the Qt work uncommitted (`qt-ui` had no commits of its own).
 
 ## Decisions and findings
 
@@ -396,3 +402,44 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
 - Popup: a semibold title ("Too demanding for this PC") over a one-sentence text, 350 ms delay like Windows
   tooltips, flipped to stay on screen. The texts are only in `UiText`: the catalog tests fail until the translation
   pass.
+
+### Qt instead of Tk (2026-10-21)
+
+- Why: after a restore from the taskbar the Tk window stayed partly black (and grey) for ~1.1 s, every time, and the
+  2000-game list scrolled in jerks. Measured: the working set doesn't change (nothing is paged out) and Python idles
+  in `mainloop` the whole time: the time goes into Tk's own redraw, each widget being a native child window painted
+  separately. tkinter's 20 ms busy-wait was ruled out (1 ms changes nothing); a lone Treeview with 3000 real names
+  restores instantly, so the culprit was not pinned down. The same probe on the Qt window: no black area at all.
+- PySide6 (LGPL, the official binding) rather than PyQt6 (GPL); `PySide6-Essentials` only: no add-on modules needed.
+- PySide6 takes keyword arguments only for optional parameters (`addWidget(widget, stretch=1)` works,
+  `setText(text=...)` raises): required arguments of Qt calls are passed by position.
+- `Presenter` and `MainView` didn't change: the view protocol already kept Tk out of the presenter. `Worker` emits a
+  Qt signal from its thread; the worker object lives in the UI thread, so the callbacks are queued there (no polling).
+  An exception in a callback goes to `sys.excepthook` (logged in `__main__`) and later callbacks still arrive.
+- Theme: `QStyleHints.setColorScheme` (it still drives the window title bar) plus PyQtDarkTheme (below). Muted texts use the palette's `PlaceholderText`, the preset position and changed values its `Accent`; the changed
+  rows take the color in the delegate at paint time, so a scheme switch reaches them at once.
+- The warning sign is still `Icons` PNG data (now bytes, drawn per device pixel ratio); `_SignDelegate` paints it a
+  space after the text and shows the hint as a rich-text tooltip only while the pointer is over the sign.
+- Lists use `QListView` + `QStringListModel` with uniform item sizes; `currentChanged` with an invalid index (after a
+  refill) is not a choice. Programmatic slider changes block its signals; comboboxes react to `activated` (user only).
+- Tooling: pylint needs `extension-pkg-allow-list = ["PySide6"]` and `generated-members = ["connect"]` (it can't see
+  bound signals); `MainWindow.connect` became `attach` (a QObject already has `connect`). Tests share a session
+  `qt_app` fixture on the `offscreen` platform, which ignores color schemes (so `Theme.apply` isn't tested there).
+
+### PyQtDarkTheme (2026-10-21)
+
+- The original `pyqtdarktheme` 2.1.0 (last release ~2023) requires Python `<3.12`: pip silently picks the ancient
+  0.1.7 on 3.13. The original works on 3.13 + PySide6 6.12 when forced, but only through `--ignore-requires-python`.
+- `pyqtdarktheme-fork` 2.3.6 (PyPI, publisher unverified: its metadata copies the original author) differs from 2.1.0
+  only cosmetically: Python range, `_HSLA` fields renamed, `None` guards for newer PySide6 stubs, a dropped
+  `global`, gallery typing fixes. SVG, style sheets, palettes and license (MIT) are identical; no network, subprocess,
+  eval or pickle; `ctypes` only in the macOS accent code, as in the original; its wheel equals its sdist.
+- So it is vendored, not installed: `src/app/ui/vendor/qdarktheme` with `LICENSE.txt`, without `widget_gallery`; the
+  only edit is `qdarktheme.` imports rewritten to `app.ui.vendor.qdarktheme.`. Black, mypy (`ignore_errors`) and
+  pylint (`ignore = vendor`) leave it alone (user's call): it scores 7.54 in pylint and has 61 strict mypy errors,
+  and even black (8 files, line length 100 upstream) would spoil a plain `diff` against a future fork release.
+  Its dependency `darkdetect` 0.8.0 comes from pip.
+- `setup_theme(theme=...)` takes the `ThemeMode` value as is ("auto", "light", "dark"); with "auto" a `QThread`
+  runs `darkdetect.listener` (Windows registry notification) and reapplies the style on a switch.
+- It sets an app palette without `Accent`, so `Accent` still comes from Windows (blue in both themes); its
+  `PlaceholderText` is the muted text color. It caches recolored SVG icons in `~/.cache/qdarktheme/v2.3.6`.

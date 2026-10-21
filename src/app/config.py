@@ -27,13 +27,11 @@ __all__: tuple[str, ...] = (
     "OPS_COMPATIBILITY_URL",
     "OPS_PRESETS_URL",
     "SETTINGS_FILE",
-    "THEME_POLL_MS",
     "TRANSLATION_LANGUAGES",
     "UI_LANGUAGES",
     "USER_AGENT_OS",
     "WINDOW_MIN_SIZE",
     "WINDOW_SIZE",
-    "WORKER_POLL_MS",
 )
 
 APP_NAME: str = "GamePresetPeek"
@@ -61,17 +59,13 @@ LANGUAGE_NAMES: dict[str, str] = {
     "es": "Español",
 }
 
-# Main window: initial size as a Tk geometry string and the smallest size, in pixels.
-WINDOW_SIZE: str = "1200x720"
+# Main window: initial and smallest width and height, in pixels at 100 % scale.
+WINDOW_SIZE: tuple[int, int] = (1200, 720)
 WINDOW_MIN_SIZE: tuple[int, int] = (900, 520)
 # Visible lines of the log panel and the lines it keeps before dropping the oldest ones.
 LOG_PANEL_HEIGHT: int = 15
 LOG_PANEL_MAX_LINES: int = 2000
 LOG_POLL_MS: int = 200
-# How often the AUTO theme checks whether Windows switched between light and dark mode.
-THEME_POLL_MS: int = 2000
-# How often the Tk thread picks up the results of background tasks.
-WORKER_POLL_MS: int = 50
 
 # Operating systems a fake browser User-Agent is picked for, one per HTTP client.
 USER_AGENT_OS: tuple[str, ...] = ("Windows",)

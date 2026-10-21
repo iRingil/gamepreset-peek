@@ -1,48 +1,19 @@
 """Tests of the background worker."""
 
+import sys
 import threading
-import tkinter as tk
-from typing import Callable, cast
+from types import TracebackType
 
 import pytest
+from PySide6.QtWidgets import QApplication
 
 from app.ui.worker import Worker
 
 __all__: tuple = ()
 
 
-class _FakeRoot:
-    """Stands in for Tk's after(): keeps the scheduled calls for the test to run."""
-
-    def __init__(self) -> None:
-        """
-        Start with nothing scheduled.
-        """
-        self.scheduled: list[Callable[[], None]] = []
-
-    def after(self, ms: int, func: Callable[[], None]) -> str:
-        """
-        Keep a scheduled call like Tk's after().
-
-        :param ms: delay, ignored
-        :param func: the call
-        :return: identifier of the scheduled call
-        """
-        self.scheduled.append(func)
-        return f"after#{len(self.scheduled)}"
-
-
 class TestWorker:
-    """Tests of Worker."""
-
-    @pytest.fixture(name="root")
-    def _root(self) -> _FakeRoot:
-        """
-        Create the fake Tk root.
-
-        :return: fake root
-        """
-        return _FakeRoot()
+    """Tests of Worker; callbacks are delivered by processing the Qt events once the tasks are done."""
 
     @staticmethod
     def _unexpected(value: object) -> None:
@@ -55,44 +26,45 @@ class TestWorker:
         raise AssertionError(f"unexpected callback with {value!r}")
 
     @staticmethod
-    def _finish(*, worker: Worker, root: _FakeRoot) -> None:
+    def _finish(*, worker: Worker, qt_app: QApplication) -> None:
         """
-        Let the worker run every submitted task, then pick up their callbacks once.
+        Wait until the worker ran every submitted task, then deliver their callbacks.
 
         :param worker: the worker
-        :param root: fake root holding the scheduled pickup
+        :param qt_app: Qt application whose events carry the callbacks
         :return: None
         """
-        worker.close()
-        worker.join(timeout=5)
-        root.scheduled[-1]()
+        done: threading.Event = threading.Event()
+        worker.submit(task=done.set, on_done=lambda _: None, on_error=lambda _: None)
+        done.wait(timeout=5)
+        qt_app.processEvents()
 
-    def test_results_in_order(self, root: _FakeRoot) -> None:
+    def test_results_in_order(self, qt_app: QApplication) -> None:
         """
         Hands the results to on_done in the order the tasks were submitted.
 
-        :param root: fake root
+        :param qt_app: Qt application
         :return: None
         """
         # Arrange
-        worker: Worker = Worker(root=cast(tk.Misc, root))
+        worker: Worker = Worker()
         results: list[int] = []
         for number in range(3):
             worker.submit(task=lambda value=number: value * 10, on_done=results.append, on_error=self._unexpected)
         # Act
-        self._finish(worker=worker, root=root)
+        self._finish(worker=worker, qt_app=qt_app)
         # Assert
         assert results == [0, 10, 20]
 
-    def test_error_to_on_error(self, root: _FakeRoot) -> None:
+    def test_error_to_on_error(self, qt_app: QApplication) -> None:
         """
         Hands a task's exception to on_error.
 
-        :param root: fake root
+        :param qt_app: Qt application
         :return: None
         """
         # Arrange
-        worker: Worker = Worker(root=cast(tk.Misc, root))
+        worker: Worker = Worker()
         errors: list[Exception] = []
         failure: ValueError = ValueError("broken")
 
@@ -106,38 +78,69 @@ class TestWorker:
 
         worker.submit(task=task, on_done=self._unexpected, on_error=errors.append)
         # Act
-        self._finish(worker=worker, root=root)
+        self._finish(worker=worker, qt_app=qt_app)
         # Assert
         assert errors == [failure]
 
-    def test_tasks_off_the_calling_thread(self, root: _FakeRoot) -> None:
+    def test_tasks_off_the_calling_thread(self, qt_app: QApplication) -> None:
         """
         Runs tasks in its own thread, never in the one that submitted them.
 
-        :param root: fake root
+        :param qt_app: Qt application
         :return: None
         """
         # Arrange
-        worker: Worker = Worker(root=cast(tk.Misc, root))
+        worker: Worker = Worker()
         threads: list[threading.Thread] = []
         worker.submit(task=threading.current_thread, on_done=threads.append, on_error=self._unexpected)
         # Act
-        self._finish(worker=worker, root=root)
+        self._finish(worker=worker, qt_app=qt_app)
         # Assert
         assert threads and threads[0] is not threading.current_thread()
 
-    def test_pickup_goes_on_after_failing_callback(self, root: _FakeRoot) -> None:
+    def test_callbacks_in_ui_thread(self, qt_app: QApplication) -> None:
         """
-        Schedules the next pickup even when a callback raises.
+        Calls the callbacks in the thread of the Qt application.
 
-        :param root: fake root
+        :param qt_app: Qt application
         :return: None
         """
         # Arrange
-        worker: Worker = Worker(root=cast(tk.Misc, root))
-        done: threading.Event = threading.Event()
+        worker: Worker = Worker()
+        threads: list[threading.Thread] = []
+        worker.submit(task=lambda: None, on_done=lambda _: threads.append(threading.current_thread()), on_error=print)
+        # Act
+        self._finish(worker=worker, qt_app=qt_app)
+        # Assert
+        assert threads == [threading.current_thread()]
 
-        def fail(_: None) -> None:
+    def test_delivery_goes_on_after_failing_callback(
+        self, qt_app: QApplication, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """
+        Delivers later results even when a callback raises; the error goes to the exception hook.
+
+        :param qt_app: Qt application
+        :param monkeypatch: replaces the exception hook
+        :return: None
+        """
+        # Arrange
+        worker: Worker = Worker()
+        hooked: list[BaseException] = []
+        results: list[int] = []
+
+        def hook(_: type[BaseException], error: BaseException, __: TracebackType | None) -> None:
+            """
+            Keep an unhandled error.
+
+            :param _: exception type
+            :param error: exception
+            :param __: traceback
+            :return: None
+            """
+            hooked.append(error)
+
+        def fail(_: int) -> None:
             """
             Fail in the callback.
 
@@ -146,13 +149,28 @@ class TestWorker:
             """
             raise RuntimeError("callback failed")
 
-        worker.submit(task=lambda: None, on_done=fail, on_error=self._unexpected)
-        # The second task starts only after the first one's callback was queued.
-        worker.submit(task=done.set, on_done=lambda _: None, on_error=self._unexpected)
-        done.wait(timeout=5)
-        scheduled: int = len(root.scheduled)
-        # Act & Assert
-        with pytest.raises(RuntimeError):
-            root.scheduled[-1]()
-        assert len(root.scheduled) == scheduled + 1
+        monkeypatch.setattr(target=sys, name="excepthook", value=hook)
+        worker.submit(task=lambda: 1, on_done=fail, on_error=self._unexpected)
+        worker.submit(task=lambda: 2, on_done=results.append, on_error=self._unexpected)
+        # Act
+        self._finish(worker=worker, qt_app=qt_app)
+        # Assert
+        assert (results, [str(error) for error in hooked]) == ([2], ["callback failed"])
+
+    def test_nothing_delivered_after_close(self, qt_app: QApplication) -> None:
+        """
+        Drops the results of tasks that finish after close().
+
+        :param qt_app: Qt application
+        :return: None
+        """
+        # Arrange
+        worker: Worker = Worker()
+        results: list[int] = []
+        worker.submit(task=lambda: 1, on_done=results.append, on_error=self._unexpected)
+        # Act
         worker.close()
+        worker.join(timeout=5)
+        qt_app.processEvents()
+        # Assert
+        assert not results

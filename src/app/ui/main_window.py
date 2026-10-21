@@ -1,15 +1,35 @@
 """Widgets and layout of the main window and of the GPU choice dialog."""
 
-import tkinter as tk
+import html
 from queue import Queue
-from tkinter import font as tkfont
-from tkinter import ttk
-from types import TracebackType
 from typing import Callable, Sequence
 
-from loguru import logger
+from PySide6.QtCore import QEvent, QModelIndex, QPersistentModelIndex, QRect, QStringListModel, Qt
+from PySide6.QtGui import QFont, QHelpEvent, QPainter, QPalette, QPixmap
+from PySide6.QtWidgets import (
+    QAbstractItemView,
+    QApplication,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QListView,
+    QPushButton,
+    QSlider,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
+    QToolTip,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
-from app.config import APP_TITLE, LANGUAGE_NAMES, THEME_POLL_MS, WINDOW_MIN_SIZE, WINDOW_SIZE
+from app.config import APP_TITLE, LANGUAGE_NAMES, WINDOW_MIN_SIZE, WINDOW_SIZE
 from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
@@ -23,148 +43,145 @@ __all__: tuple[str, ...] = ("MainWindow",)
 _PAD: int = 8
 _GAMES_WIDTH: int = 300
 _RESOLUTIONS_WIDTH: int = 230
-_SETTING_WIDTH: int = 320
 _VALUE_WIDTH: int = 220
-_GPU_LIST_WIDTH: int = 460
-_GPU_LIST_HEIGHT: int = 14
-_MESSAGE_WRAP: int = 460
-_COMBO_WIDTH: int = 12
+_GPU_LIST_SIZE: tuple[int, int] = (460, 320)
 _ICON_SIZE: int = 18
-_TOOLTIP_WRAP: int = 280
-_TOOLTIP_OFFSET: int = 16
-# Like Windows tooltips: no flicker while the pointer just crosses the list.
-_TOOLTIP_DELAY_MS: int = 350
-_CHANGED_TAG: str = "changed"
+# Point size steps above the base font: the GPU line, the settings title and the preset position.
+_HEADLINE_STEP: float = 2
+_TITLE_STEP: float = 6
+_BIG_STEP: float = 10
+# Item data role of the settings table telling that a value differs from the recommended preset.
+_CHANGED_ROLE: int = Qt.ItemDataRole.UserRole + 1
 
 
-class _Tooltip:
-    """A borderless popup next to the mouse pointer: a title over a short text, in the colors of the theme applied last.
+class _Fonts:
+    """Fonts derived from the application font: bold and larger ones for headings."""
 
-    It shows after a short delay and stays inside the screen."""
-
-    def __init__(self, *, parent: tk.Misc, theme: Theme) -> None:
+    @staticmethod
+    def derived(*, base: QFont, step: float = 0, bold: bool = False) -> QFont:
         """
-        Build the popup hidden.
+        Make a font from the base one.
 
-        :param parent: widget the popup belongs to
-        :param theme: theme giving the colors
+        :param base: font to start from
+        :param step: points to add to its size
+        :param bold: True for bold
+        :return: the font
         """
-        self._theme: Theme = theme
-        self._window: tk.Toplevel = tk.Toplevel(master=parent)
-        self._window.withdraw()
-        self._window.overrideredirect(True)
-        self._window.attributes("-topmost", True)
-        self._frame: tk.Frame = tk.Frame(master=self._window, highlightthickness=1, padx=_PAD + 2, pady=_PAD - 1)
-        self._frame.pack()
-        wrap: int = round(_TOOLTIP_WRAP * theme.scale)
-        self._title: tk.Label = tk.Label(master=self._frame, font=Theme.STRONG_FONT, justify="left", wraplength=wrap)
-        self._title.pack(anchor="w")
-        self._text: tk.Label = tk.Label(master=self._frame, font=Theme.BODY_FONT, justify="left", wraplength=wrap)
-        self._text.pack(anchor="w", pady=(2, 0))
-        self._hint: Hint | None = None
-        self._pending: str | None = None
+        font: QFont = QFont(base)
+        font.setPointSizeF(base.pointSizeF() + step)
+        font.setBold(bold)
+        return font
 
-    def show(self, *, hint: Hint, x: int, y: int) -> None:
+
+class _SignDelegate(QStyledItemDelegate):
+    """Draws a warning sign one space after the text of a list item; its hint pops up over the sign only."""
+
+    def __init__(self, *, parent: QListView, warnings: Callable[[], dict[int, Hint]]) -> None:
         """
-        Show a hint next to a screen point after the delay; the hint already shown or waiting stays as it is.
+        Prepare the sign; its pixels are drawn once for each screen scale met.
 
-        :param hint: title and text to show
-        :param x: screen x of the pointer
-        :param y: screen y of the pointer
-        :return: None
+        :param parent: list the delegate draws
+        :param warnings: gives the hint of the sign of each row that has one
         """
-        if hint == self._hint:
-            return
-        self.hide()
-        self._hint = hint
-        self._pending = self._window.after(ms=_TOOLTIP_DELAY_MS, func=lambda: self._open(x=x, y=y))
+        super().__init__(parent)
+        self._warnings: Callable[[], dict[int, Hint]] = warnings
+        self._signs: dict[float, QPixmap] = {}
 
-    def hide(self) -> None:
-        """
-        Hide the popup, or cancel it when it is still waiting for the delay.
-
-        :return: None
-        """
-        if self._pending is not None:
-            self._window.after_cancel(id=self._pending)
-            self._pending = None
-        if self._hint is not None:
-            self._hint = None
-            self._window.withdraw()
-
-    def _open(self, *, x: int, y: int) -> None:
-        """
-        Fill the popup with the hint and place it below right of the pointer, flipped where the screen ends.
-
-        :param x: screen x of the pointer
-        :param y: screen y of the pointer
-        :return: None
-        """
-        self._pending = None
-        if self._hint is None:
-            return
-        background: str = self._theme.color(name="raised")
-        self._frame.configure(background=background, highlightbackground=self._theme.color(name="line"))
-        for label, text in ((self._title, self._hint.title), (self._text, self._hint.text)):
-            label.configure(text=text, background=background, foreground=self._theme.color(name="fg"))
-        self._window.update_idletasks()
-        offset: int = round(_TOOLTIP_OFFSET * self._theme.scale)
-        width: int = self._window.winfo_reqwidth()
-        height: int = self._window.winfo_reqheight()
-        left: int = x + offset if x + offset + width <= self._window.winfo_screenwidth() else x - offset - width
-        top: int = y + offset if y + offset + height <= self._window.winfo_screenheight() else y - offset - height
-        self._window.geometry(newGeometry=f"+{max(left, 0)}+{max(top, 0)}")
-        self._window.deiconify()
-
-
-class _ChoiceList:
-    """A single-choice list on a ttk.Treeview, so the theme styles it; item ids are the positions as strings.
-
-    Given a theme, an item can carry a warning sign whose hint pops up while the pointer is over the sign."""
-
-    def __init__(  # pylint: disable=too-many-arguments
-        self,
-        *,
-        parent: tk.Misc,
-        width: int,
-        on_select: Callable[[int], None],
-        height: int = 10,
-        theme: Theme | None = None,
+    def paint(
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
     ) -> None:
         """
-        Build the list with a vertical scrollbar in a frame of its own.
+        Draw the item, then its sign when it has one.
 
-        :param parent: widget to place the list in
-        :param width: width in pixels
-        :param on_select: called with the position of the item the user (or fill) selects
-        :param height: visible rows when the layout doesn't stretch the list
-        :param theme: theme for the warning signs and their popup, None for a list without signs
+        :param painter: painter of the list
+        :param option: item style
+        :param index: item
+        :return: None
         """
-        self.frame: ttk.Frame = ttk.Frame(master=parent)
-        self.frame.columnconfigure(index=0, weight=1)
-        self.frame.rowconfigure(index=0, weight=1)
-        self.tree: ttk.Treeview = ttk.Treeview(master=self.frame, show="tree", selectmode="browse", height=height)
-        self.tree.column(column="#0", width=width, stretch=True)
-        scrollbar: ttk.Scrollbar = ttk.Scrollbar(master=self.frame, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=scrollbar.set)
-        self.tree.grid(row=0, column=0, sticky="nsew")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        self.tree.bind(sequence="<<TreeviewSelect>>", func=lambda _: self._selected(on_select=on_select))
-        self._warnings: dict[str, Hint] = {}
-        self._tooltip: _Tooltip | None = None
-        # Kept referenced: Tk drops an image Python no longer references.
-        self._sign: tk.PhotoImage | None = None
-        self._font: tkfont.Font | None = None
-        self._gap: int = 0
-        if theme is not None:
-            self.tree.configure(style=Theme.MARKED_LIST)
-            self._font = tkfont.Font(root=self.tree, name=Theme.BODY_FONT, exists=True)
-            # One space between the text and the sign.
-            self._gap = self._font.measure(text=" ")
-            self._sign = Icons.warning(root=self.tree, size=round(_ICON_SIZE * theme.scale), gap=self._gap)
-            self._tooltip = _Tooltip(parent=self.tree, theme=theme)
-            self.tree.bind(sequence="<Motion>", func=self._hover)
-            self.tree.bind(sequence="<Leave>", func=lambda _: self._hide_tooltip())
+        super().paint(painter, option, index)
+        if index.row() in self._warnings():
+            sign: QRect = self._sign_rect(option=option, index=index)
+            painter.drawPixmap(sign.topLeft(), self._sign(scale=painter.device().devicePixelRatioF()))
+
+    def helpEvent(  # pylint: disable=invalid-name
+        self,
+        event: QHelpEvent,
+        view: QAbstractItemView,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex,
+    ) -> bool:
+        """
+        Show the hint of the sign while the pointer is over it, and no tooltip anywhere else.
+
+        :param event: tooltip request
+        :param view: the list
+        :param option: item style
+        :param index: item under the pointer
+        :return: True: the request is handled here
+        """
+        hint: Hint | None = self._warnings().get(index.row())
+        sign: QRect = self._sign_rect(option=option, index=index)
+        if event.type() == QEvent.Type.ToolTip and hint is not None and sign.contains(event.pos()):
+            text: str = f"<b>{html.escape(hint.title)}</b><br>{html.escape(hint.text)}"
+            QToolTip.showText(event.globalPos(), text, view, sign)
+        else:
+            QToolTip.hideText()
+        return True
+
+    def _sign_rect(self, *, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QRect:
+        """
+        Locate the sign of an item: a space after the end of its text, centered on the row.
+
+        :param option: item style
+        :param index: item
+        :return: rectangle of the sign in list coordinates
+        """
+        item: QStyleOptionViewItem = QStyleOptionViewItem(option)
+        self.initStyleOption(item, index)
+        style: QStyle = item.widget.style() if item.widget is not None else QApplication.style()
+        text: QRect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, item, item.widget)
+        margin: int = style.pixelMetric(QStyle.PixelMetric.PM_FocusFrameHMargin, item, item.widget) + 1
+        left: int = text.left() + margin + item.fontMetrics.horizontalAdvance(item.text + " ")
+        return QRect(left, item.rect.center().y() - _ICON_SIZE // 2 + 1, _ICON_SIZE, _ICON_SIZE)
+
+    def _sign(self, *, scale: float) -> QPixmap:
+        """
+        Get the sign drawn for a screen scale.
+
+        :param scale: device pixel ratio of the screen
+        :return: the sign at its logical size
+        """
+        if scale not in self._signs:
+            sign: QPixmap = QPixmap()
+            sign.loadFromData(Icons.warning(size=round(_ICON_SIZE * scale)))
+            sign.setDevicePixelRatio(scale)
+            self._signs[scale] = sign
+        return self._signs[scale]
+
+
+class _ChoiceList(QListView):
+    """A single-choice list; given warnings, an item can carry a warning sign whose hint pops up over the sign."""
+
+    def __init__(self, *, on_select: Callable[[int], None], parent: QWidget | None = None) -> None:
+        """
+        Build an empty list.
+
+        :param on_select: called with the position of the item the user (or fill) selects
+        :param parent: widget the list belongs to
+        """
+        super().__init__(parent)
+        self._model: QStringListModel = QStringListModel(parent=self)
+        self.setModel(self._model)
+        self.setUniformItemSizes(True)
+        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self._warnings: dict[int, Hint] = {}
+        self.setItemDelegate(_SignDelegate(parent=self, warnings=lambda: self._warnings))
+        self.selectionModel().currentChanged.connect(
+            # A refill resets the current item to none, which is no choice.
+            lambda current, _: on_select(current.row()) if current.isValid() else None
+        )
 
     def fill(self, *, items: Sequence[str], selected: int | None = None, warnings: Sequence[Hint | None] = ()) -> None:
         """
@@ -172,20 +189,23 @@ class _ChoiceList:
 
         :param items: new items
         :param selected: position to select and scroll to, None for none
-        :param warnings: hint of the warning sign of each item, None for no sign; signs need a theme given to the list
+        :param warnings: hint of the warning sign of each item, None for no sign
         :return: None
         """
-        self._hide_tooltip()
-        self.tree.delete(*self.tree.get_children())
-        self._warnings = {str(position): hint for position, hint in enumerate(warnings) if hint is not None}
-        for position, item in enumerate(items):
-            image: tk.PhotoImage | str = (
-                self._sign if self._sign is not None and str(position) in self._warnings else ""
-            )
-            self.tree.insert(parent="", index="end", iid=str(position), text=item, image=image)
+        self._warnings = {position: hint for position, hint in enumerate(warnings) if hint is not None}
+        self._model.setStringList(list(items))
         if selected is not None:
-            self.tree.selection_set(str(selected))
-            self.tree.see(item=str(selected))
+            index: QModelIndex = self._model.index(selected)
+            self.setCurrentIndex(index)
+            self.scrollTo(index, hint=QAbstractItemView.ScrollHint.EnsureVisible)
+
+    def count(self) -> int:
+        """
+        Count the items.
+
+        :return: number of items
+        """
+        return self._model.rowCount()
 
     def selection(self) -> int | None:
         """
@@ -193,73 +213,21 @@ class _ChoiceList:
 
         :return: position, None when nothing is selected
         """
-        selection: tuple[str, ...] = self.tree.selection()
-        return int(selection[0]) if selection else None
-
-    def _hover(self, event: "tk.Event[ttk.Treeview]") -> None:
-        """
-        Show the hint of the warning sign under the pointer, hide it anywhere else.
-
-        :param event: mouse motion event
-        :return: None
-        """
-        item: str = self.tree.identify_row(y=event.y)
-        if item in self._warnings and self._on_sign(item=item, x=event.x) and self._tooltip is not None:
-            self._tooltip.show(hint=self._warnings[item], x=event.x_root, y=event.y_root)
-            return
-        self._hide_tooltip()
-
-    def _on_sign(self, *, item: str, x: int) -> bool:
-        """
-        Tell whether a list x lies on the sign of an item.
-
-        Treeview can't identify elements of a custom item layout, so the sign is located from the text width.
-
-        :param item: item id
-        :param x: x within the list
-        :return: True when over the sign
-        """
-        if self._font is None or self._sign is None:
-            return False
-        cell: tuple[int, int, int, int] | str = self.tree.bbox(item=item)
-        if isinstance(cell, str):
-            return False
-        left: int = cell[0] + Theme.MARKED_INDENT + self._font.measure(text=self.tree.item(item=item, option="text"))
-        return left + self._gap <= x < left + self._sign.width()
-
-    def _hide_tooltip(self) -> None:
-        """
-        Hide the popup of the warning sign, if the list has one.
-
-        :return: None
-        """
-        if self._tooltip is not None:
-            self._tooltip.hide()
-
-    def _selected(self, *, on_select: Callable[[int], None]) -> None:
-        """
-        Pass the selected position on.
-
-        :param on_select: receiver of the position
-        :return: None
-        """
-        position: int | None = self.selection()
-        if position is not None:
-            on_select(position)
+        rows: list[QModelIndex] = self.selectionModel().selectedIndexes()
+        return rows[0].row() if rows else None
 
 
-class _GpuDialog:
+class _GpuDialog(QDialog):
     """Modal list of GPUs to pick one from."""
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
         *,
-        parent: tk.Tk,
+        parent: QWidget,
         translator: Translator,
         message: str,
         names: Sequence[str],
         selected: int | None,
-        dark: bool,
     ) -> None:
         """
         Build the dialog.
@@ -269,145 +237,116 @@ class _GpuDialog:
         :param message: why the user has to choose
         :param names: GPU names in list order
         :param selected: position preselected in the list, None for none
-        :param dark: True for a dark title bar
         """
-        self.choice: int | None = None
-        self._window: tk.Toplevel = tk.Toplevel(master=parent)
-        self._window.title(string=translator.text(item=UiText.CHOOSE_GPU_TITLE))
-        self._window.transient(master=parent)
-        frame: ttk.Frame = ttk.Frame(master=self._window, padding=_PAD * 2)
-        frame.grid(row=0, column=0, sticky="nsew")
-        ttk.Label(master=frame, text=message, wraplength=_MESSAGE_WRAP).grid(
-            row=0, column=0, columnspan=2, sticky="w", pady=(0, _PAD)
+        super().__init__(parent)
+        self.setWindowTitle(translator.text(item=UiText.CHOOSE_GPU_TITLE))
+        layout: QVBoxLayout = QVBoxLayout(self)
+        label: QLabel = QLabel(message, parent=self)
+        label.setWordWrap(True)
+        layout.addWidget(label)
+        self._buttons: QDialogButtonBox = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
         )
-        self._list: _ChoiceList = _ChoiceList(
-            parent=frame,
-            width=_GPU_LIST_WIDTH,
-            height=_GPU_LIST_HEIGHT,
-            on_select=self._enable_ok,
-        )
-        self._list.frame.grid(row=1, column=0, columnspan=2, sticky="nsew")
-        self._ok: ttk.Button = ttk.Button(
-            master=frame,
-            text=translator.text(item=UiText.OK),
-            command=self._accept,
-            state="disabled",
-            style=Theme.ACCENT,
-        )
-        self._ok.grid(row=2, column=0, sticky="e", pady=(_PAD, 0), padx=_PAD)
-        ttk.Button(master=frame, text=translator.text(item=UiText.CANCEL), command=self._window.destroy).grid(
-            row=2, column=1, sticky="e", pady=(_PAD, 0)
-        )
-        frame.columnconfigure(index=0, weight=1)
-        frame.rowconfigure(index=1, weight=1)
-        self._window.columnconfigure(index=0, weight=1)
-        self._window.rowconfigure(index=0, weight=1)
-        self._list.tree.bind(sequence="<Double-Button-1>", func=lambda _: self._accept())
-        self._window.bind(sequence="<Return>", func=lambda _: self._accept())
-        self._window.bind(sequence="<Escape>", func=lambda _: self._window.destroy())
+        self._ok: QPushButton = self._buttons.button(QDialogButtonBox.StandardButton.Ok)
+        self._ok.setText(translator.text(item=UiText.OK))
+        self._ok.setEnabled(False)
+        self._buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(translator.text(item=UiText.CANCEL))
+        self._buttons.accepted.connect(self._accept)
+        self._buttons.rejected.connect(self.reject)
+        self._list: _ChoiceList = _ChoiceList(on_select=lambda _: self._ok.setEnabled(True), parent=self)
+        self._list.setMinimumSize(*_GPU_LIST_SIZE)
+        self._list.doubleClicked.connect(lambda _: self._accept())
+        layout.addWidget(self._list, stretch=1)
+        layout.addWidget(self._buttons)
         self._list.fill(items=names, selected=selected)
-        Theme.title_bar(window=self._window, dark=dark)
+        self._list.setFocus()
 
-    def run(self) -> int | None:
+    def choice(self) -> int | None:
         """
         Show the dialog and wait until it is closed.
 
         :return: position of the chosen GPU, None when the user cancelled
         """
-        self._window.grab_set()
-        self._list.tree.focus_set()
-        self._window.wait_window()
-        return self.choice
-
-    def _enable_ok(self, _: int) -> None:
-        """
-        Allow OK once a GPU is selected.
-
-        :param _: position of the selected GPU
-        :return: None
-        """
-        self._ok.configure(state="normal")
+        return self._list.selection() if self.exec() == QDialog.DialogCode.Accepted else None
 
     def _accept(self) -> None:
         """
-        Take the selected GPU and close the dialog.
+        Close the dialog with the selected GPU, if there is one.
 
         :return: None
         """
-        position: int | None = self._list.selection()
-        if position is not None:
-            self.choice = position
-            self._window.destroy()
+        if self._list.selection() is not None:
+            self.accept()
 
 
-class _SettingsPanel:  # pylint: disable=too-many-instance-attributes
+class _ChangedDelegate(QStyledItemDelegate):
+    """Draws the values that differ from the recommended preset in bold and in the accent color of the palette.
+
+    The color is taken while painting, so a switch between light and dark mode reaches it at once."""
+
+    def initStyleOption(  # pylint: disable=invalid-name
+        self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
+    ) -> None:
+        """
+        Style an item, emphasizing a changed value.
+
+        :param option: item style to fill
+        :param index: item
+        :return: None
+        """
+        super().initStyleOption(option, index)
+        if index.data(_CHANGED_ROLE):
+            option.font.setBold(True)
+            option.palette.setColor(QPalette.ColorRole.Text, option.palette.color(QPalette.ColorRole.Accent))
+
+
+class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
     """The game and resolution title, the "Show settings" button, the quality slider and the settings table.
 
-    Rows whose value differs from the recommended preset are drawn in the accent color: that is what the slider
-    trades."""
+    Rows whose value differs from the recommended preset are emphasized: that is what the slider trades."""
 
     def __init__(
         self,
         *,
-        parent: tk.Misc,
         on_show: Callable[[], None],
         on_slider: Callable[[int], None],
         on_optimal: Callable[[], None],
+        parent: QWidget | None = None,
     ) -> None:
         """
         Build the panel with the slider and the table hidden.
 
-        :param parent: widget to place the panel in
         :param on_show: called when the user asks for the settings
         :param on_slider: called with the 1-based preset index when the user moves the slider
         :param on_optimal: called when the user asks for the recommended preset
+        :param parent: widget the panel belongs to
         """
-        self.frame: ttk.Frame = ttk.Frame(master=parent)
-        self.frame.columnconfigure(index=0, weight=1)
-        self.frame.rowconfigure(index=3, weight=1)
+        super().__init__(parent)
         self._on_slider: Callable[[int], None] = on_slider
-        head: ttk.Frame = ttk.Frame(master=self.frame)
-        head.grid(row=0, column=0, sticky="ew")
-        head.columnconfigure(index=0, weight=1)
-        self._title: ttk.Label = ttk.Label(master=head, style=Theme.TITLE)
-        self._title.grid(row=0, column=0, sticky="w")
-        self._subtitle: ttk.Label = ttk.Label(master=head, style=Theme.MUTED)
-        self._subtitle.grid(row=1, column=0, sticky="nw")
-        self._position: ttk.Label = ttk.Label(master=head, style=Theme.BIG)
-        self._position.grid(row=0, column=1, rowspan=2, sticky="e")
-        self._caption: ttk.Label = ttk.Label(master=head, style=Theme.MUTED)
-        self._caption.grid(row=2, column=1, sticky="e")
-        self._button: ttk.Button = ttk.Button(master=self.frame, command=on_show, style=Theme.ACCENT)
-        self._button.grid(row=1, column=0, sticky="w", pady=(_PAD, 0))
-        self._button.grid_remove()
-        self._slider_frame: ttk.Frame = ttk.Frame(master=self.frame)
-        self._slider_frame.grid(row=2, column=0, sticky="ew", pady=(_PAD, _PAD + _PAD // 2))
-        self._slider_frame.columnconfigure(index=1, weight=1)
-        self._performance: ttk.Label = ttk.Label(master=self._slider_frame, style=Theme.MUTED)
-        self._performance.grid(row=0, column=0, sticky="w")
-        self._slider: ttk.Scale = ttk.Scale(master=self._slider_frame, orient="horizontal", from_=1, to=2)
-        self._slider.configure(command=self._moved)
-        self._slider.grid(row=0, column=1, sticky="ew", padx=_PAD)
-        self._quality: ttk.Label = ttk.Label(master=self._slider_frame, style=Theme.MUTED)
-        self._quality.grid(row=0, column=2, sticky="e")
-        self._optimal: ttk.Button = ttk.Button(master=self._slider_frame, command=on_optimal, style=Theme.ACCENT)
-        self._optimal.grid(row=0, column=3, padx=(_PAD * 2, 0))
-        self._slider_frame.grid_remove()
-        self._table_frame: ttk.Frame = ttk.Frame(master=self.frame)
-        self._table_frame.grid(row=3, column=0, sticky="nsew")
-        self._table_frame.columnconfigure(index=0, weight=1)
-        self._table_frame.rowconfigure(index=0, weight=1)
-        self._table: ttk.Treeview = ttk.Treeview(
-            master=self._table_frame, columns=("setting", "value"), show="headings", selectmode="none"
-        )
-        self._table.column(column="setting", width=_SETTING_WIDTH, stretch=True)
-        self._table.column(column="value", width=_VALUE_WIDTH, stretch=False)
-        scrollbar: ttk.Scrollbar = ttk.Scrollbar(master=self._table_frame, orient="vertical", command=self._table.yview)
-        self._table.configure(yscrollcommand=scrollbar.set)
-        self._table.grid(row=0, column=0, sticky="nsew")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        self._table_frame.grid_remove()
         self._index: int = 0
+        self._title: QLabel = QLabel(parent=self)
+        self._title.setFont(_Fonts.derived(base=self.font(), step=_TITLE_STEP, bold=True))
+        self._subtitle: QLabel = self._muted(parent=self)
+        self._position: QLabel = QLabel(parent=self)
+        self._position.setFont(_Fonts.derived(base=self.font(), step=_BIG_STEP, bold=True))
+        self._position.setForegroundRole(QPalette.ColorRole.Accent)
+        self._caption: QLabel = self._muted(parent=self)
+        self._button: QPushButton = QPushButton(parent=self)
+        self._button.setDefault(True)
+        self._button.clicked.connect(on_show)
+        self._button.hide()
+        self._slider_row: QWidget = QWidget(parent=self)
+        self._slider_row.hide()
+        self._performance: QLabel = self._muted(parent=self._slider_row)
+        self._slider: QSlider = QSlider(Qt.Orientation.Horizontal, parent=self._slider_row)
+        self._slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self._slider.setPageStep(1)
+        self._slider.valueChanged.connect(self._moved)
+        self._quality: QLabel = self._muted(parent=self._slider_row)
+        self._optimal: QPushButton = QPushButton(parent=self._slider_row)
+        self._optimal.clicked.connect(on_optimal)
+        self._table: QTreeWidget = self._settings_table()
+        self._lay_out()
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -416,21 +355,11 @@ class _SettingsPanel:  # pylint: disable=too-many-instance-attributes
         :param translator: translator of the UI language
         :return: None
         """
-        self._button.configure(text=translator.text(item=UiText.SHOW_SETTINGS))
-        self._performance.configure(text=translator.text(item=UiText.PERFORMANCE))
-        self._quality.configure(text=translator.text(item=UiText.QUALITY))
-        self._optimal.configure(text=translator.text(item=UiText.BACK_TO_OPTIMAL))
-        self._table.heading(column="setting", text=translator.text(item=UiText.SETTING), anchor="w")
-        self._table.heading(column="value", text=translator.text(item=UiText.VALUE), anchor="w")
-
-    def apply_accent(self, *, color: str) -> None:
-        """
-        Color the rows that differ from the recommended preset.
-
-        :param color: accent color of the theme
-        :return: None
-        """
-        self._table.tag_configure(tagname=_CHANGED_TAG, foreground=color, font=Theme.STRONG_FONT)
+        self._button.setText(translator.text(item=UiText.SHOW_SETTINGS))
+        self._performance.setText(translator.text(item=UiText.PERFORMANCE))
+        self._quality.setText(translator.text(item=UiText.QUALITY))
+        self._optimal.setText(translator.text(item=UiText.BACK_TO_OPTIMAL))
+        self._table.setHeaderLabels([translator.text(item=UiText.SETTING), translator.text(item=UiText.VALUE)])
 
     def show_button(self, *, visible: bool) -> None:
         """
@@ -439,12 +368,9 @@ class _SettingsPanel:  # pylint: disable=too-many-instance-attributes
         :param visible: True to show the button
         :return: None
         """
-        if visible:
-            self._button.grid()
-        else:
-            self._button.grid_remove()
+        self._button.setVisible(visible)
 
-    def show(self, *, settings: SettingsView) -> None:
+    def show_settings(self, *, settings: SettingsView) -> None:
         """
         Show the settings of a preset with the slider at its position.
 
@@ -452,20 +378,27 @@ class _SettingsPanel:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self._index = settings.index
-        self._title.configure(text=settings.title)
-        self._subtitle.configure(text=settings.subtitle)
-        self._position.configure(text=settings.position)
-        self._caption.configure(text=settings.caption)
-        self._slider.configure(to=max(settings.count, 2), state="normal" if settings.count > 1 else "disabled")
-        self._slider.set(value=settings.index)
-        self._optimal.configure(state="disabled" if settings.optimal else "normal")
-        self._table.delete(*self._table.get_children())
+        self._title.setText(settings.title)
+        self._subtitle.setText(settings.subtitle)
+        self._position.setText(settings.position)
+        self._caption.setText(settings.caption)
+        # Set by the program, not by the user: no slider callback.
+        self._slider.blockSignals(True)
+        self._slider.setRange(1, max(settings.count, 2))
+        self._slider.setValue(settings.index)
+        self._slider.blockSignals(False)
+        self._slider.setEnabled(settings.count > 1)
+        self._optimal.setEnabled(not settings.optimal)
+        self._table.clear()
+        items: list[QTreeWidgetItem] = []
         for row in settings.rows:
-            self._table.insert(
-                parent="", index="end", values=(row.name, row.value), tags=(_CHANGED_TAG,) if row.changed else ()
-            )
-        self._slider_frame.grid()
-        self._table_frame.grid()
+            item: QTreeWidgetItem = QTreeWidgetItem([row.name, row.value])
+            for column in range(2):
+                item.setData(column, _CHANGED_ROLE, row.changed)
+            items.append(item)
+        self._table.addTopLevelItems(items)
+        self._slider_row.show()
+        self._table.show()
 
     def clear(self) -> None:
         """
@@ -474,62 +407,127 @@ class _SettingsPanel:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         for label in (self._title, self._subtitle, self._position, self._caption):
-            label.configure(text="")
-        self._table.delete(*self._table.get_children())
-        self._slider_frame.grid_remove()
-        self._table_frame.grid_remove()
+            label.clear()
+        self._table.clear()
+        self._slider_row.hide()
+        self._table.hide()
 
-    def _moved(self, value: str) -> None:
+    @staticmethod
+    def _muted(*, parent: QWidget) -> QLabel:
         """
-        Pass a slider move to another preset on; ttk.Scale moves continuously, so the position is rounded.
+        Make a label in the dimmed text color of the palette.
 
-        :param value: slider position as Tk passes it, e.g. "12.37"
+        :param parent: widget the label belongs to
+        :return: the label
+        """
+        label: QLabel = QLabel(parent=parent)
+        label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        return label
+
+    def _settings_table(self) -> QTreeWidget:
+        """
+        Make the hidden two-column table of setting names and values.
+
+        :return: the table
+        """
+        table: QTreeWidget = QTreeWidget(parent=self)
+        table.setColumnCount(2)
+        table.setRootIsDecorated(False)
+        table.setUniformRowHeights(True)
+        table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        table.setItemDelegate(_ChangedDelegate(table))
+        header: QHeaderView = table.header()
+        header.setStretchLastSection(False)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        header.resizeSection(1, _VALUE_WIDTH)
+        table.hide()
+        return table
+
+    def _lay_out(self) -> None:
+        """
+        Place the widgets: the titles with the preset position right of them, the button, the slider row, the table.
+
         :return: None
         """
-        index: int = round(float(value))
+        titles: QVBoxLayout = QVBoxLayout()
+        titles.addWidget(self._title)
+        titles.addWidget(self._subtitle)
+        titles.addStretch()
+        preset: QVBoxLayout = QVBoxLayout()
+        preset.addWidget(self._position, alignment=Qt.AlignmentFlag.AlignRight)
+        preset.addWidget(self._caption, alignment=Qt.AlignmentFlag.AlignRight)
+        head: QHBoxLayout = QHBoxLayout()
+        head.addLayout(titles, stretch=1)
+        head.addLayout(preset)
+        slider: QHBoxLayout = QHBoxLayout(self._slider_row)
+        slider.setContentsMargins(0, _PAD, 0, _PAD)
+        slider.addWidget(self._performance)
+        slider.addWidget(self._slider, stretch=1)
+        slider.addWidget(self._quality)
+        slider.addSpacing(_PAD * 2)
+        slider.addWidget(self._optimal)
+        layout: QVBoxLayout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addLayout(head)
+        layout.addWidget(self._button, alignment=Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(self._slider_row)
+        layout.addWidget(self._table, stretch=1)
+        layout.addStretch()
+
+    def _moved(self, index: int) -> None:
+        """
+        Pass a slider move to another preset on.
+
+        :param index: 1-based preset index
+        :return: None
+        """
         if index != self._index:
             self._on_slider(index)
 
 
-class _TopBar:
+class _TopBar(QWidget):
     """The GPU in use with the button to change it, and the theme and language choices."""
 
     def __init__(
         self,
         *,
-        parent: tk.Misc,
         on_change_gpu: Callable[[], None],
         on_theme: Callable[[int], None],
         on_language: Callable[[str], None],
+        parent: QWidget | None = None,
     ) -> None:
         """
         Build the bar.
 
-        :param parent: widget to place the bar in
         :param on_change_gpu: called when the user wants another GPU
         :param on_theme: called with the position of the chosen theme
         :param on_language: called with the code of the chosen language
+        :param parent: widget the bar belongs to
         """
-        self.frame: ttk.Frame = ttk.Frame(master=parent, padding=_PAD)
-        self.frame.columnconfigure(index=0, weight=1)
-        self._hardware: ttk.Label = ttk.Label(master=self.frame, style=Theme.HEADLINE)
-        self._hardware.grid(row=0, column=0, sticky="w")
-        self._change_gpu: ttk.Button = ttk.Button(master=self.frame, command=on_change_gpu)
-        self._change_gpu.grid(row=0, column=1, padx=_PAD)
-        self._theme_label: ttk.Label = ttk.Label(master=self.frame, style=Theme.SECTION)
-        self._theme_label.grid(row=0, column=2, padx=(_PAD * 2, _PAD))
-        self._themes: ttk.Combobox = ttk.Combobox(master=self.frame, state="readonly", width=_COMBO_WIDTH)
-        self._themes.grid(row=0, column=3)
-        self._themes.bind(sequence="<<ComboboxSelected>>", func=lambda _: on_theme(self._themes.current()))
-        self._language_label: ttk.Label = ttk.Label(master=self.frame, style=Theme.SECTION)
-        self._language_label.grid(row=0, column=4, padx=(_PAD * 2, _PAD))
-        self._language: ttk.Combobox = ttk.Combobox(
-            master=self.frame, state="readonly", values=list(LANGUAGE_NAMES.values()), width=_COMBO_WIDTH
-        )
-        self._language.grid(row=0, column=5)
-        self._language.bind(
-            sequence="<<ComboboxSelected>>", func=lambda _: on_language(list(LANGUAGE_NAMES)[self._language.current()])
-        )
+        super().__init__(parent)
+        layout: QHBoxLayout = QHBoxLayout(self)
+        self._hardware: QLabel = QLabel(parent=self)
+        self._hardware.setFont(_Fonts.derived(base=self.font(), step=_HEADLINE_STEP, bold=True))
+        self._change_gpu: QPushButton = QPushButton(parent=self)
+        self._change_gpu.clicked.connect(on_change_gpu)
+        self._theme_label: QLabel = QLabel(parent=self)
+        self._themes: QComboBox = QComboBox(parent=self)
+        # Activated: chosen by the user, not set by the program.
+        self._themes.activated.connect(on_theme)
+        self._language_label: QLabel = QLabel(parent=self)
+        self._language: QComboBox = QComboBox(parent=self)
+        self._language.addItems(list(LANGUAGE_NAMES.values()))
+        self._language.activated.connect(lambda index: on_language(list(LANGUAGE_NAMES)[index]))
+        layout.addWidget(self._hardware, stretch=1)
+        layout.addWidget(self._change_gpu)
+        layout.addSpacing(_PAD * 2)
+        layout.addWidget(self._theme_label)
+        layout.addWidget(self._themes)
+        layout.addSpacing(_PAD * 2)
+        layout.addWidget(self._language_label)
+        layout.addWidget(self._language)
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -538,10 +536,10 @@ class _TopBar:
         :param translator: translator of the UI language
         :return: None
         """
-        self._change_gpu.configure(text=translator.text(item=UiText.CHANGE_GPU))
-        self._theme_label.configure(text=translator.text(item=UiText.THEME))
-        self._language_label.configure(text=translator.text(item=UiText.LANGUAGE))
-        self._language.current(newindex=list(LANGUAGE_NAMES).index(translator.language))
+        self._change_gpu.setText(translator.text(item=UiText.CHANGE_GPU))
+        self._theme_label.setText(translator.text(item=UiText.THEME))
+        self._language_label.setText(translator.text(item=UiText.LANGUAGE))
+        self._language.setCurrentIndex(list(LANGUAGE_NAMES).index(translator.language))
 
     def show_hardware(self, *, text: str) -> None:
         """
@@ -550,29 +548,7 @@ class _TopBar:
         :param text: the line to show
         :return: None
         """
-        self._hardware.configure(text=text)
-
-    def recolor_popdowns(self, *, theme: Theme) -> None:
-        """
-        Recolor the drop-down lists of the comboboxes already opened; new ones take the colors from the option database.
-
-        :param theme: theme just applied
-        :return: None
-        """
-        for combobox in (self._themes, self._language):
-            popdown: str = str(combobox.tk.call("ttk::combobox::PopdownWindow", str(combobox)))
-            combobox.tk.call(
-                f"{popdown}.f.l",
-                "configure",
-                "-background",
-                theme.color(name="panel"),
-                "-foreground",
-                theme.color(name="fg"),
-                "-selectbackground",
-                theme.color(name="selected"),
-                "-selectforeground",
-                theme.color(name="fg"),
-            )
+        self._hardware.setText(text)
 
     def show_themes(self, *, names: Sequence[str], selected: int) -> None:
         """
@@ -582,49 +558,46 @@ class _TopBar:
         :param selected: position of the theme in use
         :return: None
         """
-        self._themes.configure(values=list(names))
-        self._themes.current(newindex=selected)
+        self._themes.clear()
+        self._themes.addItems(list(names))
+        self._themes.setCurrentIndex(selected)
 
 
-class _GamesColumn:
+class _GamesColumn(QWidget):
     """The game list with its search field and the button that requests the list again after a failure."""
 
     def __init__(
         self,
         *,
-        parent: tk.Misc,
-        width: int,
         on_search: Callable[[str], None],
         on_load: Callable[[], None],
         on_select: Callable[[int], None],
+        parent: QWidget | None = None,
     ) -> None:
         """
         Build the column with the "Load games" button hidden.
 
-        :param parent: widget to place the column in
-        :param width: width of the list in pixels
         :param on_search: called with the search text on every change
         :param on_load: called when the user asks for the game list again
         :param on_select: called with the position of the selected game
+        :param parent: widget the column belongs to
         """
-        self.frame: ttk.Frame = ttk.Frame(master=parent)
-        self.frame.columnconfigure(index=0, weight=1)
-        self.frame.rowconfigure(index=3, weight=1)
-        self._title: ttk.Label = ttk.Label(master=self.frame, style=Theme.SECTION)
-        self._title.grid(row=0, column=0, sticky="w", pady=(0, _PAD // 2))
-        search: ttk.Frame = ttk.Frame(master=self.frame)
-        search.grid(row=1, column=0, sticky="ew", pady=(0, _PAD // 2))
-        search.columnconfigure(index=1, weight=1)
-        self._search_label: ttk.Label = ttk.Label(master=search, style=Theme.MUTED)
-        self._search_label.grid(row=0, column=0, padx=(0, _PAD))
-        self._search: tk.StringVar = tk.StringVar(master=self.frame)
-        self._search.trace_add(mode="write", callback=lambda *_: on_search(self._search.get()))
-        ttk.Entry(master=search, textvariable=self._search).grid(row=0, column=1, sticky="ew")
-        self._load: ttk.Button = ttk.Button(master=self.frame, command=on_load)
-        self._load.grid(row=2, column=0, sticky="ew", pady=(0, _PAD // 2))
-        self._load.grid_remove()
-        self.list: _ChoiceList = _ChoiceList(parent=self.frame, width=width, on_select=on_select)
-        self.list.frame.grid(row=3, column=0, sticky="nsew")
+        super().__init__(parent)
+        layout: QVBoxLayout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self._title: QLabel = QLabel(parent=self)
+        self._title.setFont(_Fonts.derived(base=self.font(), bold=True))
+        self._search: QLineEdit = QLineEdit(parent=self)
+        self._search.setClearButtonEnabled(True)
+        self._search.textChanged.connect(on_search)
+        self._load: QPushButton = QPushButton(parent=self)
+        self._load.clicked.connect(on_load)
+        self._load.hide()
+        self.list: _ChoiceList = _ChoiceList(on_select=on_select, parent=self)
+        layout.addWidget(self._title)
+        layout.addWidget(self._search)
+        layout.addWidget(self._load)
+        layout.addWidget(self.list, stretch=1)
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -633,9 +606,9 @@ class _GamesColumn:
         :param translator: translator of the UI language
         :return: None
         """
-        self._title.configure(text=translator.text(item=UiText.GAME))
-        self._search_label.configure(text=translator.text(item=UiText.SEARCH))
-        self._load.configure(text=translator.text(item=UiText.LOAD_GAMES))
+        self._title.setText(translator.text(item=UiText.GAME))
+        self._search.setPlaceholderText(translator.text(item=UiText.SEARCH))
+        self._load.setText(translator.text(item=UiText.LOAD_GAMES))
 
     def show_load(self, *, visible: bool) -> None:
         """
@@ -644,93 +617,80 @@ class _GamesColumn:
         :param visible: True to show the button
         :return: None
         """
-        if visible:
-            self._load.grid()
-        else:
-            self._load.grid_remove()
+        self._load.setVisible(visible)
 
 
-class MainWindow:  # pylint: disable=too-many-instance-attributes
-    """The main window; user actions go to the presenter set with connect(), which fills the widgets in turn."""
+class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
+    """The main window; user actions go to the presenter set with attach(), which fills the widgets in turn."""
 
-    def __init__(self, *, root: tk.Tk, log_lines: Queue[str]) -> None:
+    def __init__(self, *, log_lines: Queue[str]) -> None:
         """
-        Build every widget; texts are set by apply_language(), colors by apply_theme().
+        Build every widget; texts are set by apply_language(), the color scheme by apply_theme().
 
-        :param root: Tk root window
         :param log_lines: formatted log lines for the log panel
         """
-        self._root: tk.Tk = root
+        super().__init__()
         self._presenter: Presenter | None = None
         self._translator: Translator | None = None
-        self._theme: Theme = Theme(root=root)
-        self._mode: ThemeMode = ThemeMode.AUTO
-        self._applied: ThemeMode | None = None
-        self._logs_shown: bool = False
-        root.title(string=APP_TITLE)
-        width, height = (round(int(size) * self._theme.scale) for size in WINDOW_SIZE.split(sep="x"))
-        root.geometry(newGeometry=f"{width}x{height}")
-        root.minsize(
-            width=round(WINDOW_MIN_SIZE[0] * self._theme.scale), height=round(WINDOW_MIN_SIZE[1] * self._theme.scale)
-        )
-        root.report_callback_exception = self._report_callback_exception  # type: ignore[method-assign]
-        root.columnconfigure(index=0, weight=1)
-        root.rowconfigure(index=1, weight=1)
+        self.setWindowTitle(APP_TITLE)
+        self.resize(*WINDOW_SIZE)
+        self.setMinimumSize(*WINDOW_MIN_SIZE)
+        layout: QVBoxLayout = QVBoxLayout(self)
 
         self._top: _TopBar = _TopBar(
-            parent=root,
             on_change_gpu=lambda: self._call(action=Presenter.change_gpu),
             on_theme=lambda index: self._call(action=lambda presenter: presenter.change_theme(index=index)),
             on_language=lambda code: self._call(action=lambda presenter: presenter.change_language(language=code)),
+            parent=self,
         )
-        self._top.frame.grid(row=0, column=0, sticky="ew")
+        layout.addWidget(self._top)
 
-        body: ttk.Frame = ttk.Frame(master=root, padding=(_PAD, 0))
-        body.grid(row=1, column=0, sticky="nsew")
-        body.columnconfigure(index=2, weight=1)
-        body.rowconfigure(index=0, weight=1)
+        body: QHBoxLayout = QHBoxLayout()
         self._games: _GamesColumn = _GamesColumn(
-            parent=body,
-            width=round(_GAMES_WIDTH * self._theme.scale),
             on_search=lambda text: self._call(action=lambda presenter: presenter.search_games(text=text)),
             on_load=lambda: self._call(action=Presenter.load_games),
             on_select=lambda index: self._call(action=lambda presenter: presenter.select_game(index=index)),
+            parent=self,
         )
-        self._games.frame.grid(row=0, column=0, sticky="nsew", padx=(0, _PAD))
+        self._games.setFixedWidth(_GAMES_WIDTH)
+        body.addWidget(self._games)
+        body.addSpacing(_PAD)
 
-        resolutions: ttk.Frame = ttk.Frame(master=body)
-        resolutions.grid(row=0, column=1, sticky="nsew", padx=(0, _PAD * 2))
-        resolutions.columnconfigure(index=0, weight=1)
-        resolutions.rowconfigure(index=1, weight=1)
-        self._resolutions_label: ttk.Label = ttk.Label(master=resolutions, style=Theme.SECTION)
-        self._resolutions_label.grid(row=0, column=0, sticky="w", pady=(0, _PAD // 2))
+        resolutions: QVBoxLayout = QVBoxLayout()
+        self._resolutions_label: QLabel = QLabel(parent=self)
+        self._resolutions_label.setFont(_Fonts.derived(base=self.font(), bold=True))
         self._resolutions: _ChoiceList = _ChoiceList(
-            parent=resolutions,
-            width=round(_RESOLUTIONS_WIDTH * self._theme.scale),
             on_select=lambda index: self._call(action=lambda presenter: presenter.select_resolution(index=index)),
-            theme=self._theme,
+            parent=self,
         )
-        self._resolutions.frame.grid(row=1, column=0, sticky="nsew")
+        self._resolutions.setFixedWidth(_RESOLUTIONS_WIDTH)
+        resolutions.addWidget(self._resolutions_label)
+        resolutions.addWidget(self._resolutions, stretch=1)
+        body.addLayout(resolutions)
+        body.addSpacing(_PAD * 2)
 
         self._settings: _SettingsPanel = _SettingsPanel(
-            parent=body,
             on_show=lambda: self._call(action=Presenter.show_settings),
             on_slider=lambda index: self._call(action=lambda presenter: presenter.move_slider(index=index)),
             on_optimal=lambda: self._call(action=Presenter.back_to_optimal),
+            parent=self,
         )
-        self._settings.frame.grid(row=0, column=2, sticky="nsew")
+        body.addWidget(self._settings, stretch=1)
+        layout.addLayout(body, stretch=1)
 
-        bottom: ttk.Frame = ttk.Frame(master=root, padding=_PAD)
-        bottom.grid(row=2, column=0, sticky="ew")
-        bottom.columnconfigure(index=0, weight=1)
-        self._status: ttk.Label = ttk.Label(master=bottom, style=Theme.MUTED)
-        self._status.grid(row=0, column=0, sticky="w")
-        self._logs_button: ttk.Button = ttk.Button(master=bottom, command=self._toggle_logs)
-        self._logs_button.grid(row=0, column=1)
-        self._log_panel: LogPanel = LogPanel(parent=root, lines=log_lines)
-        root.after(ms=THEME_POLL_MS, func=self._follow_windows)
+        bottom: QHBoxLayout = QHBoxLayout()
+        self._status: QLabel = QLabel(parent=self)
+        self._status.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        self._logs_button: QPushButton = QPushButton(parent=self)
+        self._logs_button.clicked.connect(self._toggle_logs)
+        bottom.addWidget(self._status, stretch=1)
+        bottom.addWidget(self._logs_button)
+        layout.addLayout(bottom)
+        self._log_panel: LogPanel = LogPanel(lines=log_lines, parent=self)
+        self._log_panel.hide()
+        layout.addWidget(self._log_panel)
 
-    def connect(self, *, presenter: Presenter) -> None:
+    def attach(self, *, presenter: Presenter) -> None:
         """
         Send the user actions to the presenter.
 
@@ -741,20 +701,12 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
 
     def apply_theme(self, *, mode: ThemeMode) -> None:
         """
-        Switch the colors of the window; AUTO follows the Windows app mode, also when it changes later.
+        Switch the color scheme; AUTO follows the Windows app mode, also when it changes later.
 
         :param mode: theme mode
         :return: None
         """
-        self._mode = mode
-        applied: ThemeMode = self._theme.apply(mode=mode)
-        self._applied = applied
-        Theme.title_bar(window=self._root, dark=applied is ThemeMode.DARK)
-        self._log_panel.apply_colors(
-            background=self._theme.color(name="panel"), foreground=self._theme.color(name="fg")
-        )
-        self._settings.apply_accent(color=self._theme.color(name="accent"))
-        self._top.recolor_popdowns(theme=self._theme)
+        Theme.apply(mode=mode)
 
     def show_themes(self, *, names: Sequence[str], selected: int) -> None:
         """
@@ -776,10 +728,10 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
         self._translator = translator
         self._top.apply_language(translator=translator)
         self._games.apply_language(translator=translator)
-        self._resolutions_label.configure(text=translator.text(item=UiText.RESOLUTION))
+        self._resolutions_label.setText(translator.text(item=UiText.RESOLUTION))
         self._settings.apply_language(translator=translator)
-        self._logs_button.configure(
-            text=translator.text(item=UiText.HIDE_LOGS if self._logs_shown else UiText.SHOW_LOGS)
+        self._logs_button.setText(
+            translator.text(item=UiText.HIDE_LOGS if self._log_panel.isVisible() else UiText.SHOW_LOGS)
         )
 
     def show_hardware(self, *, text: str) -> None:
@@ -798,7 +750,7 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
         :param text: the line to show
         :return: None
         """
-        self._status.configure(text=text)
+        self._status.setText(text)
 
     def show_load_games(self, *, visible: bool) -> None:
         """
@@ -827,7 +779,7 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         selected: int | None = self._resolutions.selection()
-        same: bool = len(self._resolutions.tree.get_children()) == len(items) > 0
+        same: bool = self._resolutions.count() == len(items) > 0
         self._resolutions.fill(
             items=[item.resolution for item in items],
             selected=selected if same else None,
@@ -850,7 +802,7 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
         :param settings: what to show
         :return: None
         """
-        self._settings.show(settings=settings)
+        self._settings.show_settings(settings=settings)
 
     def clear_settings(self) -> None:
         """
@@ -872,14 +824,9 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
         if self._translator is None:
             return None
         dialog: _GpuDialog = _GpuDialog(
-            parent=self._root,
-            translator=self._translator,
-            message=message,
-            names=names,
-            selected=selected,
-            dark=self._applied is ThemeMode.DARK,
+            parent=self, translator=self._translator, message=message, names=names, selected=selected
         )
-        return dialog.run()
+        return dialog.choice()
 
     def _call(self, *, action: Callable[[Presenter], None]) -> None:
         """
@@ -891,46 +838,13 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
         if self._presenter is not None:
             action(self._presenter)
 
-    def _follow_windows(self) -> None:
-        """
-        Re-apply the AUTO theme when Windows switched between light and dark mode, then check again later.
-
-        :return: None
-        """
-        if (
-            self._mode is ThemeMode.AUTO
-            and self._applied is not None
-            and Theme.resolve(mode=ThemeMode.AUTO) != self._applied
-        ):
-            self.apply_theme(mode=ThemeMode.AUTO)
-        self._root.after(ms=THEME_POLL_MS, func=self._follow_windows)
-
     def _toggle_logs(self) -> None:
         """
         Show or hide the log panel.
 
         :return: None
         """
-        self._logs_shown = not self._logs_shown
-        if self._logs_shown:
-            self._log_panel.frame.grid(row=3, column=0, sticky="ew", padx=_PAD, pady=(0, _PAD))
-        else:
-            self._log_panel.frame.grid_remove()
+        shown: bool = not self._log_panel.isVisible()
+        self._log_panel.setVisible(shown)
         if self._translator is not None:
-            self._logs_button.configure(
-                text=self._translator.text(item=UiText.HIDE_LOGS if self._logs_shown else UiText.SHOW_LOGS)
-            )
-
-    @staticmethod
-    def _report_callback_exception(
-        exc_type: type[BaseException], exc_value: BaseException, traceback: TracebackType | None
-    ) -> None:
-        """
-        Log an error raised in a Tk callback, which would otherwise go to the missing stderr.
-
-        :param exc_type: exception type
-        :param exc_value: exception
-        :param traceback: traceback
-        :return: None
-        """
-        logger.opt(exception=(exc_type, exc_value, traceback)).error("Unhandled error in the window")
+            self._logs_button.setText(self._translator.text(item=UiText.HIDE_LOGS if shown else UiText.SHOW_LOGS))
