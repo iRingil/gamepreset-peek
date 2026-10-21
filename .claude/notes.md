@@ -23,6 +23,8 @@
 - 2026-10-06: step 5: `core/hardware.py` (`HardwareDetector`, `GpuList`, `GpuRanks`), `core/user_settings.py`
   (`UserSettingsStore`), models `Gpu` and `UserSettings`; `tools/build_gpus.py` builds `src/app/data/gpus.json` and `gpu_ranks.json`;
   tests with a fake registry. Compatibility re-checked: the gpu state depends on `gpu.deviceID`, not the name.
+- 2026-10-21: step 6: `core/service.py` (`PresetService`), models `Game`, `GameSettings`, `HardwareCheck`,
+  `HardwareState`; tests with autospec mocks of `OpsApi` and `HardwareDetector`.
 
 ## Decisions and findings
 
@@ -213,3 +215,20 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
 - Saved settings (user's decision): only the language and a GPU the user chose (name + device id) in
   `%LOCALAPPDATA%\GamePresetPeek\settings.json`; CPU, memory and OS are detected on every start. A missing or broken
   file gives the defaults with a warning in the log.
+
+### Service (2026-10-21, step 6)
+
+- `PresetService` is synchronous; the presenter calls it from one worker thread at a time, so its caches have no lock.
+- Hardware flow (`check_hardware`): saved GPU -> compatibility check; else detected NVIDIA GPUs: none ->
+  `NO_NVIDIA_GPU`, several -> `CHOOSE_DETECTED_GPU` (no NVIDIA request until the user picks), one -> check.
+  Check result: ok -> `READY` with `Hardware`; only `gpu` failed -> `CHOOSE_LISTED_GPU` (bundled list); anything
+  else (cpu, or failed but no component named) -> `REJECTED` with the failed components.
+- `choose_gpu` saves the GPU only when NVIDIA accepts it, for detected and listed choices alike (so a user with
+  several cards isn't asked on every start); the language in the file is kept. `forget_gpu` drops it and re-detects.
+- CPU, memory and Windows version are detected once per service (`cached_property`), the GPU list on every check.
+- The service holds no current hardware: `READY` gives a `Hardware` the presenter passes to `game_presets`.
+- `game_settings` caches the presets file and translations of the last game only, keyed by game, profile and
+  presets file: switching resolutions downloads nothing (war_thunder's translation is 7.3 MB), another game does.
+- `GameSettings.rows(language=NVIDIA code)` translates on demand, so a UI language switch re-renders without requests.
+  Mapping UI language -> NVIDIA code (`ru` -> `ru_RU`) belongs to step 7.
+- `dataclasses.replace` is called with the instance positionally: its first parameter is positional-only.

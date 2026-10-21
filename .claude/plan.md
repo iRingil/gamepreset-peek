@@ -104,10 +104,10 @@ tests/src/app/...
 - [x] Tests (registry mocked).
 
 ### 6. Service
-- [ ] `core/service.py`: games list, resolutions of a game, settings of game + resolution (translated with the game's
+- [x] `core/service.py`: games list, resolutions of a game, settings of game + resolution (translated with the game's
   `.translation`), hardware flow (saved -> detected -> compatibility -> manual choice); several NVIDIA adapters ->
   the user picks one of them, the strongest preselected.
-- [ ] Tests.
+- [x] Tests.
 
 ### 7. i18n
 - [ ] `i18n/ui_text.py`, `i18n/translator.py` (Windows UI language -> one of the 5, default en).
@@ -137,8 +137,13 @@ Not part of the current plan; research findings are in `.claude/notes.md` ("Game
 
 ## Open questions
 
+Decided in step 6: the service passes `belowMinSpec` and `rate` through, FLOAT values are shown as NVIDIA sends
+them, empty `ops` is a "no recommendation" result (not an error), `forget_gpu()` re-detects the GPU. Left for the GUI
+(step 8):
+
 - How to show a resolution whose answer has `belowMinSpec: true`?
-- Meaning of `rate` in the preset answer is unknown (most likely target FPS); shown or ignored?
-- How to show FLOAT values: as NVIDIA sends them (`"1.000"`) or normalized (`1`)?
-- What to show when a game has no recommendation (empty `ops`, 375 games, or a too weak GPU)?
-- Should the user be able to re-detect or change the saved GPU later (menu item / button)?
+- Show `rate` (most likely target FPS) or ignore it?
+- What text to show when a game has no recommendation (empty `ops`, 375 games, or a too weak GPU)?
+- Is there a menu item / button for `forget_gpu()`?
+- What to show when NVIDIA rejects the CPU (`REJECTED`): no GPU choice fixes it, and presets answer 404 for an
+  unknown CPU.
