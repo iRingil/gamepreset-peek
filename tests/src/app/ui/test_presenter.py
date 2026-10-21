@@ -24,7 +24,7 @@ from app.core.models import (
 )
 from app.core.service import PresetService
 from app.i18n.translator import Translator
-from app.ui.presenter import Presenter, SettingRow, SettingsView
+from app.ui.presenter import Hint, Presenter, ResolutionRow, SettingRow, SettingsView
 
 __all__: tuple = ()
 
@@ -45,6 +45,15 @@ _PRESETS: GamePresets = GamePresets(
         ResolutionPreset(resolution="2560x1440", preset_index=2, rate=35, below_min_spec=False),
     ),
 )
+_WARNING: Hint = Hint(
+    title="Too demanding for this PC", text="Even the lowest settings may stutter at this resolution."
+)
+# The resolution list _PRESETS shows: the largest first, the warning on the one below the minimum requirements.
+_ROWS: list[ResolutionRow] = [
+    ResolutionRow(resolution="3840x2160", warning=_WARNING),
+    ResolutionRow(resolution="2560x1440", warning=None),
+    ResolutionRow(resolution="1920x1080", warning=None),
+]
 _SETTINGS: GameSettings = GameSettings(
     presets=PresetsFile(
         settings=(Setting(name="Shadows", type="ENUM"), Setting(name="Scale", type="FLOAT")),
@@ -108,7 +117,7 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.load_games: bool = False
         self.games: list[str] = []
         self.game_selected: int | None = None
-        self.resolutions: list[str] = []
+        self.resolutions: list[ResolutionRow] = []
         self.settings_button: bool = False
         self.settings: SettingsView | None = None
         self.asks: list[tuple[str, list[str], int | None]] = []
@@ -180,11 +189,11 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.games = list(names)
         self.game_selected = selected
 
-    def show_resolutions(self, *, items: Sequence[str]) -> None:
+    def show_resolutions(self, *, items: Sequence[ResolutionRow]) -> None:
         """
         Record the resolution list.
 
-        :param items: resolution captions
+        :param items: resolution rows
         :return: None
         """
         self.resolutions = list(items)
@@ -495,7 +504,7 @@ class TestGame(_PresenterTests):
 
     def test_resolutions(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Shows the resolutions of the game, the largest first, marking those below the minimum requirements.
+        Shows the resolutions of the game, the largest first, with a warning on those below the minimum requirements.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -508,7 +517,7 @@ class TestGame(_PresenterTests):
         presenter.select_game(index=1)
         # Assert
         service.game_presets.assert_called_once_with(game_id="mordhau", hardware=_Hardware.with_gpu(gpu=_LAPTOP_GPU))
-        assert view.resolutions == ["3840x2160 (below minimum requirements)", "2560x1440", "1920x1080"]
+        assert view.resolutions == _ROWS
         assert (view.status, view.settings_button) == ("", False)
 
     def test_no_recommendations(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
@@ -552,13 +561,13 @@ class TestGame(_PresenterTests):
             ),
             "mordhau": _PRESETS,
         }
-        shown: list[list[str]] = []
+        shown: list[list[ResolutionRow]] = []
 
-        def record(*, items: Sequence[str]) -> None:
+        def record(*, items: Sequence[ResolutionRow]) -> None:
             """
             Record every resolution list shown.
 
-            :param items: resolution captions
+            :param items: resolution rows
             :return: None
             """
             shown.append(list(items))
@@ -572,8 +581,8 @@ class TestGame(_PresenterTests):
         # Act
         runner.run_all()
         # Assert
-        assert ["1280x720"] not in shown
-        assert shown[-1] == ["3840x2160 (below minimum requirements)", "2560x1440", "1920x1080"]
+        assert [ResolutionRow(resolution="1280x720", warning=None)] not in shown
+        assert shown[-1] == _ROWS
 
 
 class TestSettings(_PresenterTests):
@@ -728,7 +737,7 @@ class TestLanguage(_PresenterTests):
             "ru",
             "ru",
             "Видеокарта: NVIDIA GeForce RTX 4060 Laptop GPU",
-            "3840x2160 (ниже минимальных требований)",
+            ResolutionRow(resolution="3840x2160", warning=_WARNING),
         )
         assert view.settings is not None
         assert (view.settings.rows, view.settings.subtitle, view.settings.caption) == (

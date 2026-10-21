@@ -21,7 +21,23 @@ from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.worker import TaskRunner
 
-__all__: tuple[str, ...] = ("MainView", "Presenter", "SettingRow", "SettingsView")
+__all__: tuple[str, ...] = ("Hint", "MainView", "Presenter", "ResolutionRow", "SettingRow", "SettingsView")
+
+
+@dataclass(frozen=True, slots=True)
+class Hint:
+    """A popup hint: a short title over a one-sentence text."""
+
+    title: str
+    text: str
+
+
+@dataclass(frozen=True, slots=True)
+class ResolutionRow:
+    """A row of the resolution list; warning is the hint of its warning sign, None when the row has no sign."""
+
+    resolution: str
+    warning: Hint | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,11 +127,11 @@ class MainView(Protocol):
         :return: None
         """
 
-    def show_resolutions(self, *, items: Sequence[str]) -> None:
+    def show_resolutions(self, *, items: Sequence[ResolutionRow]) -> None:
         """
         Fill the resolution list; an empty sequence clears it.
 
-        :param items: resolution captions in list order
+        :param items: resolution rows in list order
         :return: None
         """
 
@@ -571,17 +587,17 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def _render_resolutions(self) -> None:
         """
-        Fill the resolution list, marking the resolutions the hardware is too weak for.
+        Fill the resolution list, marking with a warning the resolutions the hardware is too weak for.
 
         :return: None
         """
+        warning: Hint = Hint(
+            title=self._translator.text(item=UiText.RESOLUTION_BELOW_MIN_SPEC),
+            text=self._translator.text(item=UiText.RESOLUTION_BELOW_MIN_SPEC_HINT),
+        )
         self._view.show_resolutions(
             items=[
-                (
-                    self._translator.text(item=UiText.RESOLUTION_BELOW_MIN_SPEC, resolution=item.resolution)
-                    if item.below_min_spec
-                    else item.resolution
-                )
+                ResolutionRow(resolution=item.resolution, warning=warning if item.below_min_spec else None)
                 for item in self._resolutions
             ]
         )

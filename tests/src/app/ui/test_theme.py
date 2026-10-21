@@ -124,8 +124,8 @@ class TestApply:
     @pytest.mark.parametrize(
         argnames=("mode", "expected"),
         argvalues=[
-            (ThemeMode.DARK, ("#15171c", "#d6dae1", "#4fb3ff")),
-            (ThemeMode.LIGHT, ("#dcdfe4", "#20242b", "#1d6fb8")),
+            (ThemeMode.DARK, ("#031830", "#ede3e4", "#5ec4e0")),
+            (ThemeMode.LIGHT, ("#ede3e4", "#031830", "#17708f")),
         ],
         ids=["dark", "light"],
     )
@@ -153,6 +153,44 @@ class TestApply:
             )
         # Assert
         assert (applied, colors, styled) == (mode, expected, (expected[0], "clam"))
+
+    @pytest.mark.parametrize(argnames="mode", argvalues=[ThemeMode.DARK, ThemeMode.LIGHT], ids=["dark", "light"])
+    def test_rounded_shapes(self, mode: ThemeMode) -> None:
+        """
+        Draws the rounded list background in the palette: the corner shows the window color, the middle the fill.
+
+        :param mode: theme mode
+        :return: None
+        """
+        with self._hidden_root() as root:
+            # Arrange
+            theme: Theme = Theme(root=root)
+            theme.apply(mode=ThemeMode.LIGHT if mode is ThemeMode.DARK else ThemeMode.DARK)
+            # Act
+            theme.apply(mode=mode)
+            size: int = int(root.tk.call("image", "width", "app_card"))
+            corner: str = self._pixel(root=root, image="app_card", x=0, y=0)
+            middle: str = self._pixel(root=root, image="app_card", x=size // 2, y=size // 2)
+            expected: tuple[str, str] = (theme.color(name="bg"), theme.color(name="panel"))
+        # Assert
+        assert (corner, middle) == expected
+
+    @staticmethod
+    def _pixel(*, root: tk.Tk, image: str, x: int, y: int) -> str:
+        """
+        Read a pixel of a Tk image.
+
+        :param root: Tk root
+        :param image: image name
+        :param x: column
+        :param y: row
+        :return: color as #rrggbb
+        """
+        red: Any
+        green: Any
+        blue: Any
+        red, green, blue = root.tk.splitlist(root.tk.call(image, "get", x, y))
+        return f"#{int(red):02x}{int(green):02x}{int(blue):02x}"
 
     def test_fonts_created(self) -> None:
         """

@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from queue import Queue
+from tkinter import font as tkfont
 from tkinter import ttk
 from types import TracebackType
 from typing import Callable, Sequence
@@ -12,8 +13,9 @@ from app.config import APP_TITLE, LANGUAGE_NAMES, THEME_POLL_MS, WINDOW_MIN_SIZE
 from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
+from app.ui.icons import Icons
 from app.ui.log_panel import LogPanel
-from app.ui.presenter import Presenter, SettingsView
+from app.ui.presenter import Hint, Presenter, ResolutionRow, SettingsView
 from app.ui.theme import Theme
 
 __all__: tuple[str, ...] = ("MainWindow",)
@@ -27,13 +29,108 @@ _GPU_LIST_WIDTH: int = 460
 _GPU_LIST_HEIGHT: int = 14
 _MESSAGE_WRAP: int = 460
 _COMBO_WIDTH: int = 12
+_ICON_SIZE: int = 18
+_TOOLTIP_WRAP: int = 280
+_TOOLTIP_OFFSET: int = 16
+# Like Windows tooltips: no flicker while the pointer just crosses the list.
+_TOOLTIP_DELAY_MS: int = 350
 _CHANGED_TAG: str = "changed"
 
 
-class _ChoiceList:
-    """A single-choice list on a ttk.Treeview, so the theme styles it; item ids are the positions as strings."""
+class _Tooltip:
+    """A borderless popup next to the mouse pointer: a title over a short text, in the colors of the theme applied last.
 
-    def __init__(self, *, parent: tk.Misc, width: int, on_select: Callable[[int], None], height: int = 10) -> None:
+    It shows after a short delay and stays inside the screen."""
+
+    def __init__(self, *, parent: tk.Misc, theme: Theme) -> None:
+        """
+        Build the popup hidden.
+
+        :param parent: widget the popup belongs to
+        :param theme: theme giving the colors
+        """
+        self._theme: Theme = theme
+        self._window: tk.Toplevel = tk.Toplevel(master=parent)
+        self._window.withdraw()
+        self._window.overrideredirect(True)
+        self._window.attributes("-topmost", True)
+        self._frame: tk.Frame = tk.Frame(master=self._window, highlightthickness=1, padx=_PAD + 2, pady=_PAD - 1)
+        self._frame.pack()
+        wrap: int = round(_TOOLTIP_WRAP * theme.scale)
+        self._title: tk.Label = tk.Label(master=self._frame, font=Theme.STRONG_FONT, justify="left", wraplength=wrap)
+        self._title.pack(anchor="w")
+        self._text: tk.Label = tk.Label(master=self._frame, font=Theme.BODY_FONT, justify="left", wraplength=wrap)
+        self._text.pack(anchor="w", pady=(2, 0))
+        self._hint: Hint | None = None
+        self._pending: str | None = None
+
+    def show(self, *, hint: Hint, x: int, y: int) -> None:
+        """
+        Show a hint next to a screen point after the delay; the hint already shown or waiting stays as it is.
+
+        :param hint: title and text to show
+        :param x: screen x of the pointer
+        :param y: screen y of the pointer
+        :return: None
+        """
+        if hint == self._hint:
+            return
+        self.hide()
+        self._hint = hint
+        self._pending = self._window.after(ms=_TOOLTIP_DELAY_MS, func=lambda: self._open(x=x, y=y))
+
+    def hide(self) -> None:
+        """
+        Hide the popup, or cancel it when it is still waiting for the delay.
+
+        :return: None
+        """
+        if self._pending is not None:
+            self._window.after_cancel(id=self._pending)
+            self._pending = None
+        if self._hint is not None:
+            self._hint = None
+            self._window.withdraw()
+
+    def _open(self, *, x: int, y: int) -> None:
+        """
+        Fill the popup with the hint and place it below right of the pointer, flipped where the screen ends.
+
+        :param x: screen x of the pointer
+        :param y: screen y of the pointer
+        :return: None
+        """
+        self._pending = None
+        if self._hint is None:
+            return
+        background: str = self._theme.color(name="raised")
+        self._frame.configure(background=background, highlightbackground=self._theme.color(name="line"))
+        for label, text in ((self._title, self._hint.title), (self._text, self._hint.text)):
+            label.configure(text=text, background=background, foreground=self._theme.color(name="fg"))
+        self._window.update_idletasks()
+        offset: int = round(_TOOLTIP_OFFSET * self._theme.scale)
+        width: int = self._window.winfo_reqwidth()
+        height: int = self._window.winfo_reqheight()
+        left: int = x + offset if x + offset + width <= self._window.winfo_screenwidth() else x - offset - width
+        top: int = y + offset if y + offset + height <= self._window.winfo_screenheight() else y - offset - height
+        self._window.geometry(newGeometry=f"+{max(left, 0)}+{max(top, 0)}")
+        self._window.deiconify()
+
+
+class _ChoiceList:
+    """A single-choice list on a ttk.Treeview, so the theme styles it; item ids are the positions as strings.
+
+    Given a theme, an item can carry a warning sign whose hint pops up while the pointer is over the sign."""
+
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        *,
+        parent: tk.Misc,
+        width: int,
+        on_select: Callable[[int], None],
+        height: int = 10,
+        theme: Theme | None = None,
+    ) -> None:
         """
         Build the list with a vertical scrollbar in a frame of its own.
 
@@ -41,6 +138,7 @@ class _ChoiceList:
         :param width: width in pixels
         :param on_select: called with the position of the item the user (or fill) selects
         :param height: visible rows when the layout doesn't stretch the list
+        :param theme: theme for the warning signs and their popup, None for a list without signs
         """
         self.frame: ttk.Frame = ttk.Frame(master=parent)
         self.frame.columnconfigure(index=0, weight=1)
@@ -52,18 +150,39 @@ class _ChoiceList:
         self.tree.grid(row=0, column=0, sticky="nsew")
         scrollbar.grid(row=0, column=1, sticky="ns")
         self.tree.bind(sequence="<<TreeviewSelect>>", func=lambda _: self._selected(on_select=on_select))
+        self._warnings: dict[str, Hint] = {}
+        self._tooltip: _Tooltip | None = None
+        # Kept referenced: Tk drops an image Python no longer references.
+        self._sign: tk.PhotoImage | None = None
+        self._font: tkfont.Font | None = None
+        self._gap: int = 0
+        if theme is not None:
+            self.tree.configure(style=Theme.MARKED_LIST)
+            self._font = tkfont.Font(root=self.tree, name=Theme.BODY_FONT, exists=True)
+            # One space between the text and the sign.
+            self._gap = self._font.measure(text=" ")
+            self._sign = Icons.warning(root=self.tree, size=round(_ICON_SIZE * theme.scale), gap=self._gap)
+            self._tooltip = _Tooltip(parent=self.tree, theme=theme)
+            self.tree.bind(sequence="<Motion>", func=self._hover)
+            self.tree.bind(sequence="<Leave>", func=lambda _: self._hide_tooltip())
 
-    def fill(self, *, items: Sequence[str], selected: int | None = None) -> None:
+    def fill(self, *, items: Sequence[str], selected: int | None = None, warnings: Sequence[Hint | None] = ()) -> None:
         """
         Replace the items and select one of them.
 
         :param items: new items
         :param selected: position to select and scroll to, None for none
+        :param warnings: hint of the warning sign of each item, None for no sign; signs need a theme given to the list
         :return: None
         """
+        self._hide_tooltip()
         self.tree.delete(*self.tree.get_children())
+        self._warnings = {str(position): hint for position, hint in enumerate(warnings) if hint is not None}
         for position, item in enumerate(items):
-            self.tree.insert(parent="", index="end", iid=str(position), text=item)
+            image: tk.PhotoImage | str = (
+                self._sign if self._sign is not None and str(position) in self._warnings else ""
+            )
+            self.tree.insert(parent="", index="end", iid=str(position), text=item, image=image)
         if selected is not None:
             self.tree.selection_set(str(selected))
             self.tree.see(item=str(selected))
@@ -76,6 +195,46 @@ class _ChoiceList:
         """
         selection: tuple[str, ...] = self.tree.selection()
         return int(selection[0]) if selection else None
+
+    def _hover(self, event: "tk.Event[ttk.Treeview]") -> None:
+        """
+        Show the hint of the warning sign under the pointer, hide it anywhere else.
+
+        :param event: mouse motion event
+        :return: None
+        """
+        item: str = self.tree.identify_row(y=event.y)
+        if item in self._warnings and self._on_sign(item=item, x=event.x) and self._tooltip is not None:
+            self._tooltip.show(hint=self._warnings[item], x=event.x_root, y=event.y_root)
+            return
+        self._hide_tooltip()
+
+    def _on_sign(self, *, item: str, x: int) -> bool:
+        """
+        Tell whether a list x lies on the sign of an item.
+
+        Treeview can't identify elements of a custom item layout, so the sign is located from the text width.
+
+        :param item: item id
+        :param x: x within the list
+        :return: True when over the sign
+        """
+        if self._font is None or self._sign is None:
+            return False
+        cell: tuple[int, int, int, int] | str = self.tree.bbox(item=item)
+        if isinstance(cell, str):
+            return False
+        left: int = cell[0] + Theme.MARKED_INDENT + self._font.measure(text=self.tree.item(item=item, option="text"))
+        return left + self._gap <= x < left + self._sign.width()
+
+    def _hide_tooltip(self) -> None:
+        """
+        Hide the popup of the warning sign, if the list has one.
+
+        :return: None
+        """
+        if self._tooltip is not None:
+            self._tooltip.hide()
 
     def _selected(self, *, on_select: Callable[[int], None]) -> None:
         """
@@ -549,6 +708,7 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
             parent=resolutions,
             width=round(_RESOLUTIONS_WIDTH * self._theme.scale),
             on_select=lambda index: self._call(action=lambda presenter: presenter.select_resolution(index=index)),
+            theme=self._theme,
         )
         self._resolutions.frame.grid(row=1, column=0, sticky="nsew")
 
@@ -659,16 +819,20 @@ class MainWindow:  # pylint: disable=too-many-instance-attributes
         """
         self._games.list.fill(items=names, selected=selected)
 
-    def show_resolutions(self, *, items: Sequence[str]) -> None:
+    def show_resolutions(self, *, items: Sequence[ResolutionRow]) -> None:
         """
-        Fill the resolution list, keeping the selection when only the captions change (language switch).
+        Fill the resolution list, keeping the selection when only the texts change (language switch).
 
-        :param items: resolution captions in list order
+        :param items: resolution rows in list order
         :return: None
         """
         selected: int | None = self._resolutions.selection()
         same: bool = len(self._resolutions.tree.get_children()) == len(items) > 0
-        self._resolutions.fill(items=items, selected=selected if same else None)
+        self._resolutions.fill(
+            items=[item.resolution for item in items],
+            selected=selected if same else None,
+            warnings=[item.warning for item in items],
+        )
 
     def show_settings_button(self, *, visible: bool) -> None:
         """
