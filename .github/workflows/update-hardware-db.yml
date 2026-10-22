@@ -1,0 +1,59 @@
+name: update hardware db
+
+on:
+  # Cron has no "last day of the month": run on days 28-31 and go on only when tomorrow is the 1st.
+  schedule:
+    - cron: "0 3 28-31 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-hardware-db
+
+jobs:
+  day:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u -d tomorrow +%d)" = "01" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  update:
+    needs: day
+    if: needs.day.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r src/requirements.txt
+      - name: Update the database
+        env:
+          PYTHONPATH: src:tools
+          # The app's config builds its data paths from this Windows variable.
+          LOCALAPPDATA: ${{ runner.temp }}
+        run: python tools/update_hardware_db.py --report "$RUNNER_TEMP/report.md"
+      - name: Show the report
+        run: cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Commit the database
+        run: |
+          git add src/app/data/hardware.db
+          if git diff --cached --quiet; then
+            echo "Nothing new: no commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --file "$RUNNER_TEMP/report.md"
+          git push
