@@ -74,13 +74,18 @@ class _Application:  # pylint: disable=too-few-public-methods
         exc_type: type[BaseException], exc_value: BaseException, traceback: TracebackType | None
     ) -> None:
         """
-        Log an error raised in a Qt slot, which would otherwise go to the missing stderr.
+        Log an error raised in a Qt slot, which would otherwise go to the missing stderr; stop the loop on Ctrl+C.
 
         :param exc_type: exception type
         :param exc_value: exception
         :param traceback: traceback
         :return: None
         """
+        # Ctrl+C (also the IDE's Stop button) is a normal stop; PySide ends the process on SystemExit by itself.
+        if issubclass(exc_type, KeyboardInterrupt):
+            logger.info("Interrupted")
+            QApplication.quit()
+            return
         logger.opt(exception=(exc_type, exc_value, traceback)).error("Unhandled error in the window")
 
 
@@ -89,6 +94,8 @@ if __name__ == "__main__":
     logger.info("Starting")
     try:
         _Application(logging_manager=_logging).run()
+    except KeyboardInterrupt:
+        logger.info("Interrupted")
     except Exception:
         logger.exception("Application failed")
         raise
