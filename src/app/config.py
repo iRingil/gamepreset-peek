@@ -14,6 +14,7 @@ __all__: tuple[str, ...] = (
     "GETTEXT_DOMAIN",
     "GPU_RANKS_FILE",
     "GPUS_FILE",
+    "HARDWARE_DB",
     "HTTP_CONNECT_TIMEOUT",
     "HTTP_MAX_RETRIES",
     "HTTP_READ_TIMEOUT",
@@ -48,6 +49,7 @@ _DATA_DIR: Path = Path(__file__).parent / "data"
 GAME_NAMES_FILE: Path = _DATA_DIR / "game_names.json"
 GPUS_FILE: Path = _DATA_DIR / "gpus.json"
 GPU_RANKS_FILE: Path = _DATA_DIR / "gpu_ranks.json"
+HARDWARE_DB: Path = _DATA_DIR / "hardware.db"
 APP_ICON_FILE: Path = _DATA_DIR / "app.ico"
 LOCALE_DIR: Path = Path(__file__).parent / "i18n" / "locale"
 GETTEXT_DOMAIN: str = "messages"
