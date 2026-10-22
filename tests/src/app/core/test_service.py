@@ -125,9 +125,35 @@ class TestHardwareSetup:
         # Assert
         assert (setup.choice, setup.gpus) == (HardwareChoice(cpu_name=None, gpu=None), (_LISTED_GPU,))
 
-    def test_saved(self, detector: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
+    def test_detected_saved(self, detector: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
         """
-        Starts from the saved CPU and GPU; a saved GPU that is installed comes with its video memory.
+        Saves the detected CPU and every detected GPU in place of the ones of the last start, keeping the rest.
+
+        :param detector: hardware detection mock
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        detector.nvidia_gpus.return_value = (_DESKTOP_GPU, _LAPTOP_GPU)
+        store.save(
+            settings=UserSettings(
+                language="ru", detected_cpu=_LISTED_CPU, detected_gpus=(_LISTED_GPU,), chosen_gpu=_LISTED_GPU
+            )
+        )
+        # Act
+        service.hardware_setup()
+        # Assert
+        assert store.load() == UserSettings(
+            language="ru",
+            detected_cpu=_DETECTED_CPU,
+            detected_gpus=(_DESKTOP_GPU, _LAPTOP_GPU),
+            chosen_gpu=_LISTED_GPU,
+        )
+
+    def test_chosen(self, detector: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Starts from the chosen CPU and GPU; a chosen GPU that is installed comes with its video memory.
 
         :param detector: hardware detection mock
         :param store: settings store
@@ -137,7 +163,7 @@ class TestHardwareSetup:
         # Arrange
         detected_laptop: Gpu = Gpu(name=_LAPTOP_GPU.name, device_id=_LAPTOP_GPU.device_id, memory_gb=8.0)
         detector.nvidia_gpus.return_value = (_DESKTOP_GPU, detected_laptop)
-        store.save(settings=UserSettings(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU))
+        store.save(settings=UserSettings(chosen_cpu=_LISTED_CPU, chosen_gpu=_LAPTOP_GPU))
         # Act
         setup: HardwareSetup = service.hardware_setup()
         # Assert
@@ -238,7 +264,7 @@ class TestChooseHardware:
         self, ops: MagicMock, detector: MagicMock, store: UserSettingsStore, service: PresetService
     ) -> None:
         """
-        Saves an accepted CPU and GPU that are not the detected ones, keeping the language.
+        Saves as chosen an accepted CPU and GPU the user changed, keeping the language.
 
         :param ops: NVIDIA endpoints mock
         :param detector: hardware detection mock
@@ -254,13 +280,13 @@ class TestChooseHardware:
         check: HardwareCheck = service.choose_hardware(choice=HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU))
         # Assert
         assert check.state is HardwareState.READY
-        assert store.load() == UserSettings(language="ru", cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU)
+        assert store.load() == UserSettings(language="ru", chosen_cpu=_LISTED_CPU, chosen_gpu=_LAPTOP_GPU)
 
-    def test_detected_saved_as_none(
+    def test_unchanged_not_saved(
         self, ops: MagicMock, detector: MagicMock, store: UserSettingsStore, service: PresetService
     ) -> None:
         """
-        Drops the saved CPU and GPU when the user goes back to the detected ones.
+        Saves the GPU the user changed and leaves the detected CPU in use unchosen.
 
         :param ops: NVIDIA endpoints mock
         :param detector: hardware detection mock
@@ -270,12 +296,32 @@ class TestChooseHardware:
         """
         # Arrange
         detector.nvidia_gpus.return_value = (_LAPTOP_GPU,)
-        store.save(settings=UserSettings(language="de", cpu_name=_LISTED_CPU, gpu=_LISTED_GPU))
         ops.check_compatibility.return_value = _ACCEPTED
         # Act
-        service.choose_hardware(choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_LAPTOP_GPU))
+        service.choose_hardware(choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_LISTED_GPU))
         # Assert
-        assert store.load() == UserSettings(language="de")
+        assert store.load() == UserSettings(chosen_gpu=_LISTED_GPU)
+
+    def test_detected_picked_saved(
+        self, ops: MagicMock, detector: MagicMock, store: UserSettingsStore, service: PresetService
+    ) -> None:
+        """
+        Saves the detected GPU as chosen when the user picks it in place of another chosen one.
+
+        :param ops: NVIDIA endpoints mock
+        :param detector: hardware detection mock
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        detector.nvidia_gpus.return_value = (_LAPTOP_GPU,)
+        store.save(settings=UserSettings(language="de", chosen_cpu=_LISTED_CPU, chosen_gpu=_LISTED_GPU))
+        ops.check_compatibility.return_value = _ACCEPTED
+        # Act
+        service.choose_hardware(choice=HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU))
+        # Assert
+        assert store.load() == UserSettings(language="de", chosen_cpu=_LISTED_CPU, chosen_gpu=_LAPTOP_GPU)
 
     def test_rejected_component_not_saved(
         self, ops: MagicMock, store: UserSettingsStore, service: PresetService
@@ -289,13 +335,13 @@ class TestChooseHardware:
         :return: None
         """
         # Arrange
-        store.save(settings=UserSettings(cpu_name="Intel(R) Core(TM) i7-14700K"))
+        store.save(settings=UserSettings(chosen_cpu="Intel(R) Core(TM) i7-14700K"))
         ops.check_compatibility.return_value = Compatibility(ok=False, failed=("cpu",))
         # Act
         check: HardwareCheck = service.choose_hardware(choice=HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LISTED_GPU))
         # Assert
         assert check == HardwareCheck(state=HardwareState.REJECTED, failed=("cpu",))
-        assert store.load() == UserSettings(cpu_name="Intel(R) Core(TM) i7-14700K", gpu=_LISTED_GPU)
+        assert store.load() == UserSettings(chosen_cpu="Intel(R) Core(TM) i7-14700K", chosen_gpu=_LISTED_GPU)
 
     @pytest.mark.parametrize(
         argnames="choice",
@@ -463,11 +509,11 @@ class TestLanguage:
         :return: None
         """
         # Arrange
-        store.save(settings=UserSettings(language="en", gpu=_LISTED_GPU))
+        store.save(settings=UserSettings(language="en", chosen_gpu=_LISTED_GPU))
         # Act
         service.save_language(language="fr")
         # Assert
-        assert (service.saved_language(), store.load()) == ("fr", UserSettings(language="fr", gpu=_LISTED_GPU))
+        assert (service.saved_language(), store.load()) == ("fr", UserSettings(language="fr", chosen_gpu=_LISTED_GPU))
 
 
 class TestTheme:
@@ -494,8 +540,8 @@ class TestTheme:
         :return: None
         """
         # Arrange
-        store.save(settings=UserSettings(language="ru", gpu=_LISTED_GPU))
+        store.save(settings=UserSettings(language="ru", chosen_gpu=_LISTED_GPU))
         # Act
         service.save_theme(theme=ThemeMode.LIGHT)
         # Assert
-        assert store.load() == UserSettings(language="ru", gpu=_LISTED_GPU, theme=ThemeMode.LIGHT)
+        assert store.load() == UserSettings(language="ru", chosen_gpu=_LISTED_GPU, theme=ThemeMode.LIGHT)

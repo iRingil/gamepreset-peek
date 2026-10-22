@@ -92,23 +92,26 @@ class PresetService:
 
     def hardware_setup(self) -> HardwareSetup:
         """
-        Get the detected hardware, the bundled lists and the CPU and GPU to start with: saved ones, else detected ones.
+        Detect the hardware and save it, then get the bundled lists and the CPU and GPU in use: chosen, else detected.
 
         :return: hardware to show and to choose from
         """
         system: SystemHardware = self._system
         saved: UserSettings = self._store.load()
-        gpu: Gpu | None = system.gpus[0] if system.gpus else None
-        if saved.gpu is not None:
-            # A saved card that is installed is taken as detected: that one knows its video memory.
-            gpu = next((item for item in system.gpus if item == saved.gpu), saved.gpu)
+        detected: UserSettings = replace(saved, detected_cpu=system.cpu_name, detected_gpus=system.gpus)
+        if detected != saved:
+            self._store.save(settings=detected)
+        gpu: Gpu | None = self._default_gpu
+        if saved.chosen_gpu is not None:
+            # A chosen card that is installed is taken as detected: that one knows its video memory.
+            gpu = next((item for item in system.gpus if item == saved.chosen_gpu), saved.chosen_gpu)
         detected_ids: set[str] = {item.device_id for item in system.gpus}
         return HardwareSetup(
             system=system,
             amd_cpus=self._cpu_list.amd,
             intel_cpus=self._cpu_list.intel,
             gpus=tuple(item for item in self._gpu_list.gpus if item.device_id not in detected_ids),
-            choice=HardwareChoice(cpu_name=saved.cpu_name or system.cpu_name, gpu=gpu),
+            choice=HardwareChoice(cpu_name=saved.chosen_cpu or system.cpu_name, gpu=gpu),
         )
 
     def check_hardware(self, *, choice: HardwareChoice) -> HardwareCheck:
@@ -137,9 +140,9 @@ class PresetService:
 
     def choose_hardware(self, *, choice: HardwareChoice) -> HardwareCheck:
         """
-        Check the CPU and GPU the user chose and save each one NVIDIA accepts; a detected one in use is saved as none.
+        Check the CPU and GPU the user chose and save as chosen the one changed, if NVIDIA accepts it.
 
-        The default is detected again on the next start then. A component NVIDIA rejects keeps the one saved before.
+        A component the user didn't change, or one NVIDIA rejects, keeps what was saved before.
 
         :param choice: CPU and GPU to check
         :return: READY with the hardware, or why presets can't be requested
@@ -148,17 +151,17 @@ class PresetService:
         saved: UserSettings = self._store.load()
         settings: UserSettings = replace(
             saved,
-            cpu_name=self._to_save(
+            chosen_cpu=self._to_save(
                 chosen=choice.cpu_name,
-                default=self._system.cpu_name,
+                in_use=saved.chosen_cpu or self._system.cpu_name,
                 accepted=self._accepted(check=check, component=self._CPU),
-                saved=saved.cpu_name,
+                saved=saved.chosen_cpu,
             ),
-            gpu=self._to_save(
+            chosen_gpu=self._to_save(
                 chosen=choice.gpu,
-                default=self._system.gpus[0] if self._system.gpus else None,
+                in_use=saved.chosen_gpu or self._default_gpu,
                 accepted=self._accepted(check=check, component=self._GPU),
-                saved=saved.gpu,
+                saved=saved.chosen_gpu,
             ),
         )
         if settings != saved:
@@ -244,6 +247,15 @@ class PresetService:
             os_version=self._detector.os_version(),
         )
 
+    @property
+    def _default_gpu(self) -> Gpu | None:
+        """
+        Get the GPU used when none is chosen: the most powerful detected one.
+
+        :return: the GPU, None when no NVIDIA GPU is detected
+        """
+        return self._system.gpus[0] if self._system.gpus else None
+
     @staticmethod
     def _accepted(*, check: HardwareCheck, component: str) -> bool:
         """
@@ -258,16 +270,14 @@ class PresetService:
         return check.state is HardwareState.REJECTED and bool(check.failed) and component not in check.failed
 
     @staticmethod
-    def _to_save[T](*, chosen: T | None, default: T | None, accepted: bool, saved: T | None) -> T | None:
+    def _to_save[T](*, chosen: T | None, in_use: T | None, accepted: bool, saved: T | None) -> T | None:
         """
-        Pick what to save of a component.
+        Pick what to save as the chosen component.
 
-        :param chosen: the component the user chose
-        :param default: the component used when none is saved, i.e. the detected one
+        :param chosen: the component in the user's choice
+        :param in_use: the component in use before: the chosen one saved, else the detected one
         :param accepted: whether NVIDIA accepted the chosen component
-        :param saved: the component saved before
-        :return: None for the default, the chosen one when accepted, otherwise the one saved before
+        :param saved: the chosen component saved before
+        :return: the chosen one when the user changed it and NVIDIA accepted it, otherwise the one saved before
         """
-        if chosen == default:
-            return None
-        return chosen if accepted else saved
+        return chosen if chosen != in_use and accepted else saved

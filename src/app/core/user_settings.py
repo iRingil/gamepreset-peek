@@ -1,4 +1,4 @@
-"""Settings kept between runs: UI language, the CPU and GPU the user chose, the theme; JSON in the app data folder."""
+"""Settings kept between runs: UI language, detected and chosen CPU and GPU, the theme; JSON in the app data folder."""
 
 import json
 from pathlib import Path
@@ -50,8 +50,10 @@ class UserSettingsStore:
         document: dict[str, Any] = {
             "language": settings.language,
             "theme": settings.theme.value,
-            "cpu_name": settings.cpu_name,
-            "gpu": (None if settings.gpu is None else {"name": settings.gpu.name, "device_id": settings.gpu.device_id}),
+            "detected_cpu": settings.detected_cpu,
+            "detected_gpus": [self._gpu_document(gpu=gpu) for gpu in settings.detected_gpus],
+            "chosen_cpu": settings.chosen_cpu,
+            "chosen_gpu": None if settings.chosen_gpu is None else self._gpu_document(gpu=settings.chosen_gpu),
         }
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(data=json.dumps(obj=document, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -67,16 +69,41 @@ class UserSettingsStore:
         """
         if not isinstance(document, dict):
             raise TypeError(f"expected an object, got {document!r}")
-        gpu: Any = document.get("gpu")
+        detected_gpus: Any = document.get("detected_gpus", [])
+        if not isinstance(detected_gpus, list):
+            raise TypeError(f"expected a list, got {detected_gpus!r}")
+        chosen_gpu: Any = document.get("chosen_gpu")
         return UserSettings(
             language=cls._optional_str(value=document.get("language")),
             theme=ThemeMode(cls._required_str(value=document.get("theme", ThemeMode.AUTO.value))),
-            cpu_name=cls._optional_str(value=document.get("cpu_name")),
-            gpu=(
-                None
-                if gpu is None
-                else Gpu(name=cls._required_str(value=gpu["name"]), device_id=cls._required_str(value=gpu["device_id"]))
-            ),
+            detected_cpu=cls._optional_str(value=document.get("detected_cpu")),
+            detected_gpus=tuple(cls._gpu(document=gpu) for gpu in detected_gpus),
+            chosen_cpu=cls._optional_str(value=document.get("chosen_cpu")),
+            chosen_gpu=None if chosen_gpu is None else cls._gpu(document=chosen_gpu),
+        )
+
+    @staticmethod
+    def _gpu_document(*, gpu: Gpu) -> dict[str, str]:
+        """
+        Make the JSON object of a GPU; its video memory is not saved.
+
+        :param gpu: the GPU
+        :return: name and device id
+        """
+        return {"name": gpu.name, "device_id": gpu.device_id}
+
+    @classmethod
+    def _gpu(cls, *, document: Any) -> Gpu:
+        """
+        Build a GPU from its JSON object.
+
+        :param document: parsed JSON value
+        :return: the GPU
+        """
+        if not isinstance(document, dict):
+            raise TypeError(f"expected an object, got {document!r}")
+        return Gpu(
+            name=cls._required_str(value=document["name"]), device_id=cls._required_str(value=document["device_id"])
         )
 
     @classmethod

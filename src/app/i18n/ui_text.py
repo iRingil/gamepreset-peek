@@ -45,6 +45,10 @@ class UiText(StrEnum):
     OPTIMAL_PRESET = "optimal preset"
     BACK_TO_OPTIMAL = "Back to optimal"
     NO_NVIDIA_GPU = "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only."
+    UNSUPPORTED_HARDWARE = (
+        "GamePreset Peek works only with NVIDIA graphics cards and AMD or Intel processors."
+        " Choose your processor and graphics card in the links at the top."
+    )
     CPU_NOT_DETECTED = "Could not detect the processor. Choose yours from the list."
     CPU_REJECTED = "NVIDIA does not know your processor. Choose it from the list."
     GPU_REJECTED = "NVIDIA does not know your graphics card. Choose the closest one from the list."

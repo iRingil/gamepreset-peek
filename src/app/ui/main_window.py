@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListView,
+    QMessageBox,
     QPushButton,
     QSlider,
     QStyle,
@@ -798,6 +799,15 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self._status.setText(text)
+
+    def warn(self, *, text: str) -> None:
+        """
+        Show a warning in a dialog the user closes with OK.
+
+        :param text: the warning
+        :return: None
+        """
+        QMessageBox.warning(self, APP_TITLE, text)
 
     def show_load_games(self, *, visible: bool) -> None:
         """

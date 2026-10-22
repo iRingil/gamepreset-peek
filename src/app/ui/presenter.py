@@ -167,6 +167,14 @@ class MainView(Protocol):
         :return: None
         """
 
+    def warn(self, *, text: str) -> None:
+        """
+        Show a warning in a dialog the user closes with OK.
+
+        :param text: the warning
+        :return: None
+        """
+
     def show_load_games(self, *, visible: bool) -> None:
         """
         Show or hide the button that requests the game list again.
@@ -520,7 +528,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def _on_setup(self, setup: HardwareSetup) -> None:
         """
-        Show the detected hardware and check the CPU and GPU to start with.
+        Show the hardware in use and check it; warn when a CPU or GPU is neither chosen nor detected.
 
         :param setup: detected hardware, bundled lists and the CPU and GPU in use
         :return: None
@@ -534,6 +542,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             on_done=self._on_hardware,
             on_error=lambda error: self._on_check_error(previous=choice, error=error),
         )
+        if setup.choice.cpu_name is None or setup.choice.gpu is None:
+            self._view.warn(text=self._translator.text(item=UiText.UNSUPPORTED_HARDWARE))
 
     def _on_setup_error(self, error: Exception) -> None:
         """

@@ -40,8 +40,13 @@ class TestUserSettingsStore:
         argvalues=[
             UserSettings(
                 language="ru",
-                cpu_name="Intel(R) Core(TM) i7-14700K",
-                gpu=Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"),
+                detected_cpu="13th Gen Intel(R) Core(TM) i9-13900HX",
+                detected_gpus=(
+                    Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684"),
+                    Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"),
+                ),
+                chosen_cpu="Intel(R) Core(TM) i7-14700K",
+                chosen_gpu=Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"),
                 theme=ThemeMode.DARK,
             ),
             UserSettings(language="de"),
@@ -71,9 +76,13 @@ class TestUserSettingsStore:
             "{not json",
             "[]",
             '{"language": 1}',
-            '{"gpu": "NVIDIA GeForce RTX 3050"}',
-            '{"gpu": {"name": "NVIDIA GeForce RTX 3050"}}',
-            '{"gpu": {"name": "NVIDIA GeForce RTX 3050", "device_id": 9479}}',
+            '{"chosen_gpu": "NVIDIA GeForce RTX 3050"}',
+            '{"chosen_gpu": {"name": "NVIDIA GeForce RTX 3050"}}',
+            '{"chosen_gpu": {"name": "NVIDIA GeForce RTX 3050", "device_id": 9479}}',
+            '{"chosen_cpu": 1}',
+            '{"detected_cpu": 1}',
+            '{"detected_gpus": {"name": "NVIDIA GeForce RTX 3050", "device_id": "2507"}}',
+            '{"detected_gpus": ["NVIDIA GeForce RTX 3050"]}',
             '{"theme": "sepia"}',
             '{"theme": 1}',
         ],
@@ -84,6 +93,10 @@ class TestUserSettingsStore:
             "gpu not an object",
             "no device id",
             "int id",
+            "chosen cpu not a string",
+            "detected cpu not a string",
+            "detected gpus not a list",
+            "detected gpu not an object",
             "unknown theme",
             "theme not a string",
         ],
@@ -113,7 +126,7 @@ class TestUserSettingsStore:
         """
         # Arrange
         path.parent.mkdir(parents=True)
-        path.write_text(data='{"language": "de", "gpu": null}', encoding="utf-8")
+        path.write_text(data='{"language": "de", "chosen_gpu": null}', encoding="utf-8")
         # Act
         settings: UserSettings = UserSettingsStore(path=path).load()
         # Assert

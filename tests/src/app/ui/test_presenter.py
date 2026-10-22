@@ -2,6 +2,7 @@
 
 # pylint: disable=too-many-lines
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock, create_autospec
@@ -29,6 +30,7 @@ from app.core.models import (
 )
 from app.core.service import PresetService
 from app.i18n.translator import Translator
+from app.i18n.ui_text import UiText
 from app.ui.presenter import (
     ChoiceGroup,
     ChoiceView,
@@ -152,6 +154,7 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.settings: SettingsView | None = None
         self.cpu_offers: list[ChoiceView] = []
         self.gpu_offers: list[ChoiceView] = []
+        self.warnings: list[str] = []
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -216,6 +219,15 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self.status = text
+
+    def warn(self, *, text: str) -> None:
+        """
+        Record a warning dialog.
+
+        :param text: the warning
+        :return: None
+        """
+        self.warnings.append(text)
 
     def show_load_games(self, *, visible: bool) -> None:
         """
@@ -399,7 +411,7 @@ class TestStart(_PresenterTests):
 
     def test_games_and_hardware(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Shows the games and the detected hardware, in the initial language, and checks the hardware with NVIDIA.
+        Shows the games and the detected hardware, in the initial language, checks the hardware, warns of nothing.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -418,6 +430,7 @@ class TestStart(_PresenterTests):
             False,
         )
         service.check_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=_CPU, gpu=_LAPTOP_GPU))
+        assert not view.warnings
 
     def test_hardware_loading(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
         """
@@ -437,7 +450,7 @@ class TestStart(_PresenterTests):
 
     def test_nothing_detected(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Invites a choice in place of a missing CPU and GPU, with the video memory unknown.
+        Warns that only NVIDIA GPUs and AMD or Intel CPUs are supported and invites a choice in place of both.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -459,6 +472,31 @@ class TestStart(_PresenterTests):
         assert view.hardware == HardwareView(
             cpu="Choose a processor", gpu="Choose a graphics card", memory="8 GB", video_memory="unknown"
         )
+        assert view.warnings == [UiText.UNSUPPORTED_HARDWARE.value]
+
+    @pytest.mark.parametrize(
+        argnames="choice",
+        argvalues=[HardwareChoice(cpu_name=None, gpu=_LAPTOP_GPU), HardwareChoice(cpu_name=_CPU, gpu=None)],
+        ids=["no cpu", "no gpu"],
+    )
+    def test_one_missing_warned(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, choice: HardwareChoice
+    ) -> None:
+        """
+        Warns once when only the CPU or only the GPU is neither chosen nor detected.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param choice: CPU and GPU in use at the start
+        :return: None
+        """
+        # Arrange
+        service.hardware_setup.return_value = replace(_SETUP, choice=choice)
+        # Act
+        presenter.start()
+        # Assert
+        assert view.warnings == [UiText.UNSUPPORTED_HARDWARE.value]
 
     def test_setup_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """

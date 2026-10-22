@@ -254,9 +254,14 @@ class GameSettings:
 
 @dataclass(frozen=True, slots=True)
 class UserSettings:
-    """Settings kept between runs: UI language code, the CPU and GPU the user chose (None: not chosen), the theme."""
+    """Settings kept between runs: UI language code, the hardware detected at the last start, the chosen one, the theme.
+
+    The detected CPU and NVIDIA GPUs (the most powerful first) are written at every start. The chosen CPU and GPU are
+    the ones the user picked in the lists, None when not picked: the detected ones are used then."""
 
     language: str | None = None
-    cpu_name: str | None = None
-    gpu: Gpu | None = None
+    detected_cpu: str | None = None
+    detected_gpus: tuple[Gpu, ...] = ()
+    chosen_cpu: str | None = None
+    chosen_gpu: Gpu | None = None
     theme: ThemeMode = ThemeMode.AUTO
