@@ -443,3 +443,12 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
   runs `darkdetect.listener` (Windows registry notification) and reapplies the style on a switch.
 - It sets an app palette without `Accent`, so `Accent` still comes from Windows (blue in both themes); its
   `PlaceholderText` is the muted text color. It caches recolored SVG icons in `~/.cache/qdarktheme/v2.3.6`.
+
+### App icon (2026-10-22)
+
+- `data/app.ico` (16, 24, 32, 48, 256 px), made by the user from an AI-generated speedometer; before that its
+  semi-transparent edges were recoloured from the solid pixels around them (they were grey and smeared on light
+  backgrounds) and the art was cropped to its content.
+- `QApplication.setWindowIcon` sets it for every window. Run from source, the taskbar would still show python.exe's
+  icon and group the window with other Python processes, so `__main__` sets an explicit AppUserModelID first.
+- The exe icon is a Nuitka option (step 9), not a runtime call.

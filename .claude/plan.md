@@ -128,8 +128,8 @@ tests/src/app/...
   added as the window needs them (then `make_pot`, `pybabel update`, translate, `compile`).
 
 ### 9. Build
-- [ ] Nuitka onefile build script with data files (`data/*.json`, `.mo`, `fake_useragent` package data); check the
-  exe on a clean machine.
+- [ ] Nuitka onefile build script with data files (`data/*.json`, `data/app.ico`, `.mo`, `fake_useragent` package
+  data) and the exe icon (`--windows-icon-from-ico=src/app/data/app.ico`); check the exe on a clean machine.
 
 ### 10. CI and signing
 - [ ] GitHub Actions: lint, tests, Nuitka build, artifact upload.

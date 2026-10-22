@@ -1,11 +1,14 @@
 """Entry point: set up logging, wire the service and the window, run the Qt event loop."""
 
+import ctypes
 import sys
 from types import TracebackType
 
 from loguru import logger
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from app.config import APP_ICON_FILE, APP_USER_MODEL_ID
 from app.core.game_names import GameNames
 from app.core.hardware import GpuList, GpuRanks, HardwareDetector
 from app.core.ops_api import OpsApi
@@ -48,7 +51,9 @@ class _Application:  # pylint: disable=too-few-public-methods
                 store=UserSettingsStore(),
             )
             translator: Translator = Translator(language=Translator.pick_language(saved=service.saved_language()))
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
             application: QApplication = QApplication(sys.argv)
+            application.setWindowIcon(QIcon(str(APP_ICON_FILE)))
             sys.excepthook = self._log_unhandled
             window: MainWindow = MainWindow(log_lines=self._logging.lines)
             worker: Worker = Worker()
