@@ -65,8 +65,9 @@ LANGUAGE_NAMES: dict[str, str] = {
 }
 
 # Main window: initial and smallest width and height, in pixels at 100 % scale.
-WINDOW_SIZE: tuple[int, int] = (1200, 720)
-WINDOW_MIN_SIZE: tuple[int, int] = (900, 520)
+# The smallest size fits a 1280x720 logical screen (1920x1080 at 150 %) under the taskbar and the title bar.
+WINDOW_MIN_SIZE: tuple[int, int] = (1264, 640)
+WINDOW_SIZE: tuple[int, int] = WINDOW_MIN_SIZE
 # Visible lines of the log panel and the lines it keeps before dropping the oldest ones.
 LOG_PANEL_HEIGHT: int = 15
 LOG_PANEL_MAX_LINES: int = 2000
