@@ -46,6 +46,8 @@
 - 2026-10-21: Qt kept (user's call); the style is PyQtDarkTheme from the `pyqtdarktheme-fork` 2.3.6 copied into
   `src/app/ui/vendor/qdarktheme` after a diff against the original and a code review; `darkdetect` added.
   Back on `master` with the Qt work uncommitted (`qt-ui` had no commits of its own).
+- 2026-10-22: app icon; README header and CI workflows (mypy, pylint, pytest) taken from dance-hub; the window's
+  minimum and initial size fit a 1280x720 logical screen.
 
 ## Decisions and findings
 
@@ -452,3 +454,10 @@ All 1754 catalog games were requested with an RTX 4060 Laptop (`28e0`); every re
 - `QApplication.setWindowIcon` sets it for every window. Run from source, the taskbar would still show python.exe's
   icon and group the window with other Python processes, so `__main__` sets an explicit AppUserModelID first.
 - The exe icon is a Nuitka option (step 9), not a runtime call.
+
+### Window size (2026-10-22)
+
+- Qt sizes are logical pixels: Windows multiplies them by the display scale (a 2560x1600 screen at 150 % is
+  1707x1067 logical). The smallest supported logical screen is 1280x720 (1920x1080 at 150 %, also 1360x768 at
+  100 %; user's choice). `WINDOW_MIN_SIZE` (1264x640, also the initial size) fits it under the Windows 11 taskbar
+  (48 px) and title bar (~31 px); the layout itself needs only ~620x220.
