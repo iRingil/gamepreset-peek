@@ -10,20 +10,17 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QComboBox,
-    QFrame,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
     QListView,
-    QListWidget,
     QPushButton,
     QSlider,
     QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
-    QTabWidget,
     QToolTip,
     QTreeWidget,
     QTreeWidgetItem,
@@ -35,6 +32,7 @@ from app.config import APP_TITLE, LANGUAGE_NAMES, WINDOW_MIN_SIZE, WINDOW_SIZE
 from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
+from app.ui.choice_popup import ChoicePopup
 from app.ui.icons import Icons
 from app.ui.log_panel import LogPanel
 from app.ui.presenter import ChoiceView, HardwareView, Hint, Presenter, ResolutionRow, SettingsView
@@ -46,7 +44,6 @@ _PAD: int = 8
 _GAMES_WIDTH: int = 300
 _RESOLUTIONS_WIDTH: int = 230
 _VALUE_WIDTH: int = 220
-_POPUP_SIZE: tuple[int, int] = (460, 360)
 _ICON_SIZE: int = 18
 # Point size steps above the base font: the hardware block, the settings title and the preset position.
 _HEADLINE_STEP: float = 2
@@ -218,93 +215,6 @@ class _ChoiceList(QListView):
         """
         rows: list[QModelIndex] = self.selectionModel().selectedIndexes()
         return rows[0].row() if rows else None
-
-
-class _ChoicePopup(QFrame):
-    """A drop-down list under a link: detected items, a line, then the bundled ones, in tabs when there are several.
-
-    A click or Enter on an item picks it and closes the list; a click outside closes it with no choice."""
-
-    def __init__(self, *, parent: QWidget, choice: ChoiceView, on_choose: Callable[[int], None]) -> None:
-        """
-        Build the list with the item in use selected.
-
-        :param parent: window the list belongs to
-        :param choice: items to choose from
-        :param on_choose: called with the position of the item picked
-        """
-        super().__init__(parent, Qt.WindowType.Popup)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.setFrameShape(QFrame.Shape.StyledPanel)
-        self._on_choose: Callable[[int], None] = on_choose
-        self._picked: bool = False
-        layout: QVBoxLayout = QVBoxLayout(self)
-        focus: QListWidget | None = None
-        offset: int = 0
-        if choice.detected:
-            detected: QListWidget = self._list(items=choice.detected, offset=offset, selected=choice.selected)
-            detected.setFixedHeight(detected.sizeHintForRow(0) * detected.count() + 2 * detected.frameWidth())
-            layout.addWidget(detected)
-            focus = detected
-            offset += len(choice.detected)
-        if choice.detected and choice.groups:
-            line: QFrame = QFrame(parent=self)
-            line.setFrameShape(QFrame.Shape.HLine)
-            layout.addWidget(line)
-        tabs: QTabWidget | None = QTabWidget(parent=self) if len(choice.groups) > 1 else None
-        for group in choice.groups:
-            items: QListWidget = self._list(items=group.items, offset=offset, selected=choice.selected)
-            selected_here: bool = choice.selected is not None and 0 <= choice.selected - offset < len(group.items)
-            if tabs is None:
-                layout.addWidget(items, stretch=1)
-            else:
-                # The tab pane already draws a frame around the list
-                items.setFrameShape(QFrame.Shape.NoFrame)
-                tabs.addTab(items, group.title)
-                if selected_here:
-                    tabs.setCurrentWidget(items)
-            if focus is None or selected_here:
-                focus = items
-            offset += len(group.items)
-        if tabs is not None:
-            layout.addWidget(tabs, stretch=1)
-        self.resize(_POPUP_SIZE[0], _POPUP_SIZE[1] if choice.groups else self.sizeHint().height())
-        if focus is not None:
-            focus.setFocus()
-
-    def _list(self, *, items: Sequence[str], offset: int, selected: int | None) -> QListWidget:
-        """
-        Make a list of items whose positions in the whole choice start at an offset.
-
-        :param items: item texts
-        :param offset: position of the first item in the whole choice
-        :param selected: position of the item in use in the whole choice, None for none
-        :return: the list
-        """
-        view: QListWidget = QListWidget(parent=self)
-        view.setUniformItemSizes(True)
-        view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        view.addItems(list(items))
-        RoundedView(view=view)
-        if selected is not None and 0 <= selected - offset < len(items):
-            view.setCurrentRow(selected - offset)
-            view.scrollToItem(view.currentItem(), QAbstractItemView.ScrollHint.PositionAtCenter)
-        view.itemClicked.connect(lambda item: self._pick(position=offset + view.row(item)))
-        view.itemActivated.connect(lambda item: self._pick(position=offset + view.row(item)))
-        return view
-
-    def _pick(self, *, position: int) -> None:
-        """
-        Close the list and pass the item picked on; a second signal of the same pick is ignored.
-
-        :param position: position of the item in the whole choice
-        :return: None
-        """
-        if self._picked:
-            return
-        self._picked = True
-        self.close()
-        self._on_choose(position)
 
 
 class _ChangedDelegate(QStyledItemDelegate):
@@ -960,7 +870,8 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         """
         if not choice.detected and not any(group.items for group in choice.groups):
             return
-        popup: _ChoicePopup = _ChoicePopup(parent=self, choice=choice, on_choose=on_choose)
+        search_hint: str = self._translator.text(item=UiText.SEARCH) if self._translator is not None else ""
+        popup: ChoicePopup = ChoicePopup(parent=self, choice=choice, search_hint=search_hint, on_choose=on_choose)
         popup.move(anchor.mapToGlobal(anchor.rect().bottomLeft()))
         popup.show()
 
