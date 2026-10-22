@@ -6,7 +6,9 @@ from pathlib import Path
 __all__: tuple[str, ...] = (
     "APP_NAME",
     "APP_DATA_DIR",
+    "APP_ICON_FILE",
     "APP_TITLE",
+    "APP_USER_MODEL_ID",
     "DEFAULT_LANGUAGE",
     "GAME_NAMES_FILE",
     "GETTEXT_DOMAIN",
@@ -36,6 +38,8 @@ __all__: tuple[str, ...] = (
 
 APP_NAME: str = "GamePresetPeek"
 APP_TITLE: str = "GamePreset Peek"
+# Own taskbar identity, so the window shows its icon instead of python.exe's when run from source.
+APP_USER_MODEL_ID: str = "GamePresetPeek.App"
 APP_DATA_DIR: Path = Path(os.environ["LOCALAPPDATA"]) / APP_NAME
 LOG_FILE: Path = APP_DATA_DIR / "logs" / "gamepreset-peek.log"
 SETTINGS_FILE: Path = APP_DATA_DIR / "settings.json"
@@ -44,6 +48,7 @@ _DATA_DIR: Path = Path(__file__).parent / "data"
 GAME_NAMES_FILE: Path = _DATA_DIR / "game_names.json"
 GPUS_FILE: Path = _DATA_DIR / "gpus.json"
 GPU_RANKS_FILE: Path = _DATA_DIR / "gpu_ranks.json"
+APP_ICON_FILE: Path = _DATA_DIR / "app.ico"
 LOCALE_DIR: Path = Path(__file__).parent / "i18n" / "locale"
 GETTEXT_DOMAIN: str = "messages"
 
