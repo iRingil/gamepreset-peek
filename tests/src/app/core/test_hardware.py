@@ -1,16 +1,17 @@
 """Tests of the hardware detection."""
 
-import json
 import re
 import winreg
+from contextlib import closing
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Self
 
 import pytest
 
-from app.config import GPU_RANKS_FILE, GPUS_FILE
-from app.core.hardware import GpuList, GpuRanks, HardwareDetector
+from app.config import HARDWARE_DB
+from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
+from app.core.hardware_db import HardwareDb
 from app.core.models import Gpu
 
 __all__: tuple = ()
@@ -18,6 +19,25 @@ __all__: tuple = ()
 _VIDEO_MAP: str = r"hardware\devicemap\video"
 _CPU: str = r"hardware\description\system\centralprocessor\0"
 _DRIVER: str = r"System\CurrentControlSet\Control\Video\{{{guid}}}\0000"
+
+
+class _Db:
+    """Hardware databases written for a test."""
+
+    @staticmethod
+    def create(*, path: Path, statements: list[tuple[str, tuple[object, ...]]]) -> Path:
+        """
+        Create a database with the app's schema and the given rows.
+
+        :param path: database file
+        :param statements: SQL statements with their parameters
+        :return: the database file
+        """
+        with closing(HardwareDb.write(path=path)) as db:
+            for sql, parameters in statements:
+                db.execute(sql, parameters)
+            db.commit()
+        return path
 
 
 class _FakeKey:
@@ -142,6 +162,7 @@ class TestHardwareDetector:
                 _DRIVER.format(guid="rtx4060"): {
                     "DriverDesc": "NVIDIA GeForce RTX 4060",
                     "MatchingDeviceId": "pci\\ven_10de&dev_2882",
+                    "HardwareInformation.qwMemorySize": 8585740288,
                 },
                 _DRIVER.format(guid="intel"): {
                     "DriverDesc": "Intel(R) UHD Graphics 770",
@@ -150,6 +171,7 @@ class TestHardwareDetector:
                 _DRIVER.format(guid="rtx3090"): {
                     "DriverDesc": "NVIDIA GeForce RTX 3090",
                     "MatchingDeviceId": "PCI\\VEN_10DE&DEV_2204&SUBSYS_00000000",
+                    "HardwareInformation.qwMemorySize": b"\x00",
                 },
                 _DRIVER.format(guid="basic"): {"DriverDesc": "Microsoft Basic Display Adapter"},
             }
@@ -169,6 +191,26 @@ class TestHardwareDetector:
         # Assert
         assert name == "AMD Ryzen 7 7800X3D 8-Core Processor"
 
+    @pytest.mark.parametrize(
+        argnames="keys",
+        argvalues=[{}, {_CPU: {"ProcessorNameString": "   "}}, {_CPU: {"Identifier": "Intel64 Family 6"}}],
+        ids=["no key", "blank name", "no name"],
+    )
+    def test_cpu_not_detected(self, monkeypatch: pytest.MonkeyPatch, keys: dict[str, dict[str, Any]]) -> None:
+        """
+        Reports no CPU when the registry has no usable CPU name.
+
+        :param monkeypatch: pytest monkeypatch
+        :param keys: registry content
+        :return: None
+        """
+        # Arrange
+        _FakeRegistry(keys=keys).install(monkeypatch=monkeypatch)
+        # Act
+        name: str | None = HardwareDetector.cpu_name()
+        # Assert
+        assert name is None
+
     @pytest.fixture(name="ranks")
     def _ranks(self) -> GpuRanks:
         """
@@ -180,7 +222,7 @@ class TestHardwareDetector:
 
     def test_nvidia_gpus(self, registry: _FakeRegistry, ranks: GpuRanks) -> None:
         """
-        Reports each active NVIDIA adapter once, the most powerful one first.
+        Reports each active NVIDIA adapter once, the most powerful one first, with the video memory it reports.
 
         :param registry: fake registry
         :param ranks: GPU ranks
@@ -193,6 +235,7 @@ class TestHardwareDetector:
             Gpu(name="NVIDIA GeForce RTX 3090", device_id="2204"),
             Gpu(name="NVIDIA GeForce RTX 4060", device_id="2882"),
         )
+        assert [gpu.memory_gb for gpu in gpus] == [None, 8.0]
 
     def test_no_nvidia_gpu(self, monkeypatch: pytest.MonkeyPatch, ranks: GpuRanks) -> None:
         """
@@ -241,39 +284,94 @@ class TestHardwareDetector:
         assert re.fullmatch(pattern=r"\d+\.\d+", string=version)
 
 
-class TestGpuList:
-    """Loading the bundled GPU list."""
+class TestCpuList:
+    """Loading the bundled CPU lists."""
 
-    def test_from_file(self, tmp_path: Path) -> None:
+    def test_from_db(self, tmp_path: Path) -> None:
         """
-        Reads the GPUs from a JSON file in its order.
+        Reads the AMD and Intel CPUs of a database, each vendor's names sorted ignoring case.
 
         :param tmp_path: temporary directory
         :return: None
         """
         # Arrange
-        path: Path = tmp_path / "gpus.json"
-        entries: list[dict[str, str]] = [
-            {"name": "NVIDIA GeForce RTX 4090", "device_id": "2684"},
-            {"name": "NVIDIA GeForce GTX 1060 6GB", "device_id": "1c03"},
-        ]
-        path.write_text(data=json.dumps(obj=entries), encoding="utf-8")
+        sql: str = "INSERT INTO cpus (name, vendor, added) VALUES (?, ?, '2026-10-22')"
+        path: Path = _Db.create(
+            path=tmp_path / "hardware.db",
+            statements=[
+                (sql, ("AMD Ryzen 7 7800X3D 8-Core Processor", "amd")),
+                (sql, ("Intel(R) Core(TM) i7-14700K", "intel")),
+                (sql, ("AMD Ryzen 5 3600 6-Core Processor", "amd")),
+                (sql, ("13th Gen Intel(R) Core(TM) i9-13900HX", "intel")),
+            ],
+        )
         # Act
-        gpu_list: GpuList = GpuList.load(path=path)
+        cpu_list: CpuList = CpuList.load(path=path)
         # Assert
-        assert gpu_list.gpus == (
-            Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684"),
-            Gpu(name="NVIDIA GeForce GTX 1060 6GB", device_id="1c03"),
+        assert (cpu_list.amd, cpu_list.intel) == (
+            ("AMD Ryzen 5 3600 6-Core Processor", "AMD Ryzen 7 7800X3D 8-Core Processor"),
+            ("13th Gen Intel(R) Core(TM) i9-13900HX", "Intel(R) Core(TM) i7-14700K"),
         )
 
-    def test_bundled_file(self) -> None:
+    def test_missing_db(self, tmp_path: Path) -> None:
         """
-        Loads the bundled file: names are unique and device ids are 4 lowercase hex digits.
+        Fails on a missing database instead of creating an empty one.
+
+        :param tmp_path: temporary directory
+        :return: None
+        """
+        # Arrange
+        path: Path = tmp_path / "hardware.db"
+        # Act & Assert
+        with pytest.raises(FileNotFoundError):
+            CpuList.load(path=path)
+        assert not path.exists()
+
+    def test_bundled_db(self) -> None:
+        """
+        Loads the bundled database: both vendors have CPUs, a known Intel one among them.
 
         :return: None
         """
         # Arrange & Act
-        gpu_list: GpuList = GpuList.load(path=GPUS_FILE)
+        cpu_list: CpuList = CpuList.load(path=HARDWARE_DB)
+        # Assert
+        assert cpu_list.amd and cpu_list.intel
+        assert "13th Gen Intel(R) Core(TM) i9-13900HX" in cpu_list.intel
+
+
+class TestGpuList:
+    """Loading the bundled GPU list."""
+
+    def test_from_db(self, tmp_path: Path) -> None:
+        """
+        Reads the GPUs of a database sorted by name, ignoring case.
+
+        :param tmp_path: temporary directory
+        :return: None
+        """
+        # Arrange
+        sql: str = "INSERT INTO gpus (name, device_id, added) VALUES (?, ?, '2026-10-06')"
+        path: Path = _Db.create(
+            path=tmp_path / "hardware.db",
+            statements=[(sql, ("NVIDIA GeForce RTX 4090", "2684")), (sql, ("NVIDIA GeForce GTX 1060 6GB", "1c03"))],
+        )
+        # Act
+        gpu_list: GpuList = GpuList.load(path=path)
+        # Assert
+        assert gpu_list.gpus == (
+            Gpu(name="NVIDIA GeForce GTX 1060 6GB", device_id="1c03"),
+            Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684"),
+        )
+
+    def test_bundled_db(self) -> None:
+        """
+        Loads the bundled database: names are unique and device ids are 4 lowercase hex digits.
+
+        :return: None
+        """
+        # Arrange & Act
+        gpu_list: GpuList = GpuList.load(path=HARDWARE_DB)
         # Assert
         assert gpu_list.gpus
         assert len({gpu.name for gpu in gpu_list.gpus}) == len(gpu_list.gpus)
@@ -319,14 +417,36 @@ class TestGpuRanks:
         # Assert
         assert score == expected
 
-    def test_bundled_file(self) -> None:
+    def test_from_db(self, tmp_path: Path) -> None:
         """
-        Loads the bundled file and orders real cards by their power across generations.
+        Reads the ranks of a database.
+
+        :param tmp_path: temporary directory
+        :return: None
+        """
+        # Arrange
+        path: Path = _Db.create(
+            path=tmp_path / "hardware.db",
+            statements=[
+                (
+                    "INSERT INTO gpu_ranks (device_id, chip, generation, tier) VALUES (?, ?, ?, ?)",
+                    ("2684", "AD102", 6, 4.0),
+                )
+            ],
+        )
+        # Act
+        ranks: GpuRanks = GpuRanks.load(path=path)
+        # Assert
+        assert ranks.score(gpu=Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")) == 10.0
+
+    def test_bundled_db(self) -> None:
+        """
+        Loads the bundled database and orders real cards by their power across generations.
 
         :return: None
         """
         # Arrange
-        ranks: GpuRanks = GpuRanks.load(path=GPU_RANKS_FILE)
+        ranks: GpuRanks = GpuRanks.load(path=HARDWARE_DB)
         stronger_weaker: list[tuple[Gpu, Gpu]] = [
             (
                 Gpu(name="NVIDIA GeForce GTX 780", device_id="1004"),

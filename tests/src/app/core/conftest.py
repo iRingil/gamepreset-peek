@@ -8,7 +8,7 @@ import pytest
 import responses
 
 from app.core.game_names import GameNames
-from app.core.hardware import GpuList, GpuRanks, HardwareDetector
+from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
 from app.core.models import Gpu
 from app.core.ops_api import OpsApi
 from app.core.service import PresetService
@@ -80,7 +80,7 @@ def _store(tmp_path: Path) -> UserSettingsStore:
 @pytest.fixture(name="service")
 def _service(ops: MagicMock, detector: MagicMock, store: UserSettingsStore) -> PresetService:
     """
-    Create the service over mocked NVIDIA and hardware, with a small GPU list and named games.
+    Create the service over mocked NVIDIA and hardware, with small CPU and GPU lists and named games.
 
     :param ops: NVIDIA endpoints mock
     :param detector: hardware detection mock
@@ -90,6 +90,7 @@ def _service(ops: MagicMock, detector: MagicMock, store: UserSettingsStore) -> P
     return PresetService(
         api=ops,
         names=GameNames(names={"mordhau": "MORDHAU", "baldurs_gate_3": "Baldur's Gate 3"}),
+        cpu_list=CpuList(amd=("AMD Ryzen 7 7800X3D 8-Core Processor",), intel=("Intel(R) Core(TM) i7-14700K",)),
         gpu_list=GpuList(gpus=(Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"),)),
         ranks=GpuRanks(ranks={}),
         detector=detector,

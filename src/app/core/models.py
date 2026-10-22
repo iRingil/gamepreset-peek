@@ -1,6 +1,6 @@
 """Data classes of the NVIDIA presets data, of the user's hardware and of the saved user settings."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 
 __all__: tuple[str, ...] = (
@@ -11,12 +11,15 @@ __all__: tuple[str, ...] = (
     "Gpu",
     "Hardware",
     "HardwareCheck",
+    "HardwareChoice",
+    "HardwareSetup",
     "HardwareState",
     "PresetsFile",
     "RemoteFile",
     "ResolutionPreset",
     "Setting",
     "SettingTranslation",
+    "SystemHardware",
     "ThemeMode",
     "Translations",
     "UserSettings",
@@ -25,10 +28,46 @@ __all__: tuple[str, ...] = (
 
 @dataclass(frozen=True, slots=True)
 class Gpu:
-    """An NVIDIA graphics card: name as Windows shows it and PCI device id as 4 lowercase hex digits, e.g. "28e0"."""
+    """An NVIDIA graphics card: name as Windows shows it and PCI device id as 4 lowercase hex digits, e.g. "28e0".
+
+    Video memory in GiB is known for a detected card only; it doesn't take part in comparisons."""
 
     name: str
     device_id: str
+    memory_gb: float | None = field(default=None, compare=False)
+
+
+@dataclass(frozen=True, slots=True)
+class SystemHardware:
+    """The hardware detected on this PC: CPU name (None when not detected), NVIDIA GPUs, memory and Windows version.
+
+    The GPUs come the most powerful first."""
+
+    cpu_name: str | None
+    gpus: tuple[Gpu, ...]
+    memory_gb: int
+    os_version: str
+
+
+@dataclass(frozen=True, slots=True)
+class HardwareChoice:
+    """The CPU and the GPU presets are requested with; None when neither detected nor chosen."""
+
+    cpu_name: str | None
+    gpu: Gpu | None
+
+
+@dataclass(frozen=True, slots=True)
+class HardwareSetup:
+    """What the hardware choice starts from: the detected hardware, the bundled lists and the CPU and GPU in use.
+
+    The bundled GPUs leave out the detected ones; the bundled CPUs are split by vendor."""
+
+    system: SystemHardware
+    amd_cpus: tuple[str, ...]
+    intel_cpus: tuple[str, ...]
+    gpus: tuple[Gpu, ...]
+    choice: HardwareChoice
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,22 +93,19 @@ class HardwareState(StrEnum):
     """Outcome of finding the hardware to request presets with."""
 
     READY = "ready"
+    NO_CPU = "no_cpu"
     NO_NVIDIA_GPU = "no_nvidia_gpu"
-    CHOOSE_DETECTED_GPU = "choose_detected_gpu"
-    CHOOSE_LISTED_GPU = "choose_listed_gpu"
     REJECTED = "rejected"
 
 
 @dataclass(frozen=True, slots=True)
 class HardwareCheck:
-    """Hardware ready for preset requests, or what the user has to do first.
+    """Hardware ready for preset requests, or why presets can't be requested with the CPU and GPU in use.
 
-    READY carries the hardware; CHOOSE_DETECTED_GPU and CHOOSE_LISTED_GPU the GPUs to choose from (detected ones the
-    most powerful first); REJECTED the components NVIDIA rejected that no GPU choice can fix."""
+    READY carries the hardware; REJECTED the components NVIDIA rejected, empty when NVIDIA named none."""
 
     state: HardwareState
     hardware: Hardware | None = None
-    gpus: tuple[Gpu, ...] = ()
     failed: tuple[str, ...] = ()
 
 
@@ -218,8 +254,9 @@ class GameSettings:
 
 @dataclass(frozen=True, slots=True)
 class UserSettings:
-    """Settings kept between runs: UI language code, the GPU the user chose (None when not chosen yet) and the theme."""
+    """Settings kept between runs: UI language code, the CPU and GPU the user chose (None: not chosen), the theme."""
 
     language: str | None = None
+    cpu_name: str | None = None
     gpu: Gpu | None = None
     theme: ThemeMode = ThemeMode.AUTO

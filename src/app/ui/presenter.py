@@ -1,6 +1,6 @@
 """UI logic of the main window: user actions -> service calls in the background -> what the window shows."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable, Protocol, Sequence
 
@@ -12,6 +12,8 @@ from app.core.models import (
     Gpu,
     Hardware,
     HardwareCheck,
+    HardwareChoice,
+    HardwareSetup,
     HardwareState,
     ResolutionPreset,
     ThemeMode,
@@ -21,7 +23,17 @@ from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.worker import TaskRunner
 
-__all__: tuple[str, ...] = ("Hint", "MainView", "Presenter", "ResolutionRow", "SettingRow", "SettingsView")
+__all__: tuple[str, ...] = (
+    "ChoiceGroup",
+    "ChoiceView",
+    "HardwareView",
+    "Hint",
+    "MainView",
+    "Presenter",
+    "ResolutionRow",
+    "SettingRow",
+    "SettingsView",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,6 +42,35 @@ class Hint:
 
     title: str
     text: str
+
+
+@dataclass(frozen=True, slots=True)
+class HardwareView:
+    """The hardware block, translated: CPU and GPU in use (the texts of their choice links) and memory sizes."""
+
+    cpu: str
+    gpu: str
+    memory: str
+    video_memory: str
+
+
+@dataclass(frozen=True, slots=True)
+class ChoiceGroup:
+    """A part of a choice list below the line; with several groups each one is a tab named by its title."""
+
+    title: str
+    items: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class ChoiceView:
+    """A CPU or GPU choice: detected items above a line, bundled groups below it.
+
+    Positions run through the detected items, then through the groups in order; selected is the one in use."""
+
+    detected: tuple[str, ...]
+    groups: tuple[ChoiceGroup, ...]
+    selected: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,11 +135,27 @@ class MainView(Protocol):
         :return: None
         """
 
-    def show_hardware(self, *, text: str) -> None:
+    def show_hardware(self, *, hardware: HardwareView) -> None:
         """
-        Show the GPU in use or why there is none.
+        Show the CPU and GPU in use and the memory sizes.
 
-        :param text: the line to show
+        :param hardware: what to show
+        :return: None
+        """
+
+    def offer_cpus(self, *, choice: ChoiceView) -> None:
+        """
+        Open the CPU choice; a pick is passed to Presenter.choose_cpu.
+
+        :param choice: CPUs to choose from
+        :return: None
+        """
+
+    def offer_gpus(self, *, choice: ChoiceView) -> None:
+        """
+        Open the GPU choice; a pick is passed to Presenter.choose_gpu.
+
+        :param choice: GPUs to choose from
         :return: None
         """
 
@@ -158,22 +215,14 @@ class MainView(Protocol):
         :return: None
         """
 
-    def ask_gpu(self, *, message: str, names: Sequence[str], selected: int | None) -> int | None:
-        """
-        Let the user pick a GPU in a modal dialog.
-
-        :param message: why the user has to choose
-        :param names: GPU names in list order
-        :param selected: position preselected in the list, None for none
-        :return: position of the chosen GPU, None when the user cancelled
-        """
-
 
 class Presenter:  # pylint: disable=too-many-instance-attributes
     """Drives the main window: every blocking service call runs through the task runner.
 
     Each request for presets or settings gets a number; an answer to a request made before the user changed the game
-    or the resolution is dropped. Texts are kept as functions, so a language switch re-renders them."""
+    or the resolution is dropped. Texts are kept as functions, so a language switch re-renders them.
+
+    Why no presets can be requested stays in the status line until NVIDIA accepts the hardware."""
 
     _THEMES: dict[ThemeMode, UiText] = {
         ThemeMode.AUTO: UiText.THEME_AUTO,
@@ -186,6 +235,9 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         "memory": UiText.COMPONENT_MEMORY,
         "os": UiText.COMPONENT_OS,
     }
+    # Tabs of the bundled CPUs: vendor names, not translated.
+    _AMD: str = "AMD"
+    _INTEL: str = "Intel"
 
     def __init__(
         self,
@@ -213,7 +265,10 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._translator: Translator = translator
         self._locale_dir: Path = locale_dir
         self._theme: ThemeMode = theme
+        self._setup: HardwareSetup | None = None
+        self._choice: HardwareChoice = HardwareChoice(cpu_name=None, gpu=None)
         self._hardware: Hardware | None = None
+        self._problem: Callable[[], str] | None = None
         self._games: tuple[Game, ...] = ()
         self._search: str = ""
         self._shown_games: tuple[Game, ...] = ()
@@ -224,7 +279,6 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._settings: GameSettings | None = None
         self._preset_index: int = 0
         self._request: int = 0
-        self._hardware_text: Callable[[], str] = self._text(item=UiText.LOADING)
         self._status: Callable[[], str] | None = None
 
     @property
@@ -238,16 +292,16 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def start(self) -> None:
         """
-        Theme and translate the window, then request the game list and the hardware check.
+        Theme and translate the window, then request the game list and detect the hardware.
 
         :return: None
         """
         self._view.apply_theme(mode=self._theme)
         self._view.apply_language(translator=self._translator)
         self._render_themes()
-        self._set_hardware_text(text=self._text(item=UiText.LOADING))
+        self._render_hardware()
         self.load_games()
-        self._runner.submit(task=self._service.check_hardware, on_done=self._on_hardware, on_error=self._on_gpu_error)
+        self._runner.submit(task=self._service.hardware_setup, on_done=self._on_setup, on_error=self._on_setup_error)
 
     def load_games(self) -> None:
         """
@@ -273,7 +327,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._game = game
         self._clear_game()
         if self._hardware is None:
-            self._set_status(text=self._text(item=UiText.NO_HARDWARE))
+            self._set_status(text=self._problem or self._text(item=UiText.LOADING))
             return
         self._request_presets()
 
@@ -361,7 +415,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         )
         self._view.apply_language(translator=self._translator)
         self._render_themes()
-        self._set_hardware_text(text=self._hardware_text)
+        self._render_hardware()
         self._set_status(text=self._status)
         self._render_resolutions()
         if self._settings is not None:
@@ -383,13 +437,65 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         )
         self._view.apply_theme(mode=theme)
 
-    def change_gpu(self) -> None:
+    def open_cpu_choice(self) -> None:
         """
-        Let the user pick any GPU: the installed ones first, then the bundled list.
+        Offer the detected CPU, then the bundled ones by vendor, the one in use selected.
 
         :return: None
         """
-        self._runner.submit(task=self._service.all_gpus, on_done=self._ask_any_gpu, on_error=self._on_gpu_error)
+        if self._setup is None:
+            return
+        options: tuple[str, ...] = self._cpu_options(setup=self._setup)
+        groups: tuple[ChoiceGroup, ...] = ()
+        if self._setup.amd_cpus or self._setup.intel_cpus:
+            groups = (
+                ChoiceGroup(title=self._AMD, items=self._setup.amd_cpus),
+                ChoiceGroup(title=self._INTEL, items=self._setup.intel_cpus),
+            )
+        self._view.offer_cpus(
+            choice=ChoiceView(
+                detected=self._detected_cpus(setup=self._setup),
+                groups=groups,
+                selected=options.index(self._choice.cpu_name) if self._choice.cpu_name in options else None,
+            )
+        )
+
+    def open_gpu_choice(self) -> None:
+        """
+        Offer the detected GPUs, then the bundled ones, the one in use selected.
+
+        :return: None
+        """
+        if self._setup is None:
+            return
+        options: tuple[Gpu, ...] = self._gpu_options(setup=self._setup)
+        self._view.offer_gpus(
+            choice=ChoiceView(
+                detected=tuple(gpu.name for gpu in self._setup.system.gpus),
+                groups=(ChoiceGroup(title="", items=tuple(gpu.name for gpu in self._setup.gpus)),),
+                selected=options.index(self._choice.gpu) if self._choice.gpu in options else None,
+            )
+        )
+
+    def choose_cpu(self, *, position: int) -> None:
+        """
+        Use the CPU the user picked, checking it with NVIDIA.
+
+        :param position: position in the CPU choice
+        :return: None
+        """
+        if self._setup is not None:
+            self._choose(choice=replace(self._choice, cpu_name=self._cpu_options(setup=self._setup)[position]))
+
+    def choose_gpu(self, *, position: int) -> None:
+        """
+        Use the GPU the user picked, checking it with NVIDIA.
+
+        :param position: position in the GPU choice
+        :return: None
+        """
+        if self._setup is not None:
+            self._choose(choice=replace(self._choice, gpu=self._gpu_options(setup=self._setup)[position]))
 
     def _on_games(self, games: tuple[Game, ...]) -> None:
         """
@@ -400,7 +506,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         self._games = games
         self._render_games()
-        self._set_status(text=None)
+        self._set_status(text=self._problem)
 
     def _on_games_error(self, error: Exception) -> None:
         """
@@ -412,90 +518,118 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._set_status(text=self._text(item=UiText.GAMES_FAILED, error=str(error)))
         self._view.show_load_games(visible=True)
 
+    def _on_setup(self, setup: HardwareSetup) -> None:
+        """
+        Show the detected hardware and check the CPU and GPU to start with.
+
+        :param setup: detected hardware, bundled lists and the CPU and GPU in use
+        :return: None
+        """
+        self._setup = setup
+        self._choice = setup.choice
+        self._render_hardware()
+        choice: HardwareChoice = setup.choice
+        self._runner.submit(
+            task=lambda: self._service.check_hardware(choice=choice),
+            on_done=self._on_hardware,
+            on_error=lambda error: self._on_check_error(previous=choice, error=error),
+        )
+
+    def _on_setup_error(self, error: Exception) -> None:
+        """
+        Report a failed hardware detection.
+
+        :param error: the failure
+        :return: None
+        """
+        self._lose_hardware(text=self._text(item=UiText.HARDWARE_FAILED, error=str(error)))
+
+    def _choose(self, *, choice: HardwareChoice) -> None:
+        """
+        Show a new CPU and GPU pair at once and have NVIDIA check it; the hardware in use stays until it is accepted.
+
+        :param choice: the pair the user made
+        :return: None
+        """
+        if choice == self._choice and self._hardware is not None:
+            return
+        previous: HardwareChoice = self._choice
+        self._choice = choice
+        self._render_hardware()
+        self._runner.submit(
+            task=lambda: self._service.choose_hardware(choice=choice),
+            on_done=self._on_hardware,
+            on_error=lambda error: self._on_check_error(previous=previous, error=error),
+        )
+
     def _on_hardware(self, check: HardwareCheck) -> None:
         """
-        Use the hardware found, or ask the user for a GPU, or show why there are no recommendations.
+        Use the hardware NVIDIA accepted, or show why there are no recommendations.
 
         :param check: result of the hardware check
         :return: None
         """
         if check.state is HardwareState.READY and check.hardware is not None:
-            hardware: Hardware = check.hardware
-            self._hardware = hardware
-            self._set_hardware_text(text=self._text(item=UiText.CURRENT_GPU, gpu=hardware.gpu_name))
+            self._hardware = check.hardware
+            if self._problem is not None and self._status is self._problem:
+                self._set_status(text=None)
+            self._problem = None
             if self._game is not None:
                 self._clear_game()
                 self._request_presets()
-        elif check.state is HardwareState.CHOOSE_DETECTED_GPU:
-            self._ask_gpu(message=UiText.CHOOSE_DETECTED_GPU, gpus=check.gpus, selected=0)
-        elif check.state is HardwareState.CHOOSE_LISTED_GPU:
-            self._ask_gpu(message=UiText.CHOOSE_LISTED_GPU, gpus=check.gpus, selected=None)
-        elif check.state is HardwareState.NO_NVIDIA_GPU:
-            self._lose_hardware(text=self._text(item=UiText.NO_NVIDIA_GPU))
         else:
-            failed: tuple[str, ...] = check.failed
-            self._lose_hardware(
-                text=lambda: self._translator.text(
-                    item=UiText.HARDWARE_REJECTED,
-                    components=", ".join(
-                        self._translator.text(item=self._COMPONENTS[name]) if name in self._COMPONENTS else name
-                        for name in failed
-                    ),
-                )
-            )
+            self._lose_hardware(text=self._problem_text(check=check))
 
-    def _on_gpu_error(self, error: Exception) -> None:
+    def _on_check_error(self, *, previous: HardwareChoice, error: Exception) -> None:
         """
-        Report a failed hardware request; a GPU in use stays in use.
+        Report a failed hardware check; hardware in use stays in use and is shown again.
 
+        :param previous: the CPU and GPU shown before the check
         :param error: the failure
         :return: None
         """
-        self._set_status(text=self._text(item=UiText.REQUEST_FAILED, error=str(error)))
+        text: Callable[[], str] = self._text(item=UiText.REQUEST_FAILED, error=str(error))
         if self._hardware is None:
-            self._set_hardware_text(text=self._text(item=UiText.GPU_NOT_CHOSEN))
-
-    def _ask_any_gpu(self, gpus: tuple[Gpu, ...]) -> None:
-        """
-        Offer every GPU, the one in use preselected.
-
-        :param gpus: GPUs to choose from
-        :return: None
-        """
-        current: str | None = None if self._hardware is None else self._hardware.gpu_device_id
-        selected: int | None = next((position for position, gpu in enumerate(gpus) if gpu.device_id == current), None)
-        self._ask_gpu(message=UiText.CHOOSE_ANY_GPU, gpus=gpus, selected=selected)
-
-    def _ask_gpu(self, *, message: UiText, gpus: tuple[Gpu, ...], selected: int | None) -> None:
-        """
-        Ask the user for a GPU and check the choice with NVIDIA; a cancel keeps the GPU in use.
-
-        :param message: why the user has to choose
-        :param gpus: GPUs to choose from
-        :param selected: position preselected in the list, None for none
-        :return: None
-        """
-        index: int | None = self._view.ask_gpu(
-            message=self._translator.text(item=message), names=[gpu.name for gpu in gpus], selected=selected
-        )
-        if index is None:
-            if self._hardware is None:
-                self._set_hardware_text(text=self._text(item=UiText.GPU_NOT_CHOSEN))
+            self._lose_hardware(text=text)
             return
-        gpu: Gpu = gpus[index]
-        self._runner.submit(
-            task=lambda: self._service.choose_gpu(gpu=gpu), on_done=self._on_hardware, on_error=self._on_gpu_error
+        self._choice = previous
+        self._render_hardware()
+        self._set_status(text=text)
+
+    def _problem_text(self, *, check: HardwareCheck) -> Callable[[], str]:
+        """
+        Explain why presets can't be requested.
+
+        :param check: a result other than READY
+        :return: the explanation in the current language
+        """
+        if check.state is HardwareState.NO_NVIDIA_GPU:
+            return self._text(item=UiText.NO_NVIDIA_GPU)
+        if check.state is HardwareState.NO_CPU:
+            return self._text(item=UiText.CPU_NOT_DETECTED)
+        if check.failed == ("cpu",):
+            return self._text(item=UiText.CPU_REJECTED)
+        if check.failed == ("gpu",):
+            return self._text(item=UiText.GPU_REJECTED)
+        failed: tuple[str, ...] = check.failed
+        return lambda: self._translator.text(
+            item=UiText.HARDWARE_REJECTED,
+            components=", ".join(
+                self._translator.text(item=self._COMPONENTS[name]) if name in self._COMPONENTS else name
+                for name in failed
+            ),
         )
 
     def _lose_hardware(self, *, text: Callable[[], str]) -> None:
         """
-        Stop using any GPU: nothing can be requested until the user picks one.
+        Stop using any hardware: nothing can be requested until NVIDIA accepts a CPU and GPU.
 
-        :param text: why there is no GPU
+        :param text: why there is no hardware
         :return: None
         """
         self._hardware = None
-        self._set_hardware_text(text=text)
+        self._problem = text
+        self._set_status(text=text)
         self._clear_game()
 
     def _request_presets(self) -> None:
@@ -585,6 +719,39 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             selected=list(self._THEMES).index(self._theme),
         )
 
+    def _render_hardware(self) -> None:
+        """
+        Show the CPU and GPU in use and the memory sizes; a missing component's link invites a choice.
+
+        :return: None
+        """
+        if self._setup is None:
+            loading: str = self._translator.text(item=UiText.LOADING)
+            self._view.show_hardware(hardware=HardwareView(cpu=loading, gpu=loading, memory="", video_memory=""))
+            return
+        gpu: Gpu | None = self._choice.gpu
+        self._view.show_hardware(
+            hardware=HardwareView(
+                cpu=self._choice.cpu_name or self._translator.text(item=UiText.CHOOSE_CPU),
+                gpu=self._translator.text(item=UiText.CHOOSE_GPU) if gpu is None else gpu.name,
+                memory=self._size(gb=self._setup.system.memory_gb),
+                video_memory=(
+                    self._translator.text(item=UiText.UNKNOWN)
+                    if gpu is None or gpu.memory_gb is None
+                    else self._size(gb=gpu.memory_gb)
+                ),
+            )
+        )
+
+    def _size(self, *, gb: float) -> str:
+        """
+        Write a memory size: 16 -> "16 GB", 7.5 -> "7.5 GB".
+
+        :param gb: size in GiB
+        :return: the size in the current language
+        """
+        return self._translator.text(item=UiText.SIZE_GB, size=f"{gb:g}")
+
     def _render_resolutions(self) -> None:
         """
         Fill the resolution list, marking with a warning the resolutions the hardware is too weak for.
@@ -668,16 +835,6 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._request += 1
         return self._request
 
-    def _set_hardware_text(self, *, text: Callable[[], str]) -> None:
-        """
-        Show the hardware line and keep it for language switches.
-
-        :param text: the line in the current language
-        :return: None
-        """
-        self._hardware_text = text
-        self._view.show_hardware(text=text())
-
     def _set_status(self, *, text: Callable[[], str] | None) -> None:
         """
         Show the status line and keep it for language switches.
@@ -697,6 +854,36 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :return: function giving the translated text
         """
         return lambda: self._translator.text(item=item, **values)
+
+    @staticmethod
+    def _detected_cpus(*, setup: HardwareSetup) -> tuple[str, ...]:
+        """
+        List the detected CPU.
+
+        :param setup: hardware setup
+        :return: the detected CPU name, nothing when none was detected
+        """
+        return () if setup.system.cpu_name is None else (setup.system.cpu_name,)
+
+    @classmethod
+    def _cpu_options(cls, *, setup: HardwareSetup) -> tuple[str, ...]:
+        """
+        List the CPUs in the order of the choice.
+
+        :param setup: hardware setup
+        :return: the detected CPU, then the AMD and the Intel ones
+        """
+        return cls._detected_cpus(setup=setup) + setup.amd_cpus + setup.intel_cpus
+
+    @staticmethod
+    def _gpu_options(*, setup: HardwareSetup) -> tuple[Gpu, ...]:
+        """
+        List the GPUs in the order of the choice.
+
+        :param setup: hardware setup
+        :return: the detected GPUs, then the bundled ones
+        """
+        return setup.system.gpus + setup.gpus
 
     @staticmethod
     def _pixels(*, resolution: str) -> int:

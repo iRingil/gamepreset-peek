@@ -1,5 +1,7 @@
 """Tests of the main window logic on a fake window and a runner that runs tasks in place."""
 
+# pylint: disable=too-many-lines
+
 from pathlib import Path
 from typing import Any, Callable, Sequence
 from unittest.mock import MagicMock, create_autospec
@@ -13,23 +15,49 @@ from app.core.models import (
     Gpu,
     Hardware,
     HardwareCheck,
+    HardwareChoice,
+    HardwareSetup,
     HardwareState,
     PresetsFile,
     RemoteFile,
     ResolutionPreset,
     Setting,
     SettingTranslation,
+    SystemHardware,
     ThemeMode,
     Translations,
 )
 from app.core.service import PresetService
 from app.i18n.translator import Translator
-from app.ui.presenter import Hint, Presenter, ResolutionRow, SettingRow, SettingsView
+from app.ui.presenter import (
+    ChoiceGroup,
+    ChoiceView,
+    HardwareView,
+    Hint,
+    Presenter,
+    ResolutionRow,
+    SettingRow,
+    SettingsView,
+)
 
 __all__: tuple = ()
 
-_LAPTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4060 Laptop GPU", device_id="28e0")
+_LAPTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4060 Laptop GPU", device_id="28e0", memory_gb=8.0)
 _DESKTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")
+_CPU: str = "13th Gen Intel(R) Core(TM) i9-13900HX"
+_AMD_CPU: str = "AMD Ryzen 7 7800X3D 8-Core Processor"
+_INTEL_CPU: str = "Intel(R) Core(TM) i7-14700K"
+# A laptop with its GPU detected, the RTX 4090 in the bundled list and no bundled CPUs.
+_SETUP: HardwareSetup = HardwareSetup(
+    system=SystemHardware(cpu_name=_CPU, gpus=(_LAPTOP_GPU,), memory_gb=16, os_version="10.0"),
+    amd_cpus=(),
+    intel_cpus=(),
+    gpus=(_DESKTOP_GPU,),
+    choice=HardwareChoice(cpu_name=_CPU, gpu=_LAPTOP_GPU),
+)
+_LAPTOP_VIEW: HardwareView = HardwareView(
+    cpu=_CPU, gpu="NVIDIA GeForce RTX 4060 Laptop GPU", memory="16 GB", video_memory="8 GB"
+)
 _GAMES: tuple[Game, ...] = (
     Game(game_id="baldurs_gate_3", name="Baldur's Gate 3"),
     Game(game_id="mordhau", name="MORDHAU"),
@@ -76,15 +104,16 @@ class _Hardware:
     """Hardware the service mock reports."""
 
     @staticmethod
-    def with_gpu(*, gpu: Gpu) -> Hardware:
+    def with_gpu(*, gpu: Gpu, cpu_name: str = _CPU) -> Hardware:
         """
         Build hardware with a GPU.
 
         :param gpu: the GPU
+        :param cpu_name: the CPU
         :return: hardware
         """
         return Hardware(
-            cpu_name="13th Gen Intel(R) Core(TM) i9-13900HX",
+            cpu_name=cpu_name,
             gpu_name=gpu.name,
             gpu_device_id=gpu.device_id,
             memory_gb=16,
@@ -92,18 +121,19 @@ class _Hardware:
         )
 
     @classmethod
-    def ready(cls, *, gpu: Gpu) -> HardwareCheck:
+    def ready(cls, *, gpu: Gpu, cpu_name: str = _CPU) -> HardwareCheck:
         """
         Build a READY check result.
 
         :param gpu: the GPU in use
+        :param cpu_name: the CPU in use
         :return: check result
         """
-        return HardwareCheck(state=HardwareState.READY, hardware=cls.with_gpu(gpu=gpu))
+        return HardwareCheck(state=HardwareState.READY, hardware=cls.with_gpu(gpu=gpu, cpu_name=cpu_name))
 
 
 class _FakeView:  # pylint: disable=too-many-instance-attributes
-    """Records what the presenter shows; ask_gpu answers from a prepared list."""
+    """Records what the presenter shows and the choices it offers."""
 
     def __init__(self) -> None:
         """
@@ -112,7 +142,7 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.language: str | None = None
         self.theme: ThemeMode | None = None
         self.themes: tuple[list[str], int] | None = None
-        self.hardware: str = ""
+        self.hardware: HardwareView | None = None
         self.status: str = ""
         self.load_games: bool = False
         self.games: list[str] = []
@@ -120,8 +150,8 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.resolutions: list[ResolutionRow] = []
         self.settings_button: bool = False
         self.settings: SettingsView | None = None
-        self.asks: list[tuple[str, list[str], int | None]] = []
-        self.answers: list[int | None] = []
+        self.cpu_offers: list[ChoiceView] = []
+        self.gpu_offers: list[ChoiceView] = []
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -151,14 +181,32 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.themes = (list(names), selected)
 
-    def show_hardware(self, *, text: str) -> None:
+    def show_hardware(self, *, hardware: HardwareView) -> None:
         """
-        Record the hardware line.
+        Record the hardware block.
 
-        :param text: the line
+        :param hardware: what is shown
         :return: None
         """
-        self.hardware = text
+        self.hardware = hardware
+
+    def offer_cpus(self, *, choice: ChoiceView) -> None:
+        """
+        Record a CPU choice offered.
+
+        :param choice: CPUs to choose from
+        :return: None
+        """
+        self.cpu_offers.append(choice)
+
+    def offer_gpus(self, *, choice: ChoiceView) -> None:
+        """
+        Record a GPU choice offered.
+
+        :param choice: GPUs to choose from
+        :return: None
+        """
+        self.gpu_offers.append(choice)
 
     def show_status(self, *, text: str) -> None:
         """
@@ -223,18 +271,6 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self.settings = None
-
-    def ask_gpu(self, *, message: str, names: Sequence[str], selected: int | None) -> int | None:
-        """
-        Record the question and give the next prepared answer.
-
-        :param message: why the user has to choose
-        :param names: GPU names
-        :param selected: preselected position
-        :return: the prepared answer
-        """
-        self.asks.append((message, list(names), selected))
-        return self.answers.pop(0)
 
 
 class _Runner:
@@ -311,12 +347,13 @@ class _PresenterTests:
     @pytest.fixture(name="service")
     def _service(self) -> MagicMock:
         """
-        Mock the service: two games, the laptop GPU accepted, presets and settings of any game.
+        Mock the service: two games, the laptop accepted, presets and settings of any game.
 
         :return: mock with the interface of PresetService
         """
         service: MagicMock = create_autospec(spec=PresetService, instance=True)
         service.games.return_value = _GAMES
+        service.hardware_setup.return_value = _SETUP
         service.check_hardware.return_value = _Hardware.ready(gpu=_LAPTOP_GPU)
         service.game_presets.return_value = _PRESETS
         service.game_settings.return_value = _SETTINGS
@@ -360,12 +397,13 @@ class _PresenterTests:
 class TestStart(_PresenterTests):
     """Tests of Presenter.start, load_games and the hardware flow."""
 
-    def test_games_and_gpu(self, presenter: Presenter, view: _FakeView) -> None:
+    def test_games_and_hardware(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Shows the games and the GPU in use, in the initial language.
+        Shows the games and the detected hardware, in the initial language, and checks the hardware with NVIDIA.
 
         :param presenter: presenter under test
         :param view: fake window
+        :param service: service mock
         :return: None
         """
         # Arrange & Act
@@ -375,10 +413,69 @@ class TestStart(_PresenterTests):
         assert (view.language, view.games, view.hardware, view.status, view.load_games) == (
             "en",
             ["Baldur's Gate 3", "MORDHAU"],
-            "Graphics card: NVIDIA GeForce RTX 4060 Laptop GPU",
+            _LAPTOP_VIEW,
             "",
             False,
         )
+        service.check_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=_CPU, gpu=_LAPTOP_GPU))
+
+    def test_hardware_loading(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
+        """
+        Shows the hardware as loading until it is detected.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param runner: runner
+        :return: None
+        """
+        # Arrange
+        runner.deferred = True
+        # Act
+        presenter.start()
+        # Assert
+        assert view.hardware == HardwareView(cpu="Loading…", gpu="Loading…", memory="", video_memory="")
+
+    def test_nothing_detected(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Invites a choice in place of a missing CPU and GPU, with the video memory unknown.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.hardware_setup.return_value = HardwareSetup(
+            system=SystemHardware(cpu_name=None, gpus=(), memory_gb=8, os_version="10.0"),
+            amd_cpus=(),
+            intel_cpus=(),
+            gpus=(_DESKTOP_GPU,),
+            choice=HardwareChoice(cpu_name=None, gpu=None),
+        )
+        service.check_hardware.return_value = HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
+        # Act
+        presenter.start()
+        # Assert
+        assert view.hardware == HardwareView(
+            cpu="Choose a processor", gpu="Choose a graphics card", memory="8 GB", video_memory="unknown"
+        )
+
+    def test_setup_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Reports a failed hardware detection and asks NVIDIA nothing.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.hardware_setup.side_effect = OSError("no registry")
+        # Act
+        presenter.start()
+        # Assert
+        assert view.status == "Could not detect the hardware: no registry"
+        service.check_hardware.assert_not_called()
 
     def test_games_failed_then_reloaded(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
@@ -407,23 +504,35 @@ class TestStart(_PresenterTests):
                 "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only.",
             ),
             (
+                HardwareCheck(state=HardwareState.NO_CPU),
+                "Could not detect the processor. Choose yours from the list.",
+            ),
+            (
+                HardwareCheck(state=HardwareState.REJECTED, failed=("cpu",)),
+                "NVIDIA does not know your processor. Choose it from the list.",
+            ),
+            (
+                HardwareCheck(state=HardwareState.REJECTED, failed=("gpu",)),
+                "NVIDIA does not know your graphics card. Choose the closest one from the list.",
+            ),
+            (
                 HardwareCheck(state=HardwareState.REJECTED, failed=("cpu", "bios")),
                 "NVIDIA does not support this computer: processor, bios.",
             ),
         ],
-        ids=["no nvidia gpu", "rejected"],
+        ids=["no nvidia gpu", "no cpu", "cpu rejected", "gpu rejected", "several rejected"],
     )
     def test_no_hardware(
         self, presenter: Presenter, view: _FakeView, service: MagicMock, check: HardwareCheck, expected: str
     ) -> None:
         """
-        Explains why there is no GPU to request presets with; unknown component names are shown as NVIDIA sends them.
+        Explains in the status line why there are no recommendations; unknown component names are shown as they come.
 
         :param presenter: presenter under test
         :param view: fake window
         :param service: service mock
         :param check: hardware check result
-        :param expected: hardware line
+        :param expected: status line
         :return: None
         """
         # Arrange
@@ -431,54 +540,28 @@ class TestStart(_PresenterTests):
         # Act
         presenter.start()
         # Assert
-        assert view.hardware == expected
+        assert view.status == expected
 
-    def test_detected_gpu_chosen(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+    def test_problem_outlives_game_list(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, runner: _Runner
+    ) -> None:
         """
-        Asks which detected GPU to use, the first preselected, and checks the choice.
-
-        :param presenter: presenter under test
-        :param view: fake window
-        :param service: service mock
-        :return: None
-        """
-        # Arrange
-        service.check_hardware.return_value = HardwareCheck(
-            state=HardwareState.CHOOSE_DETECTED_GPU, gpus=(_DESKTOP_GPU, _LAPTOP_GPU)
-        )
-        service.choose_gpu.return_value = _Hardware.ready(gpu=_LAPTOP_GPU)
-        view.answers = [1]
-        # Act
-        presenter.start()
-        # Assert
-        assert view.asks == [
-            (
-                "Several NVIDIA graphics cards found. Choose the one you play on.",
-                ["NVIDIA GeForce RTX 4090", "NVIDIA GeForce RTX 4060 Laptop GPU"],
-                0,
-            )
-        ]
-        service.choose_gpu.assert_called_once_with(gpu=_LAPTOP_GPU)
-        assert view.hardware == "Graphics card: NVIDIA GeForce RTX 4060 Laptop GPU"
-
-    def test_listed_gpu_cancelled(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
-        """
-        Offers the bundled list with nothing preselected; a cancel leaves no GPU in use.
+        Keeps the hardware problem in the status line when the game list arrives after it.
 
         :param presenter: presenter under test
         :param view: fake window
         :param service: service mock
+        :param runner: runner
         :return: None
         """
         # Arrange
-        service.check_hardware.return_value = HardwareCheck(state=HardwareState.CHOOSE_LISTED_GPU, gpus=(_DESKTOP_GPU,))
-        view.answers = [None]
-        # Act
+        service.check_hardware.return_value = HardwareCheck(state=HardwareState.REJECTED, failed=("gpu",))
+        service.games.side_effect = [ConnectionError("down"), _GAMES]
         presenter.start()
+        # Act
+        presenter.load_games()
         # Assert
-        assert view.asks[0][2] is None
-        assert view.hardware == "No graphics card chosen."
-        service.choose_gpu.assert_not_called()
+        assert view.status == "NVIDIA does not know your graphics card. Choose the closest one from the list."
 
 
 class TestGame(_PresenterTests):
@@ -486,7 +569,7 @@ class TestGame(_PresenterTests):
 
     def test_no_hardware(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Asks for a GPU first when there is none in use.
+        Repeats why there are no recommendations when a game is chosen without accepted hardware.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -496,10 +579,13 @@ class TestGame(_PresenterTests):
         # Arrange
         service.check_hardware.return_value = HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
         presenter.start()
+        view.status = ""
         # Act
         presenter.select_game(index=0)
         # Assert
-        assert view.status == "Choose a graphics card first."
+        assert view.status == (
+            "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only."
+        )
         service.game_presets.assert_not_called()
 
     def test_resolutions(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
@@ -733,10 +819,9 @@ class TestLanguage(_PresenterTests):
         presenter.change_language(language="ru")
         # Assert
         service.save_language.assert_called_once_with(language="ru")
-        assert (presenter.language, view.language, view.hardware, view.resolutions[0]) == (
+        assert (presenter.language, view.language, view.resolutions[0]) == (
             "ru",
             "ru",
-            "Видеокарта: NVIDIA GeForce RTX 4060 Laptop GPU",
             ResolutionRow(resolution="3840x2160", warning=_WARNING),
         )
         assert view.settings is not None
@@ -872,12 +957,33 @@ class TestTheme(_PresenterTests):
         assert view.themes == (["Авто", "Светлая", "Тёмная"], 1)
 
 
-class TestChangeGpu(_PresenterTests):
-    """Tests of Presenter.change_gpu."""
+class TestHardwareChoice(_PresenterTests):
+    """Tests of Presenter.open_cpu_choice, open_gpu_choice, choose_cpu and choose_gpu."""
 
-    def test_current_preselected(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+    def test_gpus_offered(self, presenter: Presenter, view: _FakeView) -> None:
         """
-        Offers every GPU with the one in use preselected; a cancel keeps it.
+        Offers the detected GPUs above the bundled ones, the one in use selected.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.open_gpu_choice()
+        # Assert
+        assert view.gpu_offers == [
+            ChoiceView(
+                detected=("NVIDIA GeForce RTX 4060 Laptop GPU",),
+                groups=(ChoiceGroup(title="", items=("NVIDIA GeForce RTX 4090",)),),
+                selected=0,
+            )
+        ]
+
+    def test_cpus_offered(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Offers the detected CPU above vendor tabs of the bundled ones, the one in use selected.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -885,24 +991,61 @@ class TestChangeGpu(_PresenterTests):
         :return: None
         """
         # Arrange
-        service.all_gpus.return_value = (_DESKTOP_GPU, _LAPTOP_GPU)
-        view.answers = [None]
+        service.hardware_setup.return_value = HardwareSetup(
+            system=_SETUP.system,
+            amd_cpus=(_AMD_CPU,),
+            intel_cpus=(_INTEL_CPU,),
+            gpus=_SETUP.gpus,
+            choice=HardwareChoice(cpu_name=_INTEL_CPU, gpu=_LAPTOP_GPU),
+        )
         presenter.start()
         # Act
-        presenter.change_gpu()
+        presenter.open_cpu_choice()
         # Assert
-        assert view.asks == [
-            (
-                "Choose the graphics card to get recommended settings for.",
-                ["NVIDIA GeForce RTX 4090", "NVIDIA GeForce RTX 4060 Laptop GPU"],
-                1,
+        assert view.cpu_offers == [
+            ChoiceView(
+                detected=(_CPU,),
+                groups=(ChoiceGroup(title="AMD", items=(_AMD_CPU,)), ChoiceGroup(title="Intel", items=(_INTEL_CPU,))),
+                selected=2,
             )
         ]
-        assert view.hardware == "Graphics card: NVIDIA GeForce RTX 4060 Laptop GPU"
+
+    def test_no_bundled_cpus(self, presenter: Presenter, view: _FakeView) -> None:
+        """
+        Offers only the detected CPU while there is no bundled CPU list.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.open_cpu_choice()
+        # Assert
+        assert view.cpu_offers == [ChoiceView(detected=(_CPU,), groups=(), selected=0)]
+
+    def test_nothing_offered_before_detection(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
+        """
+        Offers nothing while the hardware is not detected yet.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param runner: runner
+        :return: None
+        """
+        # Arrange
+        runner.deferred = True
+        presenter.start()
+        # Act
+        presenter.open_cpu_choice()
+        presenter.open_gpu_choice()
+        # Assert
+        assert (view.cpu_offers, view.gpu_offers) == ([], [])
 
     def test_new_gpu_reloads_presets(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Uses the chosen GPU and requests the presets of the game shown again for it.
+        Uses the GPU NVIDIA accepts and requests the presets of the game shown again for it.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -910,18 +1053,93 @@ class TestChangeGpu(_PresenterTests):
         :return: None
         """
         # Arrange
-        service.all_gpus.return_value = (_DESKTOP_GPU, _LAPTOP_GPU)
-        service.choose_gpu.return_value = _Hardware.ready(gpu=_DESKTOP_GPU)
-        view.answers = [0]
+        service.choose_hardware.return_value = _Hardware.ready(gpu=_DESKTOP_GPU)
         self.show_settings(presenter=presenter)
         # Act
-        presenter.change_gpu()
+        presenter.choose_gpu(position=1)
         # Assert
-        service.choose_gpu.assert_called_once_with(gpu=_DESKTOP_GPU)
+        service.choose_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=_CPU, gpu=_DESKTOP_GPU))
         last_call: Any = service.game_presets.call_args
         assert last_call.kwargs == {"game_id": "mordhau", "hardware": _Hardware.with_gpu(gpu=_DESKTOP_GPU)}
         assert (view.hardware, view.settings, view.settings_button) == (
-            "Graphics card: NVIDIA GeForce RTX 4090",
+            HardwareView(cpu=_CPU, gpu="NVIDIA GeForce RTX 4090", memory="16 GB", video_memory="unknown"),
             None,
             False,
         )
+
+    def test_new_cpu_accepted(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Uses a chosen CPU NVIDIA accepts, clearing the hardware problem shown before.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.hardware_setup.return_value = HardwareSetup(
+            system=_SETUP.system, amd_cpus=(_AMD_CPU,), intel_cpus=(), gpus=_SETUP.gpus, choice=_SETUP.choice
+        )
+        service.check_hardware.return_value = HardwareCheck(state=HardwareState.REJECTED, failed=("cpu",))
+        service.choose_hardware.return_value = _Hardware.ready(gpu=_LAPTOP_GPU, cpu_name=_AMD_CPU)
+        presenter.start()
+        # Act
+        presenter.choose_cpu(position=1)
+        presenter.select_game(index=1)
+        # Assert
+        assert (view.hardware is not None and view.hardware.cpu, view.status) == (_AMD_CPU, "")
+        assert service.game_presets.call_args.kwargs["hardware"] == _Hardware.with_gpu(
+            gpu=_LAPTOP_GPU, cpu_name=_AMD_CPU
+        )
+
+    def test_same_gpu(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Asks NVIDIA nothing when the GPU in use is picked again.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.choose_gpu(position=0)
+        # Assert
+        service.choose_hardware.assert_not_called()
+
+    def test_rejected_gpu(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Shows the GPU picked with the reason NVIDIA rejects it, and stops using the hardware.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.choose_hardware.return_value = HardwareCheck(state=HardwareState.REJECTED, failed=("gpu",))
+        presenter.start()
+        # Act
+        presenter.choose_gpu(position=1)
+        presenter.select_game(index=1)
+        # Assert
+        assert view.hardware is not None and view.hardware.gpu == "NVIDIA GeForce RTX 4090"
+        assert view.status == "NVIDIA does not know your graphics card. Choose the closest one from the list."
+        service.game_presets.assert_not_called()
+
+    def test_check_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Reports a failed check of a new GPU and goes back to the hardware in use.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.choose_hardware.side_effect = ConnectionError("timeout")
+        presenter.start()
+        # Act
+        presenter.choose_gpu(position=1)
+        # Assert
+        assert (view.hardware, view.status) == (_LAPTOP_VIEW, "Could not get data from NVIDIA: timeout")

@@ -1,19 +1,20 @@
-"""Detection of the user's hardware: CPU and NVIDIA GPUs from the registry, memory size and Windows version."""
+"""Detection of the user's hardware (CPU and NVIDIA GPUs from the registry, memory, Windows) and the bundled lists."""
 
 import ctypes
-import json
 import re
 import sys
 import winreg
+from contextlib import closing
 from pathlib import Path
 from typing import Any, Mapping, Self
 
 from loguru import logger
 
-from app.config import GPU_RANKS_FILE, GPUS_FILE
+from app.config import HARDWARE_DB
+from app.core.hardware_db import HardwareDb
 from app.core.models import Gpu
 
-__all__: tuple[str, ...] = ("GpuList", "GpuRanks", "HardwareDetector")
+__all__: tuple[str, ...] = ("CpuList", "GpuList", "GpuRanks", "HardwareDetector")
 
 
 class _MemoryStatus(ctypes.Structure):  # pylint: disable=too-few-public-methods
@@ -43,16 +44,25 @@ class HardwareDetector:
     _VIDEO_DEVICE_PREFIX: str = "\\Device\\Video"
     _MACHINE_PREFIX: str = "\\registry\\machine\\"
     _NVIDIA_DEVICE_ID: re.Pattern[str] = re.compile(pattern=r"ven_10de&dev_([0-9a-f]{4})")
+    # A 64-bit size in bytes; the 32-bit "HardwareInformation.MemorySize" stops at 4 GiB.
+    _VIDEO_MEMORY_VALUE: str = "HardwareInformation.qwMemorySize"
 
     @classmethod
-    def cpu_name(cls) -> str:
+    def cpu_name(cls) -> str | None:
         """
         Read the CPU name, e.g. "13th Gen Intel(R) Core(TM) i9-13900HX".
 
-        :return: CPU name without surrounding whitespace
+        :return: CPU name without surrounding whitespace, None when the registry has none
         """
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, cls._CPU_KEY) as key:
-            name: str = cls._string(key=key, name="ProcessorNameString").strip()
+        try:
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, cls._CPU_KEY) as key:
+                name: str = cls._string(key=key, name="ProcessorNameString").strip()
+        except OSError as error:
+            logger.warning("CPU not detected: {!r}", error)
+            return None
+        if not name:
+            logger.warning("CPU not detected: empty name")
+            return None
         logger.info("CPU: {}", name)
         return name
 
@@ -137,6 +147,7 @@ class HardwareDetector:
             with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, driver_key) as key:
                 hardware_id: str = cls._string(key=key, name="MatchingDeviceId")
                 name: str = cls._string(key=key, name="DriverDesc").strip()
+                memory_gb: float | None = cls._video_memory_gb(key=key)
         except OSError:
             logger.debug("Skipped video adapter {}: no hardware id or name", driver_key)
             return None
@@ -144,7 +155,24 @@ class HardwareDetector:
         if match is None:
             logger.debug("Skipped video adapter {}: {}", name, hardware_id)
             return None
-        return Gpu(name=name, device_id=match.group(1))
+        return Gpu(name=name, device_id=match.group(1), memory_gb=memory_gb)
+
+    @classmethod
+    def _video_memory_gb(cls, *, key: winreg.HKEYType) -> float | None:
+        """
+        Read the video memory size of an adapter.
+
+        :param key: open driver key of the adapter
+        :return: size in GiB to one decimal (7.996 -> 8.0), None when the driver doesn't report it
+        """
+        try:
+            value: Any = winreg.QueryValueEx(key, cls._VIDEO_MEMORY_VALUE)[0]
+        except OSError:
+            return None
+        if not isinstance(value, int) or value <= 0:
+            logger.debug("Ignored video memory size {!r}", value)
+            return None
+        return round(value / 2**30, 1)
 
     @staticmethod
     def _string(*, key: winreg.HKEYType, name: str) -> str:
@@ -161,6 +189,39 @@ class HardwareDetector:
         return value
 
 
+class CpuList:
+    """The bundled lists of AMD and Intel CPU names NVIDIA knows, exactly as Windows writes them."""
+
+    def __init__(self, *, amd: tuple[str, ...], intel: tuple[str, ...]) -> None:
+        """
+        Use the given CPUs.
+
+        :param amd: AMD CPU names in display order
+        :param intel: Intel CPU names in display order
+        """
+        self.amd: tuple[str, ...] = amd
+        self.intel: tuple[str, ...] = intel
+
+    @classmethod
+    def load(cls, *, path: Path = HARDWARE_DB) -> Self:
+        """
+        Load the CPUs from the hardware database.
+
+        :param path: database file
+        :return: CPU list, each vendor's names sorted ignoring case
+        """
+        with closing(HardwareDb.read(path=path)) as db:
+            rows: list[tuple[str, str]] = db.execute(
+                "SELECT vendor, name FROM cpus ORDER BY name COLLATE NOCASE"
+            ).fetchall()
+        cpu_list: Self = cls(
+            amd=tuple(name for vendor, name in rows if vendor == "amd"),
+            intel=tuple(name for vendor, name in rows if vendor == "intel"),
+        )
+        logger.debug("Loaded {} AMD and {} Intel CPUs from {}", len(cpu_list.amd), len(cpu_list.intel), path)
+        return cpu_list
+
+
 class GpuList:
     """The bundled list of GeForce GPUs NVIDIA knows, offered when NVIDIA rejects the detected hardware."""
 
@@ -173,15 +234,18 @@ class GpuList:
         self.gpus: tuple[Gpu, ...] = gpus
 
     @classmethod
-    def load(cls, *, path: Path = GPUS_FILE) -> Self:
+    def load(cls, *, path: Path = HARDWARE_DB) -> Self:
         """
-        Load the GPUs from a JSON file.
+        Load the GPUs from the hardware database.
 
-        :param path: JSON list of objects with name and device_id
-        :return: GPU list
+        :param path: database file
+        :return: GPU list sorted by name, ignoring case
         """
-        entries: list[dict[str, str]] = json.loads(s=path.read_text(encoding="utf-8"))
-        gpus: tuple[Gpu, ...] = tuple(Gpu(name=entry["name"], device_id=entry["device_id"]) for entry in entries)
+        with closing(HardwareDb.read(path=path)) as db:
+            rows: list[tuple[str, str]] = db.execute(
+                "SELECT name, device_id FROM gpus ORDER BY name COLLATE NOCASE"
+            ).fetchall()
+        gpus: tuple[Gpu, ...] = tuple(Gpu(name=name, device_id=device_id) for name, device_id in rows)
         logger.debug("Loaded {} GPUs from {}", len(gpus), path)
         return cls(gpus=gpus)
 
@@ -213,16 +277,19 @@ class GpuRanks:
         self._newest_generation: int = max((generation for generation, _ in ranks.values()), default=0)
 
     @classmethod
-    def load(cls, *, path: Path = GPU_RANKS_FILE) -> Self:
+    def load(cls, *, path: Path = HARDWARE_DB) -> Self:
         """
-        Load the ranks from a JSON file.
+        Load the ranks from the hardware database.
 
-        :param path: JSON object of {"chip", "generation", "tier"} objects by device id
+        :param path: database file
         :return: GPU ranks
         """
-        entries: dict[str, dict[str, Any]] = json.loads(s=path.read_text(encoding="utf-8"))
-        logger.debug("Loaded {} GPU ranks from {}", len(entries), path)
-        return cls(ranks={device_id: (entry["generation"], entry["tier"]) for device_id, entry in entries.items()})
+        with closing(HardwareDb.read(path=path)) as db:
+            rows: list[tuple[str, int, float]] = db.execute(
+                "SELECT device_id, generation, tier FROM gpu_ranks"
+            ).fetchall()
+        logger.debug("Loaded {} GPU ranks from {}", len(rows), path)
+        return cls(ranks={device_id: (generation, tier) for device_id, generation, tier in rows})
 
     def score(self, *, gpu: Gpu) -> float:
         """

@@ -1,5 +1,6 @@
 """Tests of the service the UI calls."""
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,12 +13,15 @@ from app.core.models import (
     Gpu,
     Hardware,
     HardwareCheck,
+    HardwareChoice,
+    HardwareSetup,
     HardwareState,
     PresetsFile,
     RemoteFile,
     ResolutionPreset,
     Setting,
     SettingTranslation,
+    SystemHardware,
     ThemeMode,
     Translations,
     UserSettings,
@@ -30,23 +34,25 @@ __all__: tuple = ()
 _LAPTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4060 Laptop GPU", device_id="28e0")
 _DESKTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")
 _LISTED_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507")
+_DETECTED_CPU: str = "13th Gen Intel(R) Core(TM) i9-13900HX"
+_LISTED_CPU: str = "AMD Ryzen 7 7800X3D 8-Core Processor"
 _ACCEPTED: Compatibility = Compatibility(ok=True, failed=())
-_GPU_REJECTED: Compatibility = Compatibility(ok=False, failed=("gpu",))
 
 
 class _Hardware:
     """Hardware the service builds from the detection mock of conftest."""
 
     @staticmethod
-    def with_gpu(*, gpu: Gpu) -> Hardware:
+    def with_gpu(*, gpu: Gpu, cpu_name: str = _DETECTED_CPU) -> Hardware:
         """
         Build the hardware of the detected system with a GPU.
 
         :param gpu: the GPU
+        :param cpu_name: the CPU
         :return: hardware sent to NVIDIA
         """
         return Hardware(
-            cpu_name="13th Gen Intel(R) Core(TM) i9-13900HX",
+            cpu_name=cpu_name,
             gpu_name=gpu.name,
             gpu_device_id=gpu.device_id,
             memory_gb=16,
@@ -77,187 +83,184 @@ class TestGames:
         )
 
 
-class TestCheckHardware:
-    """Tests of PresetService.check_hardware."""
+class TestHardwareSetup:
+    """Tests of PresetService.hardware_setup."""
 
-    def test_saved_gpu(
-        self, ops: MagicMock, detector: MagicMock, store: UserSettingsStore, service: PresetService
-    ) -> None:
+    def test_detected(self, detector: MagicMock, service: PresetService) -> None:
         """
-        Checks the saved GPU without looking for the installed ones.
+        Starts from the detected CPU and the most powerful detected GPU; the bundled GPUs leave out detected ones.
 
-        :param ops: NVIDIA endpoints mock
+        :param detector: hardware detection mock
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        listed_detected: Gpu = Gpu(name="NVIDIA GeForce RTX 3050 OEM", device_id="2507", memory_gb=8.0)
+        detector.nvidia_gpus.return_value = (_DESKTOP_GPU, listed_detected)
+        # Act
+        setup: HardwareSetup = service.hardware_setup()
+        # Assert
+        assert setup == HardwareSetup(
+            system=SystemHardware(
+                cpu_name=_DETECTED_CPU, gpus=(_DESKTOP_GPU, listed_detected), memory_gb=16, os_version="10.0"
+            ),
+            amd_cpus=(_LISTED_CPU,),
+            intel_cpus=("Intel(R) Core(TM) i7-14700K",),
+            gpus=(),
+            choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_DESKTOP_GPU),
+        )
+
+    def test_nothing_detected(self, detector: MagicMock, service: PresetService) -> None:
+        """
+        Starts with no CPU and no GPU when none is detected or saved, offering every bundled GPU.
+
+        :param detector: hardware detection mock
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        detector.cpu_name.return_value = None
+        # Act
+        setup: HardwareSetup = service.hardware_setup()
+        # Assert
+        assert (setup.choice, setup.gpus) == (HardwareChoice(cpu_name=None, gpu=None), (_LISTED_GPU,))
+
+    def test_saved(self, detector: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Starts from the saved CPU and GPU; a saved GPU that is installed comes with its video memory.
+
         :param detector: hardware detection mock
         :param store: settings store
         :param service: service under test
         :return: None
         """
         # Arrange
-        store.save(settings=UserSettings(gpu=_LISTED_GPU))
+        detected_laptop: Gpu = Gpu(name=_LAPTOP_GPU.name, device_id=_LAPTOP_GPU.device_id, memory_gb=8.0)
+        detector.nvidia_gpus.return_value = (_DESKTOP_GPU, detected_laptop)
+        store.save(settings=UserSettings(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU))
+        # Act
+        setup: HardwareSetup = service.hardware_setup()
+        # Assert
+        assert setup.choice == HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU)
+        assert setup.choice.gpu is not None and setup.choice.gpu.memory_gb == 8.0
+
+    def test_detected_once(self, ops: MagicMock, detector: MagicMock, service: PresetService) -> None:
+        """
+        Detects the hardware once however often the setup is asked for and the hardware checked.
+
+        :param ops: NVIDIA endpoints mock
+        :param detector: hardware detection mock
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
         ops.check_compatibility.return_value = _ACCEPTED
         # Act
-        check: HardwareCheck = service.check_hardware()
+        service.hardware_setup()
+        service.hardware_setup()
+        service.check_hardware(choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_LAPTOP_GPU))
         # Assert
-        assert check == HardwareCheck(state=HardwareState.READY, hardware=_Hardware.with_gpu(gpu=_LISTED_GPU))
-        detector.nvidia_gpus.assert_not_called()
+        assert [
+            mock.call_count
+            for mock in (detector.cpu_name, detector.nvidia_gpus, detector.memory_gb, detector.os_version)
+        ] == [1, 1, 1, 1]
 
-    def test_no_nvidia_gpu(self, ops: MagicMock, service: PresetService) -> None:
+
+class TestCheckHardware:
+    """Tests of PresetService.check_hardware."""
+
+    def test_accepted(self, ops: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
         """
-        Reports a system without an NVIDIA GPU and asks NVIDIA nothing.
+        Gives ready hardware when NVIDIA accepts the CPU and GPU, saving nothing.
+
+        :param ops: NVIDIA endpoints mock
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        ops.check_compatibility.return_value = _ACCEPTED
+        # Act
+        check: HardwareCheck = service.check_hardware(choice=HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU))
+        # Assert
+        hardware: Hardware = _Hardware.with_gpu(gpu=_LAPTOP_GPU, cpu_name=_LISTED_CPU)
+        assert check == HardwareCheck(state=HardwareState.READY, hardware=hardware)
+        ops.check_compatibility.assert_called_once_with(hardware=hardware)
+        assert store.load() == UserSettings()
+
+    @pytest.mark.parametrize(
+        argnames=("choice", "state"),
+        argvalues=[
+            (HardwareChoice(cpu_name=_DETECTED_CPU, gpu=None), HardwareState.NO_NVIDIA_GPU),
+            (HardwareChoice(cpu_name=None, gpu=None), HardwareState.NO_NVIDIA_GPU),
+            (HardwareChoice(cpu_name=None, gpu=_LAPTOP_GPU), HardwareState.NO_CPU),
+        ],
+        ids=["no gpu", "nothing", "no cpu"],
+    )
+    def test_missing(
+        self, ops: MagicMock, service: PresetService, choice: HardwareChoice, state: HardwareState
+    ) -> None:
+        """
+        Reports a missing component, the GPU first, and asks NVIDIA nothing.
+
+        :param ops: NVIDIA endpoints mock
+        :param service: service under test
+        :param choice: CPU and GPU to check
+        :param state: expected state
+        :return: None
+        """
+        # Arrange & Act
+        check: HardwareCheck = service.check_hardware(choice=choice)
+        # Assert
+        assert check == HardwareCheck(state=state)
+        ops.check_compatibility.assert_not_called()
+
+    def test_rejected(self, ops: MagicMock, service: PresetService) -> None:
+        """
+        Reports the components NVIDIA rejects.
 
         :param ops: NVIDIA endpoints mock
         :param service: service under test
         :return: None
         """
-        # Arrange & Act
-        check: HardwareCheck = service.check_hardware()
+        # Arrange
+        ops.check_compatibility.return_value = Compatibility(ok=False, failed=("cpu", "gpu"))
+        # Act
+        check: HardwareCheck = service.check_hardware(choice=HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU))
         # Assert
-        assert check == HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
-        ops.check_compatibility.assert_not_called()
+        assert check == HardwareCheck(state=HardwareState.REJECTED, failed=("cpu", "gpu"))
 
-    def test_several_detected(self, ops: MagicMock, detector: MagicMock, service: PresetService) -> None:
+
+class TestChooseHardware:
+    """Tests of PresetService.choose_hardware."""
+
+    def test_accepted_saved(
+        self, ops: MagicMock, detector: MagicMock, store: UserSettingsStore, service: PresetService
+    ) -> None:
         """
-        Offers the detected GPUs in the detector's order, the most powerful first, before asking NVIDIA.
+        Saves an accepted CPU and GPU that are not the detected ones, keeping the language.
 
         :param ops: NVIDIA endpoints mock
         :param detector: hardware detection mock
+        :param store: settings store
         :param service: service under test
         :return: None
         """
         # Arrange
         detector.nvidia_gpus.return_value = (_DESKTOP_GPU, _LAPTOP_GPU)
-        # Act
-        check: HardwareCheck = service.check_hardware()
-        # Assert
-        assert check == HardwareCheck(state=HardwareState.CHOOSE_DETECTED_GPU, gpus=(_DESKTOP_GPU, _LAPTOP_GPU))
-        ops.check_compatibility.assert_not_called()
-
-    def test_one_detected_accepted(self, ops: MagicMock, detector: MagicMock, service: PresetService) -> None:
-        """
-        Gives the detected system as ready hardware when NVIDIA accepts it.
-
-        :param ops: NVIDIA endpoints mock
-        :param detector: hardware detection mock
-        :param service: service under test
-        :return: None
-        """
-        # Arrange
-        detector.nvidia_gpus.return_value = (_LAPTOP_GPU,)
-        ops.check_compatibility.return_value = _ACCEPTED
-        # Act
-        check: HardwareCheck = service.check_hardware()
-        # Assert
-        assert check == HardwareCheck(state=HardwareState.READY, hardware=_Hardware.with_gpu(gpu=_LAPTOP_GPU))
-        ops.check_compatibility.assert_called_once_with(hardware=_Hardware.with_gpu(gpu=_LAPTOP_GPU))
-
-    def test_gpu_rejected(self, ops: MagicMock, detector: MagicMock, service: PresetService) -> None:
-        """
-        Offers the bundled GPU list when NVIDIA rejects only the GPU.
-
-        :param ops: NVIDIA endpoints mock
-        :param detector: hardware detection mock
-        :param service: service under test
-        :return: None
-        """
-        # Arrange
-        detector.nvidia_gpus.return_value = (_LAPTOP_GPU,)
-        ops.check_compatibility.return_value = _GPU_REJECTED
-        # Act
-        check: HardwareCheck = service.check_hardware()
-        # Assert
-        assert check == HardwareCheck(state=HardwareState.CHOOSE_LISTED_GPU, gpus=(_LISTED_GPU,))
-
-    @pytest.mark.parametrize(
-        argnames="failed",
-        argvalues=[("cpu",), ("cpu", "gpu"), ()],
-        ids=["cpu", "cpu and gpu", "nothing named"],
-    )
-    def test_rejected(
-        self, ops: MagicMock, detector: MagicMock, service: PresetService, failed: tuple[str, ...]
-    ) -> None:
-        """
-        Reports a rejection no GPU choice can fix.
-
-        :param ops: NVIDIA endpoints mock
-        :param detector: hardware detection mock
-        :param service: service under test
-        :param failed: components NVIDIA rejects
-        :return: None
-        """
-        # Arrange
-        detector.nvidia_gpus.return_value = (_LAPTOP_GPU,)
-        ops.check_compatibility.return_value = Compatibility(ok=False, failed=failed)
-        # Act
-        check: HardwareCheck = service.check_hardware()
-        # Assert
-        assert check == HardwareCheck(state=HardwareState.REJECTED, failed=failed)
-
-    def test_system_detected_once(self, ops: MagicMock, detector: MagicMock, service: PresetService) -> None:
-        """
-        Detects the CPU, memory and Windows version once however often the hardware is checked.
-
-        :param ops: NVIDIA endpoints mock
-        :param detector: hardware detection mock
-        :param service: service under test
-        :return: None
-        """
-        # Arrange
-        detector.nvidia_gpus.return_value = (_LAPTOP_GPU,)
-        ops.check_compatibility.return_value = _ACCEPTED
-        # Act
-        service.check_hardware()
-        service.check_hardware()
-        # Assert
-        assert (detector.cpu_name.call_count, detector.memory_gb.call_count, detector.os_version.call_count) == (
-            1,
-            1,
-            1,
-        )
-
-
-class TestChooseGpu:
-    """Tests of PresetService.choose_gpu and forget_gpu."""
-
-    def test_accepted_saved(self, ops: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
-        """
-        Saves an accepted GPU and keeps the saved language.
-
-        :param ops: NVIDIA endpoints mock
-        :param store: settings store
-        :param service: service under test
-        :return: None
-        """
-        # Arrange
         store.save(settings=UserSettings(language="ru"))
         ops.check_compatibility.return_value = _ACCEPTED
         # Act
-        check: HardwareCheck = service.choose_gpu(gpu=_DESKTOP_GPU)
+        check: HardwareCheck = service.choose_hardware(choice=HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU))
         # Assert
-        assert check == HardwareCheck(state=HardwareState.READY, hardware=_Hardware.with_gpu(gpu=_DESKTOP_GPU))
-        assert store.load() == UserSettings(language="ru", gpu=_DESKTOP_GPU)
+        assert check.state is HardwareState.READY
+        assert store.load() == UserSettings(language="ru", cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU)
 
-    def test_rejected_not_saved(self, ops: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
-        """
-        Offers the bundled GPU list for a rejected GPU and saves nothing.
-
-        :param ops: NVIDIA endpoints mock
-        :param store: settings store
-        :param service: service under test
-        :return: None
-        """
-        # Arrange
-        ops.check_compatibility.return_value = _GPU_REJECTED
-        # Act
-        check: HardwareCheck = service.choose_gpu(gpu=_DESKTOP_GPU)
-        # Assert
-        assert check == HardwareCheck(state=HardwareState.CHOOSE_LISTED_GPU, gpus=(_LISTED_GPU,))
-        assert store.load() == UserSettings()
-
-    def test_forget(
+    def test_detected_saved_as_none(
         self, ops: MagicMock, detector: MagicMock, store: UserSettingsStore, service: PresetService
     ) -> None:
         """
-        Drops the saved GPU, keeps the language and checks the detected GPU instead.
+        Drops the saved CPU and GPU when the user goes back to the detected ones.
 
         :param ops: NVIDIA endpoints mock
         :param detector: hardware detection mock
@@ -266,14 +269,60 @@ class TestChooseGpu:
         :return: None
         """
         # Arrange
-        store.save(settings=UserSettings(language="de", gpu=_LISTED_GPU))
         detector.nvidia_gpus.return_value = (_LAPTOP_GPU,)
+        store.save(settings=UserSettings(language="de", cpu_name=_LISTED_CPU, gpu=_LISTED_GPU))
         ops.check_compatibility.return_value = _ACCEPTED
         # Act
-        check: HardwareCheck = service.forget_gpu()
+        service.choose_hardware(choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_LAPTOP_GPU))
         # Assert
-        assert check == HardwareCheck(state=HardwareState.READY, hardware=_Hardware.with_gpu(gpu=_LAPTOP_GPU))
         assert store.load() == UserSettings(language="de")
+
+    def test_rejected_component_not_saved(
+        self, ops: MagicMock, store: UserSettingsStore, service: PresetService
+    ) -> None:
+        """
+        Saves the GPU NVIDIA accepted and keeps the CPU saved before in place of the rejected one.
+
+        :param ops: NVIDIA endpoints mock
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(cpu_name="Intel(R) Core(TM) i7-14700K"))
+        ops.check_compatibility.return_value = Compatibility(ok=False, failed=("cpu",))
+        # Act
+        check: HardwareCheck = service.choose_hardware(choice=HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LISTED_GPU))
+        # Assert
+        assert check == HardwareCheck(state=HardwareState.REJECTED, failed=("cpu",))
+        assert store.load() == UserSettings(cpu_name="Intel(R) Core(TM) i7-14700K", gpu=_LISTED_GPU)
+
+    @pytest.mark.parametrize(
+        argnames="choice",
+        argvalues=[
+            HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LISTED_GPU),
+            HardwareChoice(cpu_name=None, gpu=_LISTED_GPU),
+        ],
+        ids=["nothing named", "no cpu"],
+    )
+    def test_nothing_saved(
+        self, ops: MagicMock, tmp_path: Path, service: PresetService, choice: HardwareChoice
+    ) -> None:
+        """
+        Writes no settings when NVIDIA names no rejected component or can't be asked.
+
+        :param ops: NVIDIA endpoints mock
+        :param tmp_path: temporary directory of the settings store
+        :param service: service under test
+        :param choice: CPU and GPU the user chose
+        :return: None
+        """
+        # Arrange
+        ops.check_compatibility.return_value = Compatibility(ok=False, failed=())
+        # Act
+        service.choose_hardware(choice=choice)
+        # Assert
+        assert not (tmp_path / "settings.json").exists()
 
 
 class TestGameSettings:
@@ -388,37 +437,6 @@ class TestGameSettings:
         service.game_settings(game_id="baldurs_gate_3", presets=presets)
         # Assert
         assert (game_ops.presets_file.call_count, game_ops.translations.call_count) == (2, 2)
-
-
-class TestAllGpus:
-    """Tests of PresetService.all_gpus."""
-
-    def test_detected_first(self, detector: MagicMock, service: PresetService) -> None:
-        """
-        Lists the detected GPUs first, then the bundled ones, each device id once.
-
-        :param detector: hardware detection mock
-        :param service: service under test
-        :return: None
-        """
-        # Arrange
-        detector.nvidia_gpus.return_value = (_DESKTOP_GPU, Gpu(name="NVIDIA GeForce RTX 3050 OEM", device_id="2507"))
-        # Act
-        gpus: tuple[Gpu, ...] = service.all_gpus()
-        # Assert
-        assert gpus == (_DESKTOP_GPU, Gpu(name="NVIDIA GeForce RTX 3050 OEM", device_id="2507"))
-
-    def test_nothing_detected(self, service: PresetService) -> None:
-        """
-        Lists the bundled GPUs when no NVIDIA GPU is installed.
-
-        :param service: service under test
-        :return: None
-        """
-        # Arrange & Act
-        gpus: tuple[Gpu, ...] = service.all_gpus()
-        # Assert
-        assert gpus == (_LISTED_GPU,)
 
 
 class TestLanguage:

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QApplication
 
 from app.config import APP_ICON_FILE, APP_USER_MODEL_ID
 from app.core.game_names import GameNames
-from app.core.hardware import GpuList, GpuRanks, HardwareDetector
+from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
 from app.core.ops_api import OpsApi
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
@@ -45,6 +45,7 @@ class _Application:  # pylint: disable=too-few-public-methods
             service: PresetService = PresetService(
                 api=OpsApi(http=http),
                 names=GameNames.load(),
+                cpu_list=CpuList.load(),
                 gpu_list=GpuList.load(),
                 ranks=GpuRanks.load(),
                 detector=HardwareDetector(),

@@ -6,7 +6,7 @@ from functools import cached_property
 from loguru import logger
 
 from app.core.game_names import GameNames
-from app.core.hardware import GpuList, GpuRanks, HardwareDetector
+from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
 from app.core.models import (
     Compatibility,
     Game,
@@ -15,23 +15,18 @@ from app.core.models import (
     Gpu,
     Hardware,
     HardwareCheck,
+    HardwareChoice,
+    HardwareSetup,
     HardwareState,
     RemoteFile,
+    SystemHardware,
     ThemeMode,
+    UserSettings,
 )
 from app.core.ops_api import OpsApi
 from app.core.user_settings import UserSettingsStore
 
 __all__: tuple[str, ...] = ("PresetService",)
-
-
-@dataclass(frozen=True, slots=True)
-class _System:
-    """The hardware NVIDIA needs besides the GPU, detected once per run."""
-
-    cpu_name: str
-    memory_gb: int
-    os_version: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,6 +43,7 @@ class PresetService:
     Every method may block on the network or the registry: the UI calls them from a worker thread, one at a time,
     so the files of the last game shown are cached without a lock."""
 
+    _CPU: str = "cpu"
     _GPU: str = "gpu"
 
     def __init__(
@@ -55,6 +51,7 @@ class PresetService:
         *,
         api: OpsApi,
         names: GameNames,
+        cpu_list: CpuList,
         gpu_list: GpuList,
         ranks: GpuRanks,
         detector: HardwareDetector,
@@ -65,13 +62,15 @@ class PresetService:
 
         :param api: NVIDIA endpoints client
         :param names: display names of games
-        :param gpu_list: GPUs offered when NVIDIA rejects the user's one
+        :param cpu_list: CPUs the user can choose from
+        :param gpu_list: GPUs the user can choose from
         :param ranks: performance ranks to order detected GPUs by
         :param detector: hardware detection
         :param store: saved user settings
         """
         self._api: OpsApi = api
         self._names: GameNames = names
+        self._cpu_list: CpuList = cpu_list
         self._gpu_list: GpuList = gpu_list
         self._ranks: GpuRanks = ranks
         self._detector: HardwareDetector = detector
@@ -91,53 +90,80 @@ class PresetService:
             )
         )
 
-    def check_hardware(self) -> HardwareCheck:
+    def hardware_setup(self) -> HardwareSetup:
         """
-        Find the hardware to request presets with: the saved GPU, otherwise the detected NVIDIA one.
+        Get the detected hardware, the bundled lists and the CPU and GPU to start with: saved ones, else detected ones.
 
-        :return: ready hardware, or the choice the user has to make, or why presets can't be requested
+        :return: hardware to show and to choose from
         """
-        saved: Gpu | None = self._store.load().gpu
-        if saved is not None:
-            logger.info("Using the saved GPU {}", saved)
-            return self._check(gpu=saved)
-        detected: tuple[Gpu, ...] = self._detector.nvidia_gpus(ranks=self._ranks)
-        if not detected:
+        system: SystemHardware = self._system
+        saved: UserSettings = self._store.load()
+        gpu: Gpu | None = system.gpus[0] if system.gpus else None
+        if saved.gpu is not None:
+            # A saved card that is installed is taken as detected: that one knows its video memory.
+            gpu = next((item for item in system.gpus if item == saved.gpu), saved.gpu)
+        detected_ids: set[str] = {item.device_id for item in system.gpus}
+        return HardwareSetup(
+            system=system,
+            amd_cpus=self._cpu_list.amd,
+            intel_cpus=self._cpu_list.intel,
+            gpus=tuple(item for item in self._gpu_list.gpus if item.device_id not in detected_ids),
+            choice=HardwareChoice(cpu_name=saved.cpu_name or system.cpu_name, gpu=gpu),
+        )
+
+    def check_hardware(self, *, choice: HardwareChoice) -> HardwareCheck:
+        """
+        Ask NVIDIA whether it supports the system with a CPU and a GPU.
+
+        :param choice: CPU and GPU to check
+        :return: READY with the hardware, or why presets can't be requested
+        """
+        if choice.gpu is None:
             return HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
-        if len(detected) > 1:
-            return HardwareCheck(state=HardwareState.CHOOSE_DETECTED_GPU, gpus=detected)
-        return self._check(gpu=detected[0])
+        if choice.cpu_name is None:
+            return HardwareCheck(state=HardwareState.NO_CPU)
+        hardware: Hardware = Hardware(
+            cpu_name=choice.cpu_name,
+            gpu_name=choice.gpu.name,
+            gpu_device_id=choice.gpu.device_id,
+            memory_gb=self._system.memory_gb,
+            os_version=self._system.os_version,
+        )
+        compatibility: Compatibility = self._api.check_compatibility(hardware=hardware)
+        if compatibility.ok:
+            return HardwareCheck(state=HardwareState.READY, hardware=hardware)
+        logger.warning("NVIDIA rejected the hardware: {}", compatibility.failed)
+        return HardwareCheck(state=HardwareState.REJECTED, failed=compatibility.failed)
 
-    def choose_gpu(self, *, gpu: Gpu) -> HardwareCheck:
+    def choose_hardware(self, *, choice: HardwareChoice) -> HardwareCheck:
         """
-        Check the GPU the user chose and save it when NVIDIA accepts it.
+        Check the CPU and GPU the user chose and save each one NVIDIA accepts; a detected one in use is saved as none.
 
-        :param gpu: a detected GPU or one of the bundled list
-        :return: ready hardware, or the choice the user has to make, or why presets can't be requested
+        The default is detected again on the next start then. A component NVIDIA rejects keeps the one saved before.
+
+        :param choice: CPU and GPU to check
+        :return: READY with the hardware, or why presets can't be requested
         """
-        check: HardwareCheck = self._check(gpu=gpu)
-        if check.state is HardwareState.READY:
-            self._store.save(settings=replace(self._store.load(), gpu=gpu))
+        check: HardwareCheck = self.check_hardware(choice=choice)
+        saved: UserSettings = self._store.load()
+        settings: UserSettings = replace(
+            saved,
+            cpu_name=self._to_save(
+                chosen=choice.cpu_name,
+                default=self._system.cpu_name,
+                accepted=self._accepted(check=check, component=self._CPU),
+                saved=saved.cpu_name,
+            ),
+            gpu=self._to_save(
+                chosen=choice.gpu,
+                default=self._system.gpus[0] if self._system.gpus else None,
+                accepted=self._accepted(check=check, component=self._GPU),
+                saved=saved.gpu,
+            ),
+        )
+        if settings != saved:
+            self._store.save(settings=settings)
         return check
-
-    def forget_gpu(self) -> HardwareCheck:
-        """
-        Drop the saved GPU and find the hardware again, e.g. after the user changed the graphics card.
-
-        :return: ready hardware, or the choice the user has to make, or why presets can't be requested
-        """
-        self._store.save(settings=replace(self._store.load(), gpu=None))
-        return self.check_hardware()
-
-    def all_gpus(self) -> tuple[Gpu, ...]:
-        """
-        List every GPU the user can choose: the installed NVIDIA ones, then the bundled list.
-
-        :return: detected GPUs the most powerful first, then the bundled ones not detected, in list order
-        """
-        detected: tuple[Gpu, ...] = self._detector.nvidia_gpus(ranks=self._ranks)
-        detected_ids: set[str] = {gpu.device_id for gpu in detected}
-        return detected + tuple(gpu for gpu in self._gpu_list.gpus if gpu.device_id not in detected_ids)
 
     def saved_language(self) -> str | None:
         """
@@ -149,7 +175,7 @@ class PresetService:
 
     def save_language(self, *, language: str) -> None:
         """
-        Save the UI language, keeping the saved GPU.
+        Save the UI language, keeping the other settings.
 
         :param language: language code, e.g. "ru"
         :return: None
@@ -205,36 +231,43 @@ class PresetService:
         return self._files.settings
 
     @cached_property
-    def _system(self) -> _System:
+    def _system(self) -> SystemHardware:
         """
-        Detect the CPU, memory size and Windows version.
+        Detect the hardware once per run.
 
-        :return: detected hardware besides the GPU
+        :return: detected hardware
         """
-        return _System(
+        return SystemHardware(
             cpu_name=self._detector.cpu_name(),
+            gpus=self._detector.nvidia_gpus(ranks=self._ranks),
             memory_gb=self._detector.memory_gb(),
             os_version=self._detector.os_version(),
         )
 
-    def _check(self, *, gpu: Gpu) -> HardwareCheck:
+    @staticmethod
+    def _accepted(*, check: HardwareCheck, component: str) -> bool:
         """
-        Ask NVIDIA whether it supports the system with a GPU.
+        Tell whether NVIDIA accepted a component.
 
-        :param gpu: GPU to check
-        :return: READY, the bundled GPUs to choose from when only the GPU is rejected, otherwise REJECTED
+        :param check: result of the check
+        :param component: component name as NVIDIA names it, e.g. "cpu"
+        :return: True when the check passed, or failed naming other components only
         """
-        hardware: Hardware = Hardware(
-            cpu_name=self._system.cpu_name,
-            gpu_name=gpu.name,
-            gpu_device_id=gpu.device_id,
-            memory_gb=self._system.memory_gb,
-            os_version=self._system.os_version,
-        )
-        compatibility: Compatibility = self._api.check_compatibility(hardware=hardware)
-        if compatibility.ok:
-            return HardwareCheck(state=HardwareState.READY, hardware=hardware)
-        if compatibility.failed == (self._GPU,):
-            return HardwareCheck(state=HardwareState.CHOOSE_LISTED_GPU, gpus=self._gpu_list.gpus)
-        logger.warning("NVIDIA rejected the hardware: {}", compatibility.failed)
-        return HardwareCheck(state=HardwareState.REJECTED, failed=compatibility.failed)
+        if check.state is HardwareState.READY:
+            return True
+        return check.state is HardwareState.REJECTED and bool(check.failed) and component not in check.failed
+
+    @staticmethod
+    def _to_save[T](*, chosen: T | None, default: T | None, accepted: bool, saved: T | None) -> T | None:
+        """
+        Pick what to save of a component.
+
+        :param chosen: the component the user chose
+        :param default: the component used when none is saved, i.e. the detected one
+        :param accepted: whether NVIDIA accepted the chosen component
+        :param saved: the component saved before
+        :return: None for the default, the chosen one when accepted, otherwise the one saved before
+        """
+        if chosen == default:
+            return None
+        return chosen if accepted else saved

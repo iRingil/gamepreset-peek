@@ -1,4 +1,4 @@
-"""Widgets and layout of the main window and of the GPU choice dialog."""
+"""Widgets and layout of the main window and of the CPU and GPU choice drop-downs."""
 
 import html
 from queue import Queue
@@ -10,18 +10,20 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QComboBox,
-    QDialog,
-    QDialogButtonBox,
+    QFrame,
+    QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
     QListView,
+    QListWidget,
     QPushButton,
     QSlider,
     QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
+    QTabWidget,
     QToolTip,
     QTreeWidget,
     QTreeWidgetItem,
@@ -35,7 +37,7 @@ from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.icons import Icons
 from app.ui.log_panel import LogPanel
-from app.ui.presenter import Hint, Presenter, ResolutionRow, SettingsView
+from app.ui.presenter import ChoiceView, HardwareView, Hint, Presenter, ResolutionRow, SettingsView
 from app.ui.theme import Theme
 
 __all__: tuple[str, ...] = ("MainWindow",)
@@ -44,9 +46,9 @@ _PAD: int = 8
 _GAMES_WIDTH: int = 300
 _RESOLUTIONS_WIDTH: int = 230
 _VALUE_WIDTH: int = 220
-_GPU_LIST_SIZE: tuple[int, int] = (460, 320)
+_POPUP_SIZE: tuple[int, int] = (460, 360)
 _ICON_SIZE: int = 18
-# Point size steps above the base font: the GPU line, the settings title and the preset position.
+# Point size steps above the base font: the hardware block, the settings title and the preset position.
 _HEADLINE_STEP: float = 2
 _TITLE_STEP: float = 6
 _BIG_STEP: float = 10
@@ -217,66 +219,88 @@ class _ChoiceList(QListView):
         return rows[0].row() if rows else None
 
 
-class _GpuDialog(QDialog):
-    """Modal list of GPUs to pick one from."""
+class _ChoicePopup(QFrame):
+    """A drop-down list under a link: detected items, a line, then the bundled ones, in tabs when there are several.
 
-    def __init__(  # pylint: disable=too-many-arguments
-        self,
-        *,
-        parent: QWidget,
-        translator: Translator,
-        message: str,
-        names: Sequence[str],
-        selected: int | None,
-    ) -> None:
-        """
-        Build the dialog.
+    A click or Enter on an item picks it and closes the list; a click outside closes it with no choice."""
 
-        :param parent: main window
-        :param translator: translator of the UI language
-        :param message: why the user has to choose
-        :param names: GPU names in list order
-        :param selected: position preselected in the list, None for none
+    def __init__(self, *, parent: QWidget, choice: ChoiceView, on_choose: Callable[[int], None]) -> None:
         """
-        super().__init__(parent)
-        self.setWindowTitle(translator.text(item=UiText.CHOOSE_GPU_TITLE))
+        Build the list with the item in use selected.
+
+        :param parent: window the list belongs to
+        :param choice: items to choose from
+        :param on_choose: called with the position of the item picked
+        """
+        super().__init__(parent, Qt.WindowType.Popup)
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self._on_choose: Callable[[int], None] = on_choose
+        self._picked: bool = False
         layout: QVBoxLayout = QVBoxLayout(self)
-        label: QLabel = QLabel(message, parent=self)
-        label.setWordWrap(True)
-        layout.addWidget(label)
-        self._buttons: QDialogButtonBox = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, parent=self
-        )
-        self._ok: QPushButton = self._buttons.button(QDialogButtonBox.StandardButton.Ok)
-        self._ok.setText(translator.text(item=UiText.OK))
-        self._ok.setEnabled(False)
-        self._buttons.button(QDialogButtonBox.StandardButton.Cancel).setText(translator.text(item=UiText.CANCEL))
-        self._buttons.accepted.connect(self._accept)
-        self._buttons.rejected.connect(self.reject)
-        self._list: _ChoiceList = _ChoiceList(on_select=lambda _: self._ok.setEnabled(True), parent=self)
-        self._list.setMinimumSize(*_GPU_LIST_SIZE)
-        self._list.doubleClicked.connect(lambda _: self._accept())
-        layout.addWidget(self._list, stretch=1)
-        layout.addWidget(self._buttons)
-        self._list.fill(items=names, selected=selected)
-        self._list.setFocus()
+        focus: QListWidget | None = None
+        offset: int = 0
+        if choice.detected:
+            detected: QListWidget = self._list(items=choice.detected, offset=offset, selected=choice.selected)
+            detected.setFixedHeight(detected.sizeHintForRow(0) * detected.count() + 2 * detected.frameWidth())
+            layout.addWidget(detected)
+            focus = detected
+            offset += len(choice.detected)
+        if choice.detected and choice.groups:
+            line: QFrame = QFrame(parent=self)
+            line.setFrameShape(QFrame.Shape.HLine)
+            layout.addWidget(line)
+        tabs: QTabWidget | None = QTabWidget(parent=self) if len(choice.groups) > 1 else None
+        for group in choice.groups:
+            items: QListWidget = self._list(items=group.items, offset=offset, selected=choice.selected)
+            selected_here: bool = choice.selected is not None and 0 <= choice.selected - offset < len(group.items)
+            if tabs is None:
+                layout.addWidget(items, stretch=1)
+            else:
+                tabs.addTab(items, group.title)
+                if selected_here:
+                    tabs.setCurrentWidget(items)
+            if focus is None or selected_here:
+                focus = items
+            offset += len(group.items)
+        if tabs is not None:
+            layout.addWidget(tabs, stretch=1)
+        self.resize(_POPUP_SIZE[0], _POPUP_SIZE[1] if choice.groups else self.sizeHint().height())
+        if focus is not None:
+            focus.setFocus()
 
-    def choice(self) -> int | None:
+    def _list(self, *, items: Sequence[str], offset: int, selected: int | None) -> QListWidget:
         """
-        Show the dialog and wait until it is closed.
+        Make a list of items whose positions in the whole choice start at an offset.
 
-        :return: position of the chosen GPU, None when the user cancelled
+        :param items: item texts
+        :param offset: position of the first item in the whole choice
+        :param selected: position of the item in use in the whole choice, None for none
+        :return: the list
         """
-        return self._list.selection() if self.exec() == QDialog.DialogCode.Accepted else None
+        view: QListWidget = QListWidget(parent=self)
+        view.setUniformItemSizes(True)
+        view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
+        view.addItems(list(items))
+        if selected is not None and 0 <= selected - offset < len(items):
+            view.setCurrentRow(selected - offset)
+            view.scrollToItem(view.currentItem(), QAbstractItemView.ScrollHint.PositionAtCenter)
+        view.itemClicked.connect(lambda item: self._pick(position=offset + view.row(item)))
+        view.itemActivated.connect(lambda item: self._pick(position=offset + view.row(item)))
+        return view
 
-    def _accept(self) -> None:
+    def _pick(self, *, position: int) -> None:
         """
-        Close the dialog with the selected GPU, if there is one.
+        Close the list and pass the item picked on; a second signal of the same pick is ignored.
 
+        :param position: position of the item in the whole choice
         :return: None
         """
-        if self._list.selection() is not None:
-            self.accept()
+        if self._picked:
+            return
+        self._picked = True
+        self.close()
+        self._on_choose(position)
 
 
 class _ChangedDelegate(QStyledItemDelegate):
@@ -487,13 +511,106 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
             self._on_slider(index)
 
 
+class _HardwareBlock(QWidget):
+    """The CPU and GPU in use as links that open their choice, next to the memory and video memory sizes."""
+
+    def __init__(
+        self, *, on_cpu: Callable[[], None], on_gpu: Callable[[], None], parent: QWidget | None = None
+    ) -> None:
+        """
+        Build the block: two rows of a caption and a value, CPU with RAM and GPU with VRAM.
+
+        :param on_cpu: called when the user opens the CPU choice
+        :param on_gpu: called when the user opens the GPU choice
+        :param parent: widget the block belongs to
+        """
+        super().__init__(parent)
+        self._captions: dict[UiText, QLabel] = {item: self._caption() for item in (UiText.CPU, UiText.GPU)}
+        self._captions |= {item: self._caption() for item in (UiText.RAM, UiText.VRAM)}
+        self.cpu: QLabel = self._link(on_click=on_cpu)
+        self.gpu: QLabel = self._link(on_click=on_gpu)
+        self._memory: QLabel = self._value()
+        self._video_memory: QLabel = self._value()
+        grid: QGridLayout = QGridLayout(self)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setColumnMinimumWidth(2, _PAD * 4)
+        rows: tuple[tuple[UiText, QLabel, UiText, QLabel], ...] = (
+            (UiText.CPU, self.cpu, UiText.RAM, self._memory),
+            (UiText.GPU, self.gpu, UiText.VRAM, self._video_memory),
+        )
+        for row, (name, link, size_name, size) in enumerate(rows):
+            grid.addWidget(self._captions[name], row, 0)
+            grid.addWidget(link, row, 1)
+            grid.addWidget(self._captions[size_name], row, 3)
+            grid.addWidget(size, row, 4)
+
+    def apply_language(self, *, translator: Translator) -> None:
+        """
+        Translate the captions.
+
+        :param translator: translator of the UI language
+        :return: None
+        """
+        for item, caption in self._captions.items():
+            caption.setText(translator.text(item=item))
+
+    def show_hardware(self, *, hardware: HardwareView) -> None:
+        """
+        Show the CPU and GPU in use and the memory sizes.
+
+        :param hardware: what to show
+        :return: None
+        """
+        for link, text in ((self.cpu, hardware.cpu), (self.gpu, hardware.gpu)):
+            link.setText(f'<a href="choose">{html.escape(text)}</a>')
+        self._memory.setText(hardware.memory)
+        self._video_memory.setText(hardware.video_memory)
+
+    def _caption(self) -> QLabel:
+        """
+        Make a caption in the dimmed text color of the palette.
+
+        :return: the caption
+        """
+        label: QLabel = QLabel(parent=self)
+        label.setFont(_Fonts.derived(base=self.font(), step=_HEADLINE_STEP))
+        label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        return label
+
+    def _value(self) -> QLabel:
+        """
+        Make a value label.
+
+        :return: the label
+        """
+        label: QLabel = QLabel(parent=self)
+        label.setFont(_Fonts.derived(base=self.font(), step=_HEADLINE_STEP, bold=True))
+        return label
+
+    def _link(self, *, on_click: Callable[[], None]) -> QLabel:
+        """
+        Make a value label shown as a link that opens a choice.
+
+        :param on_click: called when the link is clicked
+        :return: the label
+        """
+        label: QLabel = self._value()
+        label.setTextFormat(Qt.TextFormat.RichText)
+        label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.LinksAccessibleByMouse | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+        )
+        label.linkActivated.connect(lambda _: on_click())
+        return label
+
+
 class _TopBar(QWidget):
-    """The GPU in use with the button to change it, and the theme and language choices."""
+    """The hardware block, and the theme and language choices."""
 
     def __init__(
         self,
         *,
-        on_change_gpu: Callable[[], None],
+        on_cpu: Callable[[], None],
+        on_gpu: Callable[[], None],
         on_theme: Callable[[int], None],
         on_language: Callable[[str], None],
         parent: QWidget | None = None,
@@ -501,17 +618,15 @@ class _TopBar(QWidget):
         """
         Build the bar.
 
-        :param on_change_gpu: called when the user wants another GPU
+        :param on_cpu: called when the user opens the CPU choice
+        :param on_gpu: called when the user opens the GPU choice
         :param on_theme: called with the position of the chosen theme
         :param on_language: called with the code of the chosen language
         :param parent: widget the bar belongs to
         """
         super().__init__(parent)
         layout: QHBoxLayout = QHBoxLayout(self)
-        self._hardware: QLabel = QLabel(parent=self)
-        self._hardware.setFont(_Fonts.derived(base=self.font(), step=_HEADLINE_STEP, bold=True))
-        self._change_gpu: QPushButton = QPushButton(parent=self)
-        self._change_gpu.clicked.connect(on_change_gpu)
+        self.hardware: _HardwareBlock = _HardwareBlock(on_cpu=on_cpu, on_gpu=on_gpu, parent=self)
         self._theme_label: QLabel = QLabel(parent=self)
         self._themes: QComboBox = QComboBox(parent=self)
         # Activated: chosen by the user, not set by the program.
@@ -520,9 +635,8 @@ class _TopBar(QWidget):
         self._language: QComboBox = QComboBox(parent=self)
         self._language.addItems(list(LANGUAGE_NAMES.values()))
         self._language.activated.connect(lambda index: on_language(list(LANGUAGE_NAMES)[index]))
-        layout.addWidget(self._hardware, stretch=1)
-        layout.addWidget(self._change_gpu)
-        layout.addSpacing(_PAD * 2)
+        layout.addWidget(self.hardware)
+        layout.addStretch(1)
         layout.addWidget(self._theme_label)
         layout.addWidget(self._themes)
         layout.addSpacing(_PAD * 2)
@@ -536,19 +650,10 @@ class _TopBar(QWidget):
         :param translator: translator of the UI language
         :return: None
         """
-        self._change_gpu.setText(translator.text(item=UiText.CHANGE_GPU))
+        self.hardware.apply_language(translator=translator)
         self._theme_label.setText(translator.text(item=UiText.THEME))
         self._language_label.setText(translator.text(item=UiText.LANGUAGE))
         self._language.setCurrentIndex(list(LANGUAGE_NAMES).index(translator.language))
-
-    def show_hardware(self, *, text: str) -> None:
-        """
-        Show the GPU in use or why there is none.
-
-        :param text: the line to show
-        :return: None
-        """
-        self._hardware.setText(text)
 
     def show_themes(self, *, names: Sequence[str], selected: int) -> None:
         """
@@ -638,7 +743,8 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         layout: QVBoxLayout = QVBoxLayout(self)
 
         self._top: _TopBar = _TopBar(
-            on_change_gpu=lambda: self._call(action=Presenter.change_gpu),
+            on_cpu=lambda: self._call(action=Presenter.open_cpu_choice),
+            on_gpu=lambda: self._call(action=Presenter.open_gpu_choice),
             on_theme=lambda index: self._call(action=lambda presenter: presenter.change_theme(index=index)),
             on_language=lambda code: self._call(action=lambda presenter: presenter.change_language(language=code)),
             parent=self,
@@ -734,14 +840,40 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
             translator.text(item=UiText.HIDE_LOGS if self._log_panel.isVisible() else UiText.SHOW_LOGS)
         )
 
-    def show_hardware(self, *, text: str) -> None:
+    def show_hardware(self, *, hardware: HardwareView) -> None:
         """
-        Show the GPU in use or why there is none.
+        Show the CPU and GPU in use and the memory sizes.
 
-        :param text: the line to show
+        :param hardware: what to show
         :return: None
         """
-        self._top.show_hardware(text=text)
+        self._top.hardware.show_hardware(hardware=hardware)
+
+    def offer_cpus(self, *, choice: ChoiceView) -> None:
+        """
+        Open the CPU choice under the CPU link; a pick is passed to the presenter.
+
+        :param choice: CPUs to choose from
+        :return: None
+        """
+        self._offer(
+            anchor=self._top.hardware.cpu,
+            choice=choice,
+            on_choose=lambda position: self._call(action=lambda presenter: presenter.choose_cpu(position=position)),
+        )
+
+    def offer_gpus(self, *, choice: ChoiceView) -> None:
+        """
+        Open the GPU choice under the GPU link; a pick is passed to the presenter.
+
+        :param choice: GPUs to choose from
+        :return: None
+        """
+        self._offer(
+            anchor=self._top.hardware.gpu,
+            choice=choice,
+            on_choose=lambda position: self._call(action=lambda presenter: presenter.choose_gpu(position=position)),
+        )
 
     def show_status(self, *, text: str) -> None:
         """
@@ -812,21 +944,20 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         """
         self._settings.clear()
 
-    def ask_gpu(self, *, message: str, names: Sequence[str], selected: int | None) -> int | None:
+    def _offer(self, *, anchor: QWidget, choice: ChoiceView, on_choose: Callable[[int], None]) -> None:
         """
-        Let the user pick a GPU in a modal dialog.
+        Open a drop-down choice under a widget; an empty choice opens nothing.
 
-        :param message: why the user has to choose
-        :param names: GPU names in list order
-        :param selected: position preselected in the list, None for none
-        :return: position of the chosen GPU, None when the user cancelled
+        :param anchor: widget the list drops from
+        :param choice: items to choose from
+        :param on_choose: called with the position of the item picked
+        :return: None
         """
-        if self._translator is None:
-            return None
-        dialog: _GpuDialog = _GpuDialog(
-            parent=self, translator=self._translator, message=message, names=names, selected=selected
-        )
-        return dialog.choice()
+        if not choice.detected and not any(group.items for group in choice.groups):
+            return
+        popup: _ChoicePopup = _ChoicePopup(parent=self, choice=choice, on_choose=on_choose)
+        popup.move(anchor.mapToGlobal(anchor.rect().bottomLeft()))
+        popup.show()
 
     def _call(self, *, action: Callable[[Presenter], None]) -> None:
         """

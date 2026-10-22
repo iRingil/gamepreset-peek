@@ -39,12 +39,15 @@ class TestUserSettingsStore:
         argnames="settings",
         argvalues=[
             UserSettings(
-                language="ru", gpu=Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"), theme=ThemeMode.DARK
+                language="ru",
+                cpu_name="Intel(R) Core(TM) i7-14700K",
+                gpu=Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"),
+                theme=ThemeMode.DARK,
             ),
             UserSettings(language="de"),
             UserSettings(),
         ],
-        ids=["language and gpu", "language only", "defaults"],
+        ids=["everything", "language only", "defaults"],
     )
     def test_round_trip(self, path: Path, settings: UserSettings) -> None:
         """
