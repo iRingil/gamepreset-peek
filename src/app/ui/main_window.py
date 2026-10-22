@@ -38,7 +38,7 @@ from app.i18n.ui_text import UiText
 from app.ui.icons import Icons
 from app.ui.log_panel import LogPanel
 from app.ui.presenter import ChoiceView, HardwareView, Hint, Presenter, ResolutionRow, SettingsView
-from app.ui.theme import Theme
+from app.ui.theme import RoundedView, Theme
 
 __all__: tuple[str, ...] = ("MainWindow",)
 
@@ -180,6 +180,7 @@ class _ChoiceList(QListView):
         self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self._warnings: dict[int, Hint] = {}
         self.setItemDelegate(_SignDelegate(parent=self, warnings=lambda: self._warnings))
+        RoundedView(view=self)
         self.selectionModel().currentChanged.connect(
             # A refill resets the current item to none, which is no choice.
             lambda current, _: on_select(current.row()) if current.isValid() else None
@@ -257,6 +258,8 @@ class _ChoicePopup(QFrame):
             if tabs is None:
                 layout.addWidget(items, stretch=1)
             else:
+                # The tab pane already draws a frame around the list
+                items.setFrameShape(QFrame.Shape.NoFrame)
                 tabs.addTab(items, group.title)
                 if selected_here:
                     tabs.setCurrentWidget(items)
@@ -282,6 +285,7 @@ class _ChoicePopup(QFrame):
         view.setUniformItemSizes(True)
         view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         view.addItems(list(items))
+        RoundedView(view=view)
         if selected is not None and 0 <= selected - offset < len(items):
             view.setCurrentRow(selected - offset)
             view.scrollToItem(view.currentItem(), QAbstractItemView.ScrollHint.PositionAtCenter)
@@ -466,6 +470,7 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         header.setStretchLastSection(False)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.resizeSection(1, _VALUE_WIDTH)
+        RoundedView(view=table)
         table.hide()
         return table
 
