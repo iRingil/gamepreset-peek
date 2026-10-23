@@ -557,7 +557,7 @@ class TestStart(_PresenterTests):
         argvalues=[
             (
                 HardwareCheck(state=HardwareState.NO_NVIDIA_GPU),
-                "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only.",
+                "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only.",
             ),
             (
                 HardwareCheck(state=HardwareState.NO_CPU),
@@ -637,7 +637,7 @@ class TestGame(_PresenterTests):
         presenter.select_game(index=0)
         # Assert
         assert view.status == (
-            "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only."
+            "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only."
         )
         service.game_presets.assert_not_called()
 

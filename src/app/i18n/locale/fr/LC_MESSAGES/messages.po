@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-23 02:21+0300\n"
+"POT-Creation-Date: 2026-10-23 03:13+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -159,8 +159,10 @@ msgid "Back to optimal"
 msgstr "Revenir à l’optimal"
 
 #. NO_NVIDIA_GPU
-msgid "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only."
-msgstr "Aucune carte graphique NVIDIA trouvée. NVIDIA ne recommande des paramètres que pour les cartes graphiques NVIDIA."
+msgid "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only."
+msgstr ""
+"Aucune carte graphique NVIDIA trouvée. Cette application ne recommande des paramètres que pour les cartes graphiques "
+"NVIDIA."
 
 #. UNSUPPORTED_HARDWARE
 msgid ""
