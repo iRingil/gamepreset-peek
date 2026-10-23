@@ -37,7 +37,7 @@ class TestHardwareDbWriter:
 
     def test_rows_added(self, tmp_path: Path) -> None:
         """
-        Creates the database and adds CPUs and GPUs; a row already there keeps its date.
+        Creates the database and adds CPUs and GPUs; a row already there is kept.
 
         :param tmp_path: temporary directory
         :return: None
@@ -45,7 +45,7 @@ class TestHardwareDbWriter:
         # Arrange
         path: Path = tmp_path / "app.db"
         with HardwareDbWriter(path=path) as db:
-            db.add_cpus(cpus=[Cpu(name="AMD Ryzen 7 7800X3D 8-Core Processor", vendor="amd")], added="2026-09-30")
+            db.add_cpus(cpus=[Cpu(name="AMD Ryzen 7 7800X3D 8-Core Processor", vendor="amd")])
         # Act
         with HardwareDbWriter(path=path) as db:
             db.add_cpus(
@@ -53,17 +53,14 @@ class TestHardwareDbWriter:
                     Cpu(name="AMD Ryzen 7 7800X3D 8-Core Processor", vendor="amd"),
                     Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel"),
                 ],
-                added="2026-10-31",
             )
-            db.add_gpus(gpus=[Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")], added="2026-10-31")
+            db.add_gpus(gpus=[Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")])
         # Assert
-        assert _Rows.read(path=path, sql="SELECT name, vendor, added FROM cpus ORDER BY name") == [
-            ("AMD Ryzen 7 7800X3D 8-Core Processor", "amd", "2026-09-30"),
-            ("Intel(R) Core(TM) i7-14700K", "intel", "2026-10-31"),
+        assert _Rows.read(path=path, sql="SELECT name, vendor FROM cpus ORDER BY name") == [
+            ("AMD Ryzen 7 7800X3D 8-Core Processor", "amd"),
+            ("Intel(R) Core(TM) i7-14700K", "intel"),
         ]
-        assert _Rows.read(path=path, sql="SELECT name, device_id, added FROM gpus") == [
-            ("NVIDIA GeForce RTX 4090", "2684", "2026-10-31")
-        ]
+        assert _Rows.read(path=path, sql="SELECT name, device_id FROM gpus") == [("NVIDIA GeForce RTX 4090", "2684")]
 
     def test_names(self, tmp_path: Path) -> None:
         """
@@ -75,8 +72,8 @@ class TestHardwareDbWriter:
         # Arrange
         path: Path = tmp_path / "app.db"
         with HardwareDbWriter(path=path) as db:
-            db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")], added="2026-10-31")
-            db.add_gpus(gpus=[Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")], added="2026-10-31")
+            db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")])
+            db.add_gpus(gpus=[Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")])
         # Act
         with HardwareDbWriter(path=path) as db:
             names: tuple[set[str], set[str]] = (db.cpu_names(), db.gpu_names())
@@ -114,12 +111,12 @@ class TestHardwareDbWriter:
         # Arrange
         path: Path = tmp_path / "app.db"
         with HardwareDbWriter(path=path) as db:
-            db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")], added="2026-10-31")
+            db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")])
             db.replace_ranks(ranks=[_RANK])
         before: bytes = path.read_bytes()
         # Act
         with HardwareDbWriter(path=path) as db:
-            db.add_cpus(cpus=[], added="2026-11-30")
+            db.add_cpus(cpus=[])
             db.replace_ranks(ranks=[_RANK])
         # Assert
         assert path.read_bytes() == before
@@ -135,6 +132,6 @@ class TestHardwareDbWriter:
         path: Path = tmp_path / "app.db"
         # Act & Assert
         with pytest.raises(ConnectionError), HardwareDbWriter(path=path) as db:
-            db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")], added="2026-10-31")
+            db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")])
             raise ConnectionError("NVIDIA is down")
         assert _Rows.read(path=path, sql="SELECT name FROM cpus") == []

@@ -4,7 +4,6 @@ Run from the repository root with src and tools on the import path:
 PYTHONPATH=src:tools python tools/update_hardware_db.py [--report report.md] (on Windows: PYTHONPATH=src;tools)"""
 
 import argparse
-import datetime
 from pathlib import Path
 
 import requests
@@ -34,9 +33,8 @@ class _Update:  # pylint: disable=too-few-public-methods
         :param report: file for the Markdown report, None to log it only
         :return: None
         """
-        added: str = datetime.datetime.now(tz=datetime.UTC).date().isoformat()
         with HttpClient() as http, HardwareDbWriter(path=db) as writer:
-            updater: HardwareUpdater = HardwareUpdater(db=writer, api=OpsApi(http=http), added=added)
+            updater: HardwareUpdater = HardwareUpdater(db=writer, api=OpsApi(http=http))
             sources: list[Downloaded] = [BoincHosts.download(http=http), InstLatDumps.download(http=http)]
             for source in sources:
                 updater.report.failed += source.failed

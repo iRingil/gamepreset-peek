@@ -326,7 +326,7 @@ class TestCpuList:
         :return: None
         """
         # Arrange
-        sql: str = "INSERT INTO cpus (name, vendor, added) VALUES (?, ?, '2026-10-22')"
+        sql: str = "INSERT INTO cpus (name, vendor) VALUES (?, ?)"
         path: Path = _Db.create(
             path=tmp_path / "app.db",
             statements=[
@@ -382,7 +382,7 @@ class TestGpuList:
         :return: None
         """
         # Arrange
-        sql: str = "INSERT INTO gpus (name, device_id, added) VALUES (?, ?, '2026-10-06')"
+        sql: str = "INSERT INTO gpus (name, device_id) VALUES (?, ?)"
         path: Path = _Db.create(
             path=tmp_path / "app.db",
             statements=[(sql, ("NVIDIA GeForce RTX 4090", "2684")), (sql, ("NVIDIA GeForce GTX 1060 6GB", "1c03"))],

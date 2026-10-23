@@ -15,13 +15,11 @@ class AppDb:
     SCHEMA: str = """
         CREATE TABLE IF NOT EXISTS cpus (
             name TEXT PRIMARY KEY,
-            vendor TEXT NOT NULL CHECK (vendor IN ('amd', 'intel')),
-            added TEXT NOT NULL
+            vendor TEXT NOT NULL CHECK (vendor IN ('amd', 'intel'))
         );
         CREATE TABLE IF NOT EXISTS gpus (
             name TEXT PRIMARY KEY,
-            device_id TEXT NOT NULL,
-            added TEXT NOT NULL
+            device_id TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS gpu_ranks (
             device_id TEXT PRIMARY KEY,

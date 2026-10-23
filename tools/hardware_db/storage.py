@@ -64,16 +64,15 @@ class HardwareDbWriter:
         """
         return {name for (name,) in self._db.execute("SELECT name FROM cpus")}
 
-    def add_cpus(self, *, cpus: Iterable[Cpu], added: str) -> None:
+    def add_cpus(self, *, cpus: Iterable[Cpu]) -> None:
         """
         Add CPUs; one already there keeps its row.
 
         :param cpus: CPUs to add
-        :param added: date of the update, YYYY-MM-DD
         :return: None
         """
-        rows: list[tuple[str, str, str]] = [(cpu.name, cpu.vendor, added) for cpu in cpus]
-        self._db.executemany("INSERT OR IGNORE INTO cpus (name, vendor, added) VALUES (?, ?, ?)", rows)
+        rows: list[tuple[str, str]] = [(cpu.name, cpu.vendor) for cpu in cpus]
+        self._db.executemany("INSERT OR IGNORE INTO cpus (name, vendor) VALUES (?, ?)", rows)
         self._changed = self._changed or bool(rows)
 
     def gpu_names(self) -> set[str]:
@@ -84,16 +83,15 @@ class HardwareDbWriter:
         """
         return {name for (name,) in self._db.execute("SELECT name FROM gpus")}
 
-    def add_gpus(self, *, gpus: Iterable[Gpu], added: str) -> None:
+    def add_gpus(self, *, gpus: Iterable[Gpu]) -> None:
         """
         Add GPUs; one already there keeps its row.
 
         :param gpus: GPUs to add
-        :param added: date of the update, YYYY-MM-DD
         :return: None
         """
-        rows: list[tuple[str, str, str]] = [(gpu.name, gpu.device_id, added) for gpu in gpus]
-        self._db.executemany("INSERT OR IGNORE INTO gpus (name, device_id, added) VALUES (?, ?, ?)", rows)
+        rows: list[tuple[str, str]] = [(gpu.name, gpu.device_id) for gpu in gpus]
+        self._db.executemany("INSERT OR IGNORE INTO gpus (name, device_id) VALUES (?, ?)", rows)
         self._changed = self._changed or bool(rows)
 
     def replace_ranks(self, *, ranks: Iterable[GpuRank]) -> bool:

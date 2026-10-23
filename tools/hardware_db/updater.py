@@ -68,17 +68,15 @@ class HardwareUpdater:
     _CHECK_GAME: str = "baldurs_gate_3"
     _NVIDIA_REJECTED: str = "rejected by NVIDIA"
 
-    def __init__(self, *, db: HardwareDbWriter, api: OpsApi, added: str) -> None:
+    def __init__(self, *, db: HardwareDbWriter, api: OpsApi) -> None:
         """
         Prepare an update.
 
         :param db: database to add to
         :param api: NVIDIA API client
-        :param added: date of the update, YYYY-MM-DD
         """
         self._db: HardwareDbWriter = db
         self._api: OpsApi = api
-        self._added: str = added
         self.report: UpdateReport = UpdateReport()
 
     def update_cpus(self, *, candidates: set[Cpu]) -> None:
@@ -101,7 +99,7 @@ class HardwareUpdater:
                 known.add(cpu.name)
             else:
                 self.report.skipped[reason] += 1
-        self._db.add_cpus(cpus=new, added=self._added)
+        self._db.add_cpus(cpus=new)
         self.report.cpus += new
         logger.info("CPUs: {} candidates, {} added, left out: {}", len(candidates), len(new), dict(self.report.skipped))
 
@@ -119,7 +117,7 @@ class HardwareUpdater:
             if gpu.name not in known and self._gpu_accepted(gpu=gpu):
                 new.append(gpu)
                 known.add(gpu.name)
-        self._db.add_gpus(gpus=new, added=self._added)
+        self._db.add_gpus(gpus=new)
         self.report.gpus += new
         logger.info("GPUs: {} added, ranks changed: {}", len(new), self.report.ranks_changed)
 

@@ -54,8 +54,8 @@ class _UpdaterTests:
         :return: open writer
         """
         with HardwareDbWriter(path=tmp_path / "app.db") as db:
-            db.add_cpus(cpus=[_KNOWN], added="2026-09-30")
-            db.add_gpus(gpus=[Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")], added="2026-09-30")
+            db.add_cpus(cpus=[_KNOWN])
+            db.add_gpus(gpus=[Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")])
             yield db
 
     @pytest.fixture(name="updater")
@@ -67,7 +67,7 @@ class _UpdaterTests:
         :param api: NVIDIA API mock
         :return: updater under test
         """
-        return HardwareUpdater(db=db, api=api, added="2026-10-31")
+        return HardwareUpdater(db=db, api=api)
 
 
 class TestUpdateCpus(_UpdaterTests):
