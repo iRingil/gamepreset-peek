@@ -15,7 +15,7 @@ from hardware_db.gpu_sources import PciIds
 from hardware_db.storage import HardwareDbWriter
 from hardware_db.updater import HardwareUpdater
 
-from app.config import HARDWARE_DB
+from app.config import APP_DB
 from app.core.ops_api import OpsApi
 from app.infra.http_client import HttpClient, HttpClientError
 
@@ -57,7 +57,7 @@ class _Update:  # pylint: disable=too-few-public-methods
 
 if __name__ == "__main__":  # pragma: no cover
     _parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Update the hardware database.")
-    _parser.add_argument("--db", type=Path, default=HARDWARE_DB, help="database file (default: the bundled one)")
+    _parser.add_argument("--db", type=Path, default=APP_DB, help="database file (default: the bundled one)")
     _parser.add_argument("--report", type=Path, help="write the Markdown report to this file")
     _arguments: argparse.Namespace = _parser.parse_args()
     _Update.run(db=_arguments.db, report=_arguments.report)

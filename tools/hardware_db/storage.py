@@ -8,7 +8,7 @@ from typing import Iterable, Self
 from hardware_db.cpu_sources import Cpu
 from hardware_db.gpu_sources import GpuRank
 
-from app.core.hardware_db import HardwareDb
+from app.core.app_db import AppDb
 from app.core.models import Gpu
 
 __all__: tuple[str, ...] = ("HardwareDbWriter",)
@@ -25,7 +25,7 @@ class HardwareDbWriter:
 
         :param path: database file
         """
-        self._db: sqlite3.Connection = HardwareDb.write(path=path)
+        self._db: sqlite3.Connection = AppDb.write(path=path)
         self._changed: bool = False
 
     def __enter__(self) -> Self:

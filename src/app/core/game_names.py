@@ -1,18 +1,19 @@
 """Display names of games by their catalog identifier (slug)."""
 
-import json
+from contextlib import closing
 from pathlib import Path
 from typing import Mapping, Self
 
 from loguru import logger
 
-from app.config import GAME_NAMES_FILE
+from app.config import APP_DB
+from app.core.app_db import AppDb
 
 __all__: tuple[str, ...] = ("GameNames",)
 
 
 class GameNames:
-    """Display names of games from the bundled list; a game missing there is named after its slug."""
+    """Display names of games from the bundled database; a game missing there is named after its slug."""
 
     def __init__(self, *, names: Mapping[str, str]) -> None:
         """
@@ -23,23 +24,24 @@ class GameNames:
         self._names: Mapping[str, str] = names
 
     @classmethod
-    def load(cls, *, path: Path = GAME_NAMES_FILE) -> Self:
+    def load(cls, *, path: Path = APP_DB) -> Self:
         """
-        Load the names from a JSON file.
+        Load the names from the bundled database.
 
-        :param path: JSON object of display names by game slug
+        :param path: database file
         :return: game names
         """
-        names: dict[str, str] = json.loads(s=path.read_text(encoding="utf-8"))
-        logger.debug("Loaded {} game names from {}", len(names), path)
-        return cls(names=names)
+        with closing(AppDb.read(path=path)) as db:
+            rows: list[tuple[str, str]] = db.execute("SELECT game_id, name FROM games").fetchall()
+        logger.debug("Loaded {} game names from {}", len(rows), path)
+        return cls(names=dict(rows))
 
     def name(self, *, game_id: str) -> str:
         """
         Get the display name of a game.
 
         :param game_id: game identifier (slug), e.g. "baldurs_gate_3"
-        :return: display name from the list, or the slug with words capitalized and "_" replaced by spaces
+        :return: display name from the database, or the slug with words capitalized and "_" replaced by spaces
         """
         return self._names.get(game_id) or self._from_slug(game_id=game_id)
 

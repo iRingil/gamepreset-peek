@@ -10,8 +10,8 @@ from typing import Any, Mapping, Self
 
 from loguru import logger
 
-from app.config import HARDWARE_DB
-from app.core.hardware_db import HardwareDb
+from app.config import APP_DB
+from app.core.app_db import AppDb
 from app.core.models import Gpu
 
 __all__: tuple[str, ...] = ("CpuList", "GpuList", "GpuRanks", "HardwareDetector")
@@ -203,14 +203,14 @@ class CpuList:
         self.intel: tuple[str, ...] = intel
 
     @classmethod
-    def load(cls, *, path: Path = HARDWARE_DB) -> Self:
+    def load(cls, *, path: Path = APP_DB) -> Self:
         """
-        Load the CPUs from the hardware database.
+        Load the CPUs from the bundled database.
 
         :param path: database file
         :return: CPU list, each vendor's names sorted ignoring case
         """
-        with closing(HardwareDb.read(path=path)) as db:
+        with closing(AppDb.read(path=path)) as db:
             rows: list[tuple[str, str]] = db.execute(
                 "SELECT vendor, name FROM cpus ORDER BY name COLLATE NOCASE"
             ).fetchall()
@@ -234,14 +234,14 @@ class GpuList:
         self.gpus: tuple[Gpu, ...] = gpus
 
     @classmethod
-    def load(cls, *, path: Path = HARDWARE_DB) -> Self:
+    def load(cls, *, path: Path = APP_DB) -> Self:
         """
-        Load the GPUs from the hardware database.
+        Load the GPUs from the bundled database.
 
         :param path: database file
         :return: GPU list sorted by name, ignoring case
         """
-        with closing(HardwareDb.read(path=path)) as db:
+        with closing(AppDb.read(path=path)) as db:
             rows: list[tuple[str, str]] = db.execute(
                 "SELECT name, device_id FROM gpus ORDER BY name COLLATE NOCASE"
             ).fetchall()
@@ -277,14 +277,14 @@ class GpuRanks:
         self._newest_generation: int = max((generation for generation, _ in ranks.values()), default=0)
 
     @classmethod
-    def load(cls, *, path: Path = HARDWARE_DB) -> Self:
+    def load(cls, *, path: Path = APP_DB) -> Self:
         """
-        Load the ranks from the hardware database.
+        Load the ranks from the bundled database.
 
         :param path: database file
         :return: GPU ranks
         """
-        with closing(HardwareDb.read(path=path)) as db:
+        with closing(AppDb.read(path=path)) as db:
             rows: list[tuple[str, int, float]] = db.execute(
                 "SELECT device_id, generation, tier FROM gpu_ranks"
             ).fetchall()

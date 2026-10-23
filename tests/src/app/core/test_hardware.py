@@ -9,9 +9,9 @@ from typing import Any, Self
 
 import pytest
 
-from app.config import HARDWARE_DB
+from app.config import APP_DB
 from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
-from app.core.hardware_db import HardwareDb
+from app.core.app_db import AppDb
 from app.core.models import Gpu
 
 __all__: tuple = ()
@@ -33,7 +33,7 @@ class _Db:
         :param statements: SQL statements with their parameters
         :return: the database file
         """
-        with closing(HardwareDb.write(path=path)) as db:
+        with closing(AppDb.write(path=path)) as db:
             for sql, parameters in statements:
                 db.execute(sql, parameters)
             db.commit()
@@ -302,7 +302,7 @@ class TestCpuList:
         # Arrange
         sql: str = "INSERT INTO cpus (name, vendor, added) VALUES (?, ?, '2026-10-22')"
         path: Path = _Db.create(
-            path=tmp_path / "hardware.db",
+            path=tmp_path / "app.db",
             statements=[
                 (sql, ("AMD Ryzen 7 7800X3D 8-Core Processor", "amd")),
                 (sql, ("Intel(R) Core(TM) i7-14700K", "intel")),
@@ -326,7 +326,7 @@ class TestCpuList:
         :return: None
         """
         # Arrange
-        path: Path = tmp_path / "hardware.db"
+        path: Path = tmp_path / "app.db"
         # Act & Assert
         with pytest.raises(FileNotFoundError):
             CpuList.load(path=path)
@@ -339,7 +339,7 @@ class TestCpuList:
         :return: None
         """
         # Arrange & Act
-        cpu_list: CpuList = CpuList.load(path=HARDWARE_DB)
+        cpu_list: CpuList = CpuList.load(path=APP_DB)
         # Assert
         assert cpu_list.amd and cpu_list.intel
         assert "13th Gen Intel(R) Core(TM) i9-13900HX" in cpu_list.intel
@@ -358,7 +358,7 @@ class TestGpuList:
         # Arrange
         sql: str = "INSERT INTO gpus (name, device_id, added) VALUES (?, ?, '2026-10-06')"
         path: Path = _Db.create(
-            path=tmp_path / "hardware.db",
+            path=tmp_path / "app.db",
             statements=[(sql, ("NVIDIA GeForce RTX 4090", "2684")), (sql, ("NVIDIA GeForce GTX 1060 6GB", "1c03"))],
         )
         # Act
@@ -376,7 +376,7 @@ class TestGpuList:
         :return: None
         """
         # Arrange & Act
-        gpu_list: GpuList = GpuList.load(path=HARDWARE_DB)
+        gpu_list: GpuList = GpuList.load(path=APP_DB)
         # Assert
         assert gpu_list.gpus
         assert len({gpu.name for gpu in gpu_list.gpus}) == len(gpu_list.gpus)
@@ -431,7 +431,7 @@ class TestGpuRanks:
         """
         # Arrange
         path: Path = _Db.create(
-            path=tmp_path / "hardware.db",
+            path=tmp_path / "app.db",
             statements=[
                 (
                     "INSERT INTO gpu_ranks (device_id, chip, generation, tier) VALUES (?, ?, ?, ?)",
@@ -451,7 +451,7 @@ class TestGpuRanks:
         :return: None
         """
         # Arrange
-        ranks: GpuRanks = GpuRanks.load(path=HARDWARE_DB)
+        ranks: GpuRanks = GpuRanks.load(path=APP_DB)
         stronger_weaker: list[tuple[Gpu, Gpu]] = [
             (
                 Gpu(name="NVIDIA GeForce GTX 780", device_id="1004"),

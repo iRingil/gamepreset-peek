@@ -48,7 +48,7 @@ jobs:
         run: cat "$RUNNER_TEMP/report.md" >> "$GITHUB_STEP_SUMMARY"
       - name: Commit the database
         run: |
-          git add src/app/data/hardware.db
+          git add src/app/data/app.db
           if git diff --cached --quiet; then
             echo "Nothing new: no commit."
             exit 0

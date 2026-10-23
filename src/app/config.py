@@ -6,13 +6,12 @@ from pathlib import Path
 __all__: tuple[str, ...] = (
     "APP_NAME",
     "APP_DATA_DIR",
+    "APP_DB",
     "APP_ICON_FILE",
     "APP_TITLE",
     "APP_USER_MODEL_ID",
     "DEFAULT_LANGUAGE",
-    "GAME_NAMES_FILE",
     "GETTEXT_DOMAIN",
-    "HARDWARE_DB",
     "HTTP_CONNECT_TIMEOUT",
     "HTTP_MAX_RETRIES",
     "HTTP_READ_TIMEOUT",
@@ -44,8 +43,7 @@ LOG_FILE: Path = APP_DATA_DIR / "logs" / "gamepreset-peek.log"
 SETTINGS_FILE: Path = APP_DATA_DIR / "settings.json"
 # Bundled data files live next to the package code.
 _DATA_DIR: Path = Path(__file__).parent / "data"
-GAME_NAMES_FILE: Path = _DATA_DIR / "game_names.json"
-HARDWARE_DB: Path = _DATA_DIR / "hardware.db"
+APP_DB: Path = _DATA_DIR / "app.db"
 APP_ICON_FILE: Path = _DATA_DIR / "app.ico"
 LOCALE_DIR: Path = Path(__file__).parent / "i18n" / "locale"
 GETTEXT_DOMAIN: str = "messages"

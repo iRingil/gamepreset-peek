@@ -39,7 +39,7 @@ class TestUpdate:
             value=lambda **_: Downloaded(cpus=set(), failed=(InstLatDumps.TREE_URL,)),
         )
         responses.get(url=PciIds.URL, status=503)
-        db: Path = tmp_path / "hardware.db"
+        db: Path = tmp_path / "app.db"
         report: Path = tmp_path / "report.md"
         # Act
         _Update.run(db=db, report=report)
@@ -64,7 +64,7 @@ class TestUpdate:
         for source in (BoincHosts, InstLatDumps):
             monkeypatch.setattr(target=source, name="download", value=lambda **_: Downloaded(cpus=set(), failed=()))
         responses.get(url=PciIds.URL, body="10de  NVIDIA Corporation\n\t1eb8  TU104GL [Tesla T4]\n")
-        db: Path = tmp_path / "hardware.db"
+        db: Path = tmp_path / "app.db"
         # Act
         _Update.run(db=db, report=None)
         # Assert

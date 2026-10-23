@@ -53,7 +53,7 @@ class _UpdaterTests:
         :param tmp_path: temporary directory
         :return: open writer
         """
-        with HardwareDbWriter(path=tmp_path / "hardware.db") as db:
+        with HardwareDbWriter(path=tmp_path / "app.db") as db:
             db.add_cpus(cpus=[_KNOWN], added="2026-09-30")
             db.add_gpus(gpus=[Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")], added="2026-09-30")
             yield db

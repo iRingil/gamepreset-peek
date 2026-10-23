@@ -1,15 +1,16 @@
-"""The bundled hardware database: CPUs and GPUs the user can choose from and the chip ranks of NVIDIA devices."""
+"""The bundled database: CPUs and GPUs the user can choose from, chip ranks of NVIDIA devices and game names."""
 
 import sqlite3
 from pathlib import Path
 
-__all__: tuple[str, ...] = ("HardwareDb",)
+__all__: tuple[str, ...] = ("AppDb",)
 
 
-class HardwareDb:
-    """Schema of the SQLite file and connections to it; the app only reads it, tools/update_hardware_db.py fills it.
+class AppDb:
+    """Schema of the SQLite file and connections to it; the app only reads it.
 
-    Rows are only added over time: a CPU or GPU found once stays, so a source that drops it doesn't shrink the lists."""
+    tools/update_hardware_db.py fills the hardware tables, and only ever adds rows to them: a CPU or GPU found once
+    stays, so a source that drops it doesn't shrink the lists. The game names are a bundled list."""
 
     SCHEMA: str = """
         CREATE TABLE IF NOT EXISTS cpus (
@@ -27,6 +28,10 @@ class HardwareDb:
             chip TEXT NOT NULL,
             generation INTEGER NOT NULL,
             tier REAL NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS games (
+            game_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL
         );
     """
 

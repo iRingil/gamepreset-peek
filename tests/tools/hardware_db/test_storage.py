@@ -43,7 +43,7 @@ class TestHardwareDbWriter:
         :return: None
         """
         # Arrange
-        path: Path = tmp_path / "hardware.db"
+        path: Path = tmp_path / "app.db"
         with HardwareDbWriter(path=path) as db:
             db.add_cpus(cpus=[Cpu(name="AMD Ryzen 7 7800X3D 8-Core Processor", vendor="amd")], added="2026-09-30")
         # Act
@@ -73,7 +73,7 @@ class TestHardwareDbWriter:
         :return: None
         """
         # Arrange
-        path: Path = tmp_path / "hardware.db"
+        path: Path = tmp_path / "app.db"
         with HardwareDbWriter(path=path) as db:
             db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")], added="2026-10-31")
             db.add_gpus(gpus=[Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")], added="2026-10-31")
@@ -91,7 +91,7 @@ class TestHardwareDbWriter:
         :return: None
         """
         # Arrange
-        path: Path = tmp_path / "hardware.db"
+        path: Path = tmp_path / "app.db"
         new_rank: GpuRank = GpuRank(device_id="2b85", chip="GB202", generation=7, tier=4.0)
         with HardwareDbWriter(path=path) as db:
             db.replace_ranks(ranks=[_RANK])
@@ -112,7 +112,7 @@ class TestHardwareDbWriter:
         :return: None
         """
         # Arrange
-        path: Path = tmp_path / "hardware.db"
+        path: Path = tmp_path / "app.db"
         with HardwareDbWriter(path=path) as db:
             db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")], added="2026-10-31")
             db.replace_ranks(ranks=[_RANK])
@@ -132,7 +132,7 @@ class TestHardwareDbWriter:
         :return: None
         """
         # Arrange
-        path: Path = tmp_path / "hardware.db"
+        path: Path = tmp_path / "app.db"
         # Act & Assert
         with pytest.raises(ConnectionError), HardwareDbWriter(path=path) as db:
             db.add_cpus(cpus=[Cpu(name="Intel(R) Core(TM) i7-14700K", vendor="intel")], added="2026-10-31")
