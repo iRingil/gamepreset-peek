@@ -1,14 +1,13 @@
-"""Widgets and layout of the main window and of the CPU and GPU choice drop-downs."""
+"""Widgets and layout of the main window and of the CPU, GPU and resolution choice drop-downs."""
 
 import html
 from queue import Queue
 from typing import Callable, Sequence
 
-from PySide6.QtCore import QEvent, QModelIndex, QPersistentModelIndex, QRect, QStringListModel, Qt
-from PySide6.QtGui import QFont, QHelpEvent, QPainter, QPalette, QPixmap
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QStringListModel, Qt
+from PySide6.QtGui import QFont, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QApplication,
     QComboBox,
     QGridLayout,
     QHBoxLayout,
@@ -19,10 +18,8 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSlider,
-    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
-    QToolTip,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -34,18 +31,17 @@ from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.choice_popup import ChoicePopup
-from app.ui.icons import Icons
 from app.ui.log_panel import LogPanel
-from app.ui.presenter import ChoiceView, HardwareView, Hint, Presenter, ResolutionRow, SettingsView
+from app.ui.presenter import ChoiceView, HardwareView, Presenter, SettingsView
 from app.ui.theme import Theme
 
 __all__: tuple[str, ...] = ("MainWindow",)
 
 _PAD: int = 8
 _GAMES_WIDTH: int = 300
-_RESOLUTIONS_WIDTH: int = 230
+# Free column between the game list and the settings; nothing goes there yet.
+_SPARE_WIDTH: int = 230
 _VALUE_WIDTH: int = 220
-_ICON_SIZE: int = 18
 # Point size steps above the base font: the hardware block, the settings title and the preset position.
 _HEADLINE_STEP: float = 2
 _TITLE_STEP: float = 6
@@ -73,94 +69,8 @@ class _Fonts:
         return font
 
 
-class _SignDelegate(QStyledItemDelegate):
-    """Draws a warning sign one space after the text of a list item; its hint pops up over the sign only."""
-
-    def __init__(self, *, parent: QListView, warnings: Callable[[], dict[int, Hint]]) -> None:
-        """
-        Prepare the sign; its pixels are drawn once for each screen scale met.
-
-        :param parent: list the delegate draws
-        :param warnings: gives the hint of the sign of each row that has one
-        """
-        super().__init__(parent)
-        self._warnings: Callable[[], dict[int, Hint]] = warnings
-        self._signs: dict[float, QPixmap] = {}
-
-    def paint(
-        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
-    ) -> None:
-        """
-        Draw the item, then its sign when it has one.
-
-        :param painter: painter of the list
-        :param option: item style
-        :param index: item
-        :return: None
-        """
-        super().paint(painter, option, index)
-        if index.row() in self._warnings():
-            sign: QRect = self._sign_rect(option=option, index=index)
-            painter.drawPixmap(sign.topLeft(), self._sign(scale=painter.device().devicePixelRatioF()))
-
-    def helpEvent(  # pylint: disable=invalid-name
-        self,
-        event: QHelpEvent,
-        view: QAbstractItemView,
-        option: QStyleOptionViewItem,
-        index: QModelIndex | QPersistentModelIndex,
-    ) -> bool:
-        """
-        Show the hint of the sign while the pointer is over it, and no tooltip anywhere else.
-
-        :param event: tooltip request
-        :param view: the list
-        :param option: item style
-        :param index: item under the pointer
-        :return: True: the request is handled here
-        """
-        hint: Hint | None = self._warnings().get(index.row())
-        sign: QRect = self._sign_rect(option=option, index=index)
-        if event.type() == QEvent.Type.ToolTip and hint is not None and sign.contains(event.pos()):
-            text: str = f"<b>{html.escape(hint.title)}</b><br>{html.escape(hint.text)}"
-            QToolTip.showText(event.globalPos(), text, view, sign)
-        else:
-            QToolTip.hideText()
-        return True
-
-    def _sign_rect(self, *, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QRect:
-        """
-        Locate the sign of an item: a space after the end of its text, centered on the row.
-
-        :param option: item style
-        :param index: item
-        :return: rectangle of the sign in list coordinates
-        """
-        item: QStyleOptionViewItem = QStyleOptionViewItem(option)
-        self.initStyleOption(item, index)
-        style: QStyle = item.widget.style() if item.widget is not None else QApplication.style()
-        text: QRect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, item, item.widget)
-        margin: int = style.pixelMetric(QStyle.PixelMetric.PM_FocusFrameHMargin, item, item.widget) + 1
-        left: int = text.left() + margin + item.fontMetrics.horizontalAdvance(item.text + " ")
-        return QRect(left, item.rect.center().y() - _ICON_SIZE // 2 + 1, _ICON_SIZE, _ICON_SIZE)
-
-    def _sign(self, *, scale: float) -> QPixmap:
-        """
-        Get the sign drawn for a screen scale.
-
-        :param scale: device pixel ratio of the screen
-        :return: the sign at its logical size
-        """
-        if scale not in self._signs:
-            sign: QPixmap = QPixmap()
-            sign.loadFromData(Icons.warning(size=round(_ICON_SIZE * scale)))
-            sign.setDevicePixelRatio(scale)
-            self._signs[scale] = sign
-        return self._signs[scale]
-
-
 class _ChoiceList(QListView):
-    """A single-choice list; given warnings, an item can carry a warning sign whose hint pops up over the sign."""
+    """A single-choice list."""
 
     def __init__(self, *, on_select: Callable[[int], None], parent: QWidget | None = None) -> None:
         """
@@ -176,45 +86,24 @@ class _ChoiceList(QListView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self._warnings: dict[int, Hint] = {}
-        self.setItemDelegate(_SignDelegate(parent=self, warnings=lambda: self._warnings))
         self.selectionModel().currentChanged.connect(
             # A refill resets the current item to none, which is no choice.
             lambda current, _: on_select(current.row()) if current.isValid() else None
         )
 
-    def fill(self, *, items: Sequence[str], selected: int | None = None, warnings: Sequence[Hint | None] = ()) -> None:
+    def fill(self, *, items: Sequence[str], selected: int | None = None) -> None:
         """
         Replace the items and select one of them.
 
         :param items: new items
         :param selected: position to select and scroll to, None for none
-        :param warnings: hint of the warning sign of each item, None for no sign
         :return: None
         """
-        self._warnings = {position: hint for position, hint in enumerate(warnings) if hint is not None}
         self._model.setStringList(list(items))
         if selected is not None:
             index: QModelIndex = self._model.index(selected)
             self.setCurrentIndex(index)
             self.scrollTo(index, hint=QAbstractItemView.ScrollHint.EnsureVisible)
-
-    def count(self) -> int:
-        """
-        Count the items.
-
-        :return: number of items
-        """
-        return self._model.rowCount()
-
-    def selection(self) -> int | None:
-        """
-        Get the selected position.
-
-        :return: position, None when nothing is selected
-        """
-        rows: list[QModelIndex] = self.selectionModel().selectedIndexes()
-        return rows[0].row() if rows else None
 
 
 class _ChangedDelegate(QStyledItemDelegate):
@@ -239,22 +128,16 @@ class _ChangedDelegate(QStyledItemDelegate):
 
 
 class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
-    """The game and resolution title, the "Show settings" button, the quality slider and the settings table.
+    """The game title, the quality slider and the settings table.
 
     Rows whose value differs from the recommended preset are emphasized: that is what the slider trades."""
 
     def __init__(
-        self,
-        *,
-        on_show: Callable[[], None],
-        on_slider: Callable[[int], None],
-        on_optimal: Callable[[], None],
-        parent: QWidget | None = None,
+        self, *, on_slider: Callable[[int], None], on_optimal: Callable[[], None], parent: QWidget | None = None
     ) -> None:
         """
         Build the panel with the slider and the table hidden.
 
-        :param on_show: called when the user asks for the settings
         :param on_slider: called with the 1-based preset index when the user moves the slider
         :param on_optimal: called when the user asks for the recommended preset
         :param parent: widget the panel belongs to
@@ -264,15 +147,10 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         self._index: int = 0
         self._title: QLabel = QLabel(parent=self)
         self._title.setFont(_Fonts.derived(base=self.font(), step=_TITLE_STEP, bold=True))
-        self._subtitle: QLabel = self._muted(parent=self)
         self._position: QLabel = QLabel(parent=self)
         self._position.setFont(_Fonts.derived(base=self.font(), step=_BIG_STEP, bold=True))
         self._position.setForegroundRole(QPalette.ColorRole.Accent)
         self._caption: QLabel = self._muted(parent=self)
-        self._button: QPushButton = QPushButton(parent=self)
-        self._button.setDefault(True)
-        self._button.clicked.connect(on_show)
-        self._button.hide()
         self._slider_row: QWidget = QWidget(parent=self)
         self._slider_row.hide()
         self._performance: QLabel = self._muted(parent=self._slider_row)
@@ -293,20 +171,10 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         :param translator: translator of the UI language
         :return: None
         """
-        self._button.setText(translator.text(item=UiText.SHOW_SETTINGS))
         self._performance.setText(translator.text(item=UiText.PERFORMANCE))
         self._quality.setText(translator.text(item=UiText.QUALITY))
         self._optimal.setText(translator.text(item=UiText.BACK_TO_OPTIMAL))
         self._table.setHeaderLabels([translator.text(item=UiText.SETTING), translator.text(item=UiText.VALUE)])
-
-    def show_button(self, *, visible: bool) -> None:
-        """
-        Show or hide the "Show settings" button.
-
-        :param visible: True to show the button
-        :return: None
-        """
-        self._button.setVisible(visible)
 
     def show_settings(self, *, settings: SettingsView) -> None:
         """
@@ -317,7 +185,6 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         """
         self._index = settings.index
         self._title.setText(settings.title)
-        self._subtitle.setText(settings.subtitle)
         self._position.setText(settings.position)
         self._caption.setText(settings.caption)
         # Set by the program, not by the user: no slider callback.
@@ -344,7 +211,7 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
 
         :return: None
         """
-        for label in (self._title, self._subtitle, self._position, self._caption):
+        for label in (self._title, self._position, self._caption):
             label.clear()
         self._table.clear()
         self._slider_row.hide()
@@ -385,13 +252,12 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
 
     def _lay_out(self) -> None:
         """
-        Place the widgets: the titles with the preset position right of them, the button, the slider row, the table.
+        Place the widgets: the title with the preset position right of it, the slider row, the table.
 
         :return: None
         """
         titles: QVBoxLayout = QVBoxLayout()
         titles.addWidget(self._title)
-        titles.addWidget(self._subtitle)
         titles.addStretch()
         preset: QVBoxLayout = QVBoxLayout()
         preset.addWidget(self._position, alignment=Qt.AlignmentFlag.AlignRight)
@@ -409,7 +275,6 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         layout: QVBoxLayout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addLayout(head)
-        layout.addWidget(self._button, alignment=Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self._slider_row)
         layout.addWidget(self._table, stretch=1)
         layout.addStretch()
@@ -426,36 +291,47 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
 
 
 class _HardwareBlock(QWidget):
-    """The CPU and GPU in use as links that open their choice, next to the memory and video memory sizes."""
+    """The CPU, GPU and screen resolution in use as links that open their choice, next to the memory sizes."""
 
     def __init__(
-        self, *, on_cpu: Callable[[], None], on_gpu: Callable[[], None], parent: QWidget | None = None
+        self,
+        *,
+        on_cpu: Callable[[], None],
+        on_gpu: Callable[[], None],
+        on_resolution: Callable[[], None],
+        parent: QWidget | None = None,
     ) -> None:
         """
-        Build the block: two rows of a caption and a value, CPU with RAM and GPU with VRAM.
+        Build the block: rows of a caption and a value, CPU with RAM, GPU with VRAM, the resolution alone.
 
         :param on_cpu: called when the user opens the CPU choice
         :param on_gpu: called when the user opens the GPU choice
+        :param on_resolution: called when the user opens the resolution choice
         :param parent: widget the block belongs to
         """
         super().__init__(parent)
-        self._captions: dict[UiText, QLabel] = {item: self._caption() for item in (UiText.CPU, UiText.GPU)}
-        self._captions |= {item: self._caption() for item in (UiText.RAM, UiText.VRAM)}
+        self._captions: dict[UiText, QLabel] = {
+            item: self._caption() for item in (UiText.CPU, UiText.GPU, UiText.RESOLUTION, UiText.RAM, UiText.VRAM)
+        }
         self.cpu: QLabel = self._link(on_click=on_cpu)
         self.gpu: QLabel = self._link(on_click=on_gpu)
+        self.resolution: QLabel = self._link(on_click=on_resolution)
         self._memory: QLabel = self._value()
         self._video_memory: QLabel = self._value()
         grid: QGridLayout = QGridLayout(self)
         grid.setContentsMargins(0, 0, 0, 0)
         grid.setColumnMinimumWidth(2, _PAD * 4)
-        rows: tuple[tuple[UiText, QLabel, UiText, QLabel], ...] = (
-            (UiText.CPU, self.cpu, UiText.RAM, self._memory),
-            (UiText.GPU, self.gpu, UiText.VRAM, self._video_memory),
+        links: tuple[tuple[UiText, QLabel], ...] = (
+            (UiText.CPU, self.cpu),
+            (UiText.GPU, self.gpu),
+            (UiText.RESOLUTION, self.resolution),
         )
-        for row, (name, link, size_name, size) in enumerate(rows):
+        sizes: tuple[tuple[UiText, QLabel], ...] = ((UiText.RAM, self._memory), (UiText.VRAM, self._video_memory))
+        for row, (name, link) in enumerate(links):
             grid.addWidget(self._captions[name], row, 0)
             grid.addWidget(link, row, 1)
-            grid.addWidget(self._captions[size_name], row, 3)
+        for row, (name, size) in enumerate(sizes):
+            grid.addWidget(self._captions[name], row, 3)
             grid.addWidget(size, row, 4)
 
     def apply_language(self, *, translator: Translator) -> None:
@@ -470,12 +346,17 @@ class _HardwareBlock(QWidget):
 
     def show_hardware(self, *, hardware: HardwareView) -> None:
         """
-        Show the CPU and GPU in use and the memory sizes.
+        Show the CPU, GPU and resolution in use and the memory sizes.
 
         :param hardware: what to show
         :return: None
         """
-        for link, text in ((self.cpu, hardware.cpu), (self.gpu, hardware.gpu)):
+        links: tuple[tuple[QLabel, str], ...] = (
+            (self.cpu, hardware.cpu),
+            (self.gpu, hardware.gpu),
+            (self.resolution, hardware.resolution),
+        )
+        for link, text in links:
             link.setText(f'<a href="choose">{html.escape(text)}</a>')
         self._memory.setText(hardware.memory)
         self._video_memory.setText(hardware.video_memory)
@@ -525,6 +406,7 @@ class _TopBar(QWidget):
         *,
         on_cpu: Callable[[], None],
         on_gpu: Callable[[], None],
+        on_resolution: Callable[[], None],
         on_theme: Callable[[int], None],
         on_language: Callable[[str], None],
         parent: QWidget | None = None,
@@ -534,13 +416,16 @@ class _TopBar(QWidget):
 
         :param on_cpu: called when the user opens the CPU choice
         :param on_gpu: called when the user opens the GPU choice
+        :param on_resolution: called when the user opens the resolution choice
         :param on_theme: called with the position of the chosen theme
         :param on_language: called with the code of the chosen language
         :param parent: widget the bar belongs to
         """
         super().__init__(parent)
         layout: QHBoxLayout = QHBoxLayout(self)
-        self.hardware: _HardwareBlock = _HardwareBlock(on_cpu=on_cpu, on_gpu=on_gpu, parent=self)
+        self.hardware: _HardwareBlock = _HardwareBlock(
+            on_cpu=on_cpu, on_gpu=on_gpu, on_resolution=on_resolution, parent=self
+        )
         self._theme_label: QLabel = QLabel(parent=self)
         self._themes: QComboBox = QComboBox(parent=self)
         # Activated: chosen by the user, not set by the program.
@@ -659,6 +544,7 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._top: _TopBar = _TopBar(
             on_cpu=lambda: self._call(action=Presenter.open_cpu_choice),
             on_gpu=lambda: self._call(action=Presenter.open_gpu_choice),
+            on_resolution=lambda: self._call(action=Presenter.open_resolution_choice),
             on_theme=lambda index: self._call(action=lambda presenter: presenter.change_theme(index=index)),
             on_language=lambda code: self._call(action=lambda presenter: presenter.change_language(language=code)),
             parent=self,
@@ -674,23 +560,9 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         )
         self._games.setFixedWidth(_GAMES_WIDTH)
         body.addWidget(self._games)
-        body.addSpacing(_PAD)
-
-        resolutions: QVBoxLayout = QVBoxLayout()
-        self._resolutions_label: QLabel = QLabel(parent=self)
-        self._resolutions_label.setFont(_Fonts.derived(base=self.font(), bold=True))
-        self._resolutions: _ChoiceList = _ChoiceList(
-            on_select=lambda index: self._call(action=lambda presenter: presenter.select_resolution(index=index)),
-            parent=self,
-        )
-        self._resolutions.setFixedWidth(_RESOLUTIONS_WIDTH)
-        resolutions.addWidget(self._resolutions_label)
-        resolutions.addWidget(self._resolutions, stretch=1)
-        body.addLayout(resolutions)
-        body.addSpacing(_PAD * 2)
+        body.addSpacing(_PAD + _SPARE_WIDTH + _PAD * 2)
 
         self._settings: _SettingsPanel = _SettingsPanel(
-            on_show=lambda: self._call(action=Presenter.show_settings),
             on_slider=lambda index: self._call(action=lambda presenter: presenter.move_slider(index=index)),
             on_optimal=lambda: self._call(action=Presenter.back_to_optimal),
             parent=self,
@@ -748,7 +620,6 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._translator = translator
         self._top.apply_language(translator=translator)
         self._games.apply_language(translator=translator)
-        self._resolutions_label.setText(translator.text(item=UiText.RESOLUTION))
         self._settings.apply_language(translator=translator)
         self._logs_button.setText(
             translator.text(item=UiText.HIDE_LOGS if self._log_panel.isVisible() else UiText.SHOW_LOGS)
@@ -756,7 +627,7 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
 
     def show_hardware(self, *, hardware: HardwareView) -> None:
         """
-        Show the CPU and GPU in use and the memory sizes.
+        Show the CPU, GPU and resolution in use and the memory sizes.
 
         :param hardware: what to show
         :return: None
@@ -787,6 +658,21 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
             anchor=self._top.hardware.gpu,
             choice=choice,
             on_choose=lambda position: self._call(action=lambda presenter: presenter.choose_gpu(position=position)),
+        )
+
+    def offer_resolutions(self, *, choice: ChoiceView) -> None:
+        """
+        Open the resolution choice under the resolution link; a pick is passed to the presenter.
+
+        :param choice: resolutions to choose from
+        :return: None
+        """
+        self._offer(
+            anchor=self._top.hardware.resolution,
+            choice=choice,
+            on_choose=lambda position: self._call(
+                action=lambda presenter: presenter.choose_resolution(position=position)
+            ),
         )
 
     def show_status(self, *, text: str) -> None:
@@ -825,30 +711,6 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self._games.list.fill(items=names, selected=selected)
-
-    def show_resolutions(self, *, items: Sequence[ResolutionRow]) -> None:
-        """
-        Fill the resolution list, keeping the selection when only the texts change (language switch).
-
-        :param items: resolution rows in list order
-        :return: None
-        """
-        selected: int | None = self._resolutions.selection()
-        same: bool = self._resolutions.count() == len(items) > 0
-        self._resolutions.fill(
-            items=[item.resolution for item in items],
-            selected=selected if same else None,
-            warnings=[item.warning for item in items],
-        )
-
-    def show_settings_button(self, *, visible: bool) -> None:
-        """
-        Show or hide the "Show settings" button.
-
-        :param visible: True to show the button
-        :return: None
-        """
-        self._settings.show_button(visible=visible)
 
     def show_settings(self, *, settings: SettingsView) -> None:
         """

@@ -1,4 +1,4 @@
-"""Settings kept between runs: UI language, detected and chosen CPU and GPU, the theme; JSON in the app data folder."""
+"""Settings kept between runs: language, theme, detected and chosen CPU, GPU and resolution; JSON in app data."""
 
 import json
 from pathlib import Path
@@ -52,8 +52,10 @@ class UserSettingsStore:
             "theme": settings.theme.value,
             "detected_cpu": settings.detected_cpu,
             "detected_gpus": [self._gpu_document(gpu=gpu) for gpu in settings.detected_gpus],
+            "detected_resolution": settings.detected_resolution,
             "chosen_cpu": settings.chosen_cpu,
             "chosen_gpu": None if settings.chosen_gpu is None else self._gpu_document(gpu=settings.chosen_gpu),
+            "chosen_resolution": settings.chosen_resolution,
         }
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(data=json.dumps(obj=document, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -78,8 +80,10 @@ class UserSettingsStore:
             theme=ThemeMode(cls._required_str(value=document.get("theme", ThemeMode.AUTO.value))),
             detected_cpu=cls._optional_str(value=document.get("detected_cpu")),
             detected_gpus=tuple(cls._gpu(document=gpu) for gpu in detected_gpus),
+            detected_resolution=cls._optional_str(value=document.get("detected_resolution")),
             chosen_cpu=cls._optional_str(value=document.get("chosen_cpu")),
             chosen_gpu=None if chosen_gpu is None else cls._gpu(document=chosen_gpu),
+            chosen_resolution=cls._optional_str(value=document.get("chosen_resolution")),
         )
 
     @staticmethod

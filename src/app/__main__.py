@@ -17,6 +17,7 @@ from app.core.user_settings import UserSettingsStore
 from app.i18n.translator import Translator
 from app.infra.http_client import HttpClient
 from app.infra.logger import LoggingManager
+from app.ui.debouncer import QtDebouncer
 from app.ui.main_window import MainWindow
 from app.ui.presenter import Presenter
 from app.ui.worker import Worker
@@ -59,7 +60,12 @@ class _Application:  # pylint: disable=too-few-public-methods
             window: MainWindow = MainWindow(log_lines=self._logging.lines)
             worker: Worker = Worker()
             presenter: Presenter = Presenter(
-                view=window, service=service, runner=worker, translator=translator, theme=service.saved_theme()
+                view=window,
+                service=service,
+                runner=worker,
+                debouncer=QtDebouncer(parent=window),
+                translator=translator,
+                theme=service.saved_theme(),
             )
             window.attach(presenter=presenter)
             presenter.start()

@@ -5,6 +5,7 @@ from functools import cached_property
 
 from loguru import logger
 
+from app.config import DEFAULT_RESOLUTION, SCREEN_RESOLUTIONS
 from app.core.game_names import GameNames
 from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
 from app.core.models import (
@@ -92,13 +93,15 @@ class PresetService:
 
     def hardware_setup(self) -> HardwareSetup:
         """
-        Detect the hardware and save it, then get the bundled lists and the CPU and GPU in use: chosen, else detected.
+        Detect the hardware and save it, then get the bundled lists and what is in use: chosen, else detected.
 
-        :return: hardware to show and to choose from
+        :return: hardware and resolution to show and to choose from
         """
         system: SystemHardware = self._system
         saved: UserSettings = self._store.load()
-        detected: UserSettings = replace(saved, detected_cpu=system.cpu_name, detected_gpus=system.gpus)
+        detected: UserSettings = replace(
+            saved, detected_cpu=system.cpu_name, detected_gpus=system.gpus, detected_resolution=system.resolution
+        )
         if detected != saved:
             self._store.save(settings=detected)
         gpu: Gpu | None = self._default_gpu
@@ -111,7 +114,9 @@ class PresetService:
             amd_cpus=self._cpu_list.amd,
             intel_cpus=self._cpu_list.intel,
             gpus=tuple(item for item in self._gpu_list.gpus if item.device_id not in detected_ids),
+            resolutions=tuple(item for item in SCREEN_RESOLUTIONS if item != system.resolution),
             choice=HardwareChoice(cpu_name=saved.chosen_cpu or system.cpu_name, gpu=gpu),
+            resolution=saved.chosen_resolution or system.resolution or DEFAULT_RESOLUTION,
         )
 
     def check_hardware(self, *, choice: HardwareChoice) -> HardwareCheck:
@@ -167,6 +172,15 @@ class PresetService:
         if settings != saved:
             self._store.save(settings=settings)
         return check
+
+    def save_resolution(self, *, resolution: str) -> None:
+        """
+        Save the chosen screen resolution, keeping the other settings.
+
+        :param resolution: resolution as NVIDIA writes it, e.g. "2560x1600"
+        :return: None
+        """
+        self._store.save(settings=replace(self._store.load(), chosen_resolution=resolution))
 
     def saved_language(self) -> str | None:
         """
@@ -245,6 +259,7 @@ class PresetService:
             gpus=self._detector.nvidia_gpus(ranks=self._ranks),
             memory_gb=self._detector.memory_gb(),
             os_version=self._detector.os_version(),
+            resolution=self._detector.screen_resolution(),
         )
 
     @property

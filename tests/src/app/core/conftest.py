@@ -62,6 +62,7 @@ def _detector() -> MagicMock:
     detector.cpu_name.return_value = "13th Gen Intel(R) Core(TM) i9-13900HX"
     detector.memory_gb.return_value = 16
     detector.os_version.return_value = "10.0"
+    detector.screen_resolution.return_value = "2560x1600"
     detector.nvidia_gpus.return_value = ()
     return detector
 

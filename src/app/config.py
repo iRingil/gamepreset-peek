@@ -11,6 +11,7 @@ __all__: tuple[str, ...] = (
     "APP_TITLE",
     "APP_USER_MODEL_ID",
     "DEFAULT_LANGUAGE",
+    "DEFAULT_RESOLUTION",
     "GETTEXT_DOMAIN",
     "HTTP_CONNECT_TIMEOUT",
     "HTTP_MAX_RETRIES",
@@ -26,6 +27,9 @@ __all__: tuple[str, ...] = (
     "OPS_COMMON_FILES_URL",
     "OPS_COMPATIBILITY_URL",
     "OPS_PRESETS_URL",
+    "REQUEST_DELAY_MS",
+    "SCREEN_RESOLUTIONS",
+    "SEARCH_DELAY_MS",
     "SETTINGS_FILE",
     "TRANSLATION_LANGUAGES",
     "UI_LANGUAGES",
@@ -68,6 +72,33 @@ WINDOW_SIZE: tuple[int, int] = WINDOW_MIN_SIZE
 LOG_PANEL_HEIGHT: int = 15
 LOG_PANEL_MAX_LINES: int = 2000
 LOG_POLL_MS: int = 200
+# Pause after the last change of the game selection before its presets are requested, and after the last key typed
+# in the game search before the list is filtered: stepping through the list with the arrow keys sends no burst.
+REQUEST_DELAY_MS: int = 300
+SEARCH_DELAY_MS: int = 250
+
+# Screen resolutions NVIDIA recommends presets for, the largest first; the detected one is offered on top of them.
+SCREEN_RESOLUTIONS: tuple[str, ...] = (
+    "7680x4320",
+    "3840x2400",
+    "3840x2160",
+    "3440x1440",
+    "2560x1600",
+    "2560x1440",
+    "2560x1080",
+    "1920x1200",
+    "1920x1080",
+    "1680x1050",
+    "1600x900",
+    "1440x900",
+    "1366x768",
+    "1360x768",
+    "1280x1024",
+    "1280x720",
+    "1024x768",
+)
+# Used when the screen resolution is neither detected nor chosen.
+DEFAULT_RESOLUTION: str = "1920x1080"
 
 # Operating systems a fake browser User-Agent is picked for, one per HTTP client.
 USER_AGENT_OS: tuple[str, ...] = ("Windows",)

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-23 03:13+0300\n"
+"POT-Creation-Date: 2026-10-23 13:14+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -23,8 +23,8 @@ msgid "Game"
 msgstr "Игра"
 
 #. RESOLUTION
-msgid "Resolution"
-msgstr "Разрешение"
+msgid "Resolution:"
+msgstr "Разрешение:"
 
 #. LANGUAGE
 msgid "Language"
@@ -50,11 +50,6 @@ msgstr "Тёмная"
 msgid "Search"
 msgstr "Поиск"
 
-#. SETTINGS_SUBTITLE
-#, python-brace-format
-msgid "{resolution}, target {rate} FPS"
-msgstr "{resolution}, цель {rate} FPS"
-
 #. SETTING
 msgid "Setting"
 msgstr "Настройка"
@@ -66,10 +61,6 @@ msgstr "Значение"
 #. LOAD_GAMES
 msgid "Load games"
 msgstr "Загрузить игры"
-
-#. SHOW_SETTINGS
-msgid "Show settings"
-msgstr "Показать настройки"
 
 #. SHOW_LOGS
 msgid "Show logs"
@@ -130,13 +121,14 @@ msgstr "Не удалось получить данные от NVIDIA: {error}"
 msgid "No recommendations"
 msgstr "Нет рекомендаций"
 
-#. RESOLUTION_BELOW_MIN_SPEC
-msgid "Too demanding for this PC"
-msgstr "Слишком тяжело для этого ПК"
+#. RESOLUTION_FALLBACK
+#, python-brace-format
+msgid "No preset for {chosen}: showing the one for {shown}."
+msgstr "Нет пресета для {chosen}: показан пресет для {shown}."
 
-#. RESOLUTION_BELOW_MIN_SPEC_HINT
-msgid "Even the lowest settings may stutter at this resolution."
-msgstr "Даже на минимальных настройках в этом разрешении возможны подтормаживания."
+#. RESOLUTION_BELOW_MIN_SPEC
+msgid "Too demanding for this PC: even the lowest settings may stutter at this resolution."
+msgstr "Слишком тяжело для этого ПК: даже на минимальных настройках в этом разрешении возможны подтормаживания."
 
 #. PERFORMANCE
 msgid "Performance"

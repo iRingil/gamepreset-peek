@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-23 03:13+0300\n"
+"POT-Creation-Date: 2026-10-23 13:14+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -23,8 +23,8 @@ msgid "Game"
 msgstr "Spiel"
 
 #. RESOLUTION
-msgid "Resolution"
-msgstr "Auflösung"
+msgid "Resolution:"
+msgstr "Auflösung:"
 
 #. LANGUAGE
 msgid "Language"
@@ -50,11 +50,6 @@ msgstr "Dunkel"
 msgid "Search"
 msgstr "Suchen"
 
-#. SETTINGS_SUBTITLE
-#, python-brace-format
-msgid "{resolution}, target {rate} FPS"
-msgstr "{resolution}, Ziel {rate} FPS"
-
 #. SETTING
 msgid "Setting"
 msgstr "Einstellung"
@@ -66,10 +61,6 @@ msgstr "Wert"
 #. LOAD_GAMES
 msgid "Load games"
 msgstr "Spiele laden"
-
-#. SHOW_SETTINGS
-msgid "Show settings"
-msgstr "Einstellungen anzeigen"
 
 #. SHOW_LOGS
 msgid "Show logs"
@@ -130,13 +121,14 @@ msgstr "Daten von NVIDIA konnten nicht abgerufen werden: {error}"
 msgid "No recommendations"
 msgstr "Keine Empfehlungen"
 
-#. RESOLUTION_BELOW_MIN_SPEC
-msgid "Too demanding for this PC"
-msgstr "Zu anspruchsvoll für diesen PC"
+#. RESOLUTION_FALLBACK
+#, python-brace-format
+msgid "No preset for {chosen}: showing the one for {shown}."
+msgstr "Kein Preset für {chosen}: gezeigt wird das für {shown}."
 
-#. RESOLUTION_BELOW_MIN_SPEC_HINT
-msgid "Even the lowest settings may stutter at this resolution."
-msgstr "Selbst mit den niedrigsten Einstellungen kann es bei dieser Auflösung ruckeln."
+#. RESOLUTION_BELOW_MIN_SPEC
+msgid "Too demanding for this PC: even the lowest settings may stutter at this resolution."
+msgstr "Zu anspruchsvoll für diesen PC: selbst mit den niedrigsten Einstellungen kann es bei dieser Auflösung ruckeln."
 
 #. PERFORMANCE
 msgid "Performance"

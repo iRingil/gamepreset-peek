@@ -76,9 +76,9 @@ class TestText:
         # Arrange
         translator: Translator = Translator(language="fr", locale_dir=tmp_path)
         # Act
-        text: str = translator.text(item=UiText.SHOW_SETTINGS)
+        text: str = translator.text(item=UiText.SHOW_LOGS)
         # Assert
-        assert text == "Show settings"
+        assert text == "Show logs"
 
     def test_unsupported_language(self, locale_dir: Path) -> None:
         """

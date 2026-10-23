@@ -7,8 +7,8 @@ from typing import Iterator
 from unittest.mock import MagicMock, create_autospec
 
 import pytest
-from PySide6.QtCore import QEvent, QModelIndex, QObject, QPoint, QRect
-from PySide6.QtGui import QColor, QFont, QHelpEvent, QImage, QPalette
+from PySide6.QtCore import QModelIndex, QObject
+from PySide6.QtGui import QFont, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QAbstractItemView,
@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
     QSlider,
     QStyledItemDelegate,
     QStyleOptionViewItem,
-    QToolTip,
     QTreeWidget,
 )
 
@@ -31,24 +30,13 @@ from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.ui.choice_popup import ChoicePopup
 from app.ui.main_window import MainWindow
-from app.ui.presenter import (
-    ChoiceGroup,
-    ChoiceView,
-    HardwareView,
-    Hint,
-    Presenter,
-    ResolutionRow,
-    SettingRow,
-    SettingsView,
-)
+from app.ui.presenter import ChoiceGroup, ChoiceView, HardwareView, Presenter, SettingRow, SettingsView
 from app.ui.theme import Theme
 
 __all__: tuple = ()
 
-_HINT: Hint = Hint(title="Too demanding for this PC", text="Even the lowest settings may stutter at this resolution.")
 _SETTINGS: SettingsView = SettingsView(
     title="Baldur's Gate 3",
-    subtitle="1920x1080, target 60 FPS",
     position="2 / 3",
     caption="optimal preset",
     rows=(
@@ -88,16 +76,13 @@ class _Window:
         self.monkeypatch.setattr(target=Presenter, name=action, value=method)
         return method
 
-    def lists(self) -> tuple[QListView, QListView]:
+    def games(self) -> QListView:
         """
-        Get the game and resolution lists.
+        Get the game list.
 
-        :return: game list, resolution list
+        :return: game list
         """
-        games, resolutions = (
-            view for view in self.widget.findChildren(QListView) if type(view).__name__ == "_ChoiceList"
-        )
-        return games, resolutions
+        return next(view for view in self.widget.findChildren(QListView) if type(view).__name__ == "_ChoiceList")
 
     def button(self, *, text: str) -> QPushButton:
         """
@@ -152,7 +137,7 @@ class _Window:
 
     def popup(self) -> ChoicePopup | None:
         """
-        Get the open CPU or GPU choice.
+        Get the open CPU, GPU or resolution choice.
 
         :return: the choice, None when none is open
         """
@@ -200,13 +185,19 @@ class TestMainWindow:
         # Arrange & Act
         search: QLineEdit = window.child(parent=window.widget, kind=QLineEdit)
         # Assert
-        assert [label.text() for label in window.widget.findChildren(QLabel)][:4] == ["CPU:", "GPU:", "RAM:", "VRAM:"]
+        assert [label.text() for label in window.widget.findChildren(QLabel)][:5] == [
+            "CPU:",
+            "GPU:",
+            "Resolution:",
+            "RAM:",
+            "VRAM:",
+        ]
         assert (search.placeholderText(), window.table().headerItem().text(1)) == ("Search", "Value")
         assert window.button(text="Show logs").isVisible()
 
     def test_hardware(self, window: _Window) -> None:
         """
-        Shows the CPU and GPU as links, escaping their text, and the memory sizes.
+        Shows the CPU, GPU and resolution as links, escaping their text, and the memory sizes.
 
         :param window: the window
         :return: None
@@ -214,31 +205,38 @@ class TestMainWindow:
         # Arrange & Act
         window.widget.show_hardware(
             hardware=HardwareView(
-                cpu="AMD <Ryzen>", gpu="NVIDIA GeForce RTX 4090", memory="32 GB", video_memory="24 GB"
+                cpu="AMD <Ryzen>",
+                gpu="NVIDIA GeForce RTX 4090",
+                resolution="2560x1600",
+                memory="32 GB",
+                video_memory="24 GB",
             )
         )
         # Assert
         assert window.label(text='<a href="choose">AMD &lt;Ryzen&gt;</a>') is not None
         assert window.label(text='<a href="choose">NVIDIA GeForce RTX 4090</a>') is not None
+        assert window.label(text='<a href="choose">2560x1600</a>') is not None
         assert (window.label(text="32 GB").isVisible(), window.label(text="24 GB").isVisible()) == (True, True)
 
     @pytest.mark.parametrize(
         argnames=("link", "action"),
-        argvalues=[(0, "open_cpu_choice"), (1, "open_gpu_choice")],
-        ids=["cpu", "gpu"],
+        argvalues=[(0, "open_cpu_choice"), (1, "open_gpu_choice"), (2, "open_resolution_choice")],
+        ids=["cpu", "gpu", "resolution"],
     )
     def test_hardware_links(self, window: _Window, link: int, action: str) -> None:
         """
-        Opens the CPU or GPU choice through the presenter when its link is clicked.
+        Opens the CPU, GPU or resolution choice through the presenter when its link is clicked.
 
         :param window: the window
-        :param link: 0 for the CPU link, 1 for the GPU one
+        :param link: 0 for the CPU link, 1 for the GPU one, 2 for the resolution one
         :param action: presenter method expected
         :return: None
         """
         # Arrange
         method: MagicMock = window.spy(action=action)
-        window.widget.show_hardware(hardware=HardwareView(cpu="CPU", gpu="GPU", memory="", video_memory=""))
+        window.widget.show_hardware(
+            hardware=HardwareView(cpu="CPU", gpu="GPU", resolution="1920x1080", memory="", video_memory="")
+        )
         links: list[QLabel] = [label for label in window.widget.findChildren(QLabel) if "href" in label.text()]
         # Act
         links[link].linkActivated.emit("choose")
@@ -285,6 +283,27 @@ class TestMainWindow:
         # Assert
         window.presenter.choose_cpu.assert_called_once_with(position=0)
 
+    def test_offer_resolutions_picks_resolution(self, window: _Window) -> None:
+        """
+        Passes a pick of the resolution choice to the presenter as a resolution.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        window.widget.offer_resolutions(
+            choice=ChoiceView(
+                detected=("1920x1080",), groups=(ChoiceGroup(title="", items=("3840x2160",)),), selected=0
+            )
+        )
+        popup: ChoicePopup | None = window.popup()
+        assert popup is not None
+        view: QListView = window.child(parent=popup, kind=QListView)
+        # Act
+        view.activated.emit(view.model().index(0, 0))
+        # Assert
+        window.presenter.choose_resolution.assert_called_once_with(position=0)
+
     def test_empty_offer(self, window: _Window) -> None:
         """
         Opens nothing for a choice without items.
@@ -307,7 +326,7 @@ class TestMainWindow:
         :return: None
         """
         # Arrange
-        games, _ = window.lists()
+        games: QListView = window.games()
         window.widget.show_games(names=["Baldur's Gate 3", "MORDHAU"], selected=0)
         window.presenter.reset_mock()
         # Act
@@ -334,94 +353,6 @@ class TestMainWindow:
         # Assert
         assert button.isVisible()
         method.assert_called_once_with(window.presenter)
-
-    def test_resolution_selection_kept(self, window: _Window) -> None:
-        """
-        Keeps the selected resolution when only the texts of the rows change, and drops it for other rows.
-
-        :param window: the window
-        :return: None
-        """
-        # Arrange
-        _, resolutions = window.lists()
-        window.widget.show_resolutions(
-            items=[
-                ResolutionRow(resolution="3840x2160", warning=_HINT),
-                ResolutionRow(resolution="1920x1080", warning=None),
-            ]
-        )
-        resolutions.setCurrentIndex(resolutions.model().index(1, 0))
-        window.presenter.reset_mock()
-        # Act
-        window.widget.show_resolutions(
-            items=[
-                ResolutionRow(resolution="3840x2160", warning=None),
-                ResolutionRow(resolution="1920x1080", warning=None),
-            ]
-        )
-        kept: int = resolutions.currentIndex().row()
-        window.widget.show_resolutions(items=[ResolutionRow(resolution="1280x720", warning=None)])
-        # Assert
-        assert (kept, resolutions.currentIndex().isValid()) == (1, False)
-        window.presenter.select_resolution.assert_called_once_with(index=1)
-
-    def test_warning_sign_hint(self, window: _Window) -> None:
-        """
-        Pops the hint of a warning sign up over the sign only.
-
-        :param window: the window
-        :return: None
-        """
-        # Arrange
-        _, resolutions = window.lists()
-        window.widget.show_resolutions(items=[ResolutionRow(resolution="3840x2160", warning=_HINT)])
-        index: QModelIndex = resolutions.model().index(0, 0)
-        row: QRect = resolutions.visualRect(index)
-        text_end: int = row.left() + resolutions.fontMetrics().horizontalAdvance("3840x2160 ")
-        # Act
-        hints: list[str] = []
-        for x in (row.left() + 2, text_end + 12):
-            position: QPoint = QPoint(x, row.center().y())
-            event: QHelpEvent = QHelpEvent(QEvent.Type.ToolTip, position, resolutions.viewport().mapToGlobal(position))
-            option: QStyleOptionViewItem = QStyleOptionViewItem()
-            option.initFrom(resolutions)
-            option.rect = row
-            window.delegate(view=resolutions).helpEvent(event, resolutions, option, index)
-            hints.append(QToolTip.text())
-            QToolTip.hideText()
-        # Assert
-        assert hints[0] == "" and _HINT.title in hints[1] and _HINT.text in hints[1]
-
-    def test_warning_sign_drawn(self, window: _Window) -> None:
-        """
-        Draws the amber warning sign after the text of a row that has one, and none on a row without it.
-
-        :param window: the window
-        :return: None
-        """
-        # Arrange
-        _, resolutions = window.lists()
-        window.widget.show_resolutions(
-            items=[
-                ResolutionRow(resolution="3840x2160", warning=_HINT),
-                ResolutionRow(resolution="1920x1080", warning=None),
-            ]
-        )
-        # Act
-        image: QImage = resolutions.viewport().grab().toImage()
-        # Assert
-        amber_rows: list[int] = []
-        for row in range(2):
-            area: QRect = resolutions.visualRect(resolutions.model().index(row, 0))
-            ratio: float = image.devicePixelRatio()
-            colors: list[QColor] = [
-                image.pixelColor(round(x * ratio), round(y * ratio))
-                for x in range(area.left(), area.right())
-                for y in range(area.top(), area.bottom())
-            ]
-            if any(color.red() == 0xFF and color.green() == 0xC2 and color.blue() == 0x4B for color in colors):
-                amber_rows.append(row)
-        assert amber_rows == [0]
 
     def test_settings(self, window: _Window) -> None:
         """
@@ -469,24 +400,21 @@ class TestMainWindow:
 
     def test_settings_cleared(self, window: _Window) -> None:
         """
-        Hides the table and the slider, and offers the "Show settings" button on request.
+        Hides the table, the slider and the title.
 
         :param window: the window
         :return: None
         """
         # Arrange
-        method: MagicMock = window.spy(action="show_settings")
         window.widget.show_settings(settings=_SETTINGS)
         # Act
         window.widget.clear_settings()
-        window.widget.show_settings_button(visible=True)
-        window.button(text="Show settings").click()
         # Assert
         assert (window.table().isVisible(), window.child(parent=window.widget, kind=QSlider).isVisible()) == (
             False,
             False,
         )
-        method.assert_called_once_with(window.presenter)
+        assert all(label.text() != "Baldur's Gate 3" for label in window.widget.findChildren(QLabel))
 
     def test_back_to_optimal(self, window: _Window) -> None:
         """

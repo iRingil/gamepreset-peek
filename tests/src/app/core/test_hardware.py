@@ -1,5 +1,6 @@
 """Tests of the hardware detection."""
 
+import ctypes
 import re
 import winreg
 from contextlib import closing
@@ -287,6 +288,31 @@ class TestHardwareDetector:
         version: str = HardwareDetector.os_version()
         # Assert
         assert re.fullmatch(pattern=r"\d+\.\d+", string=version)
+
+    def test_screen_resolution(self) -> None:
+        """
+        Reports the resolution of this machine's primary screen as width x height.
+
+        :return: None
+        """
+        # Arrange & Act
+        resolution: str | None = HardwareDetector.screen_resolution()
+        # Assert
+        assert resolution is not None and re.fullmatch(pattern=r"[1-9]\d+x[1-9]\d+", string=resolution)
+
+    def test_screen_not_detected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        Reports no resolution when Windows gives no display mode.
+
+        :param monkeypatch: pytest monkeypatch
+        :return: None
+        """
+        # Arrange
+        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda name: {"EnumDisplaySettingsW": lambda *_: 0})
+        # Act
+        resolution: str | None = HardwareDetector.screen_resolution()
+        # Assert
+        assert resolution is None
 
 
 class TestCpuList:

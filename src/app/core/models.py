@@ -39,14 +39,15 @@ class Gpu:
 
 @dataclass(frozen=True, slots=True)
 class SystemHardware:
-    """The hardware detected on this PC: CPU name (None when not detected), NVIDIA GPUs, memory and Windows version.
+    """The hardware detected on this PC: CPU name, NVIDIA GPUs, memory, Windows version and the screen resolution.
 
-    The GPUs come the most powerful first."""
+    The CPU name and the resolution are None when not detected. The GPUs come the most powerful first."""
 
     cpu_name: str | None
     gpus: tuple[Gpu, ...]
     memory_gb: int
     os_version: str
+    resolution: str | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,15 +60,18 @@ class HardwareChoice:
 
 @dataclass(frozen=True, slots=True)
 class HardwareSetup:
-    """What the hardware choice starts from: the detected hardware, the bundled lists and the CPU and GPU in use.
+    """What the hardware and resolution choices start from: detected values, bundled lists and what is in use.
 
-    The bundled GPUs leave out the detected ones; the bundled CPUs are split by vendor."""
+    The bundled GPUs leave out the detected ones; the bundled CPUs are split by vendor; the bundled resolutions leave
+    out the detected one. The resolution in use is the chosen one, else the detected one, else the default."""
 
     system: SystemHardware
     amd_cpus: tuple[str, ...]
     intel_cpus: tuple[str, ...]
     gpus: tuple[Gpu, ...]
+    resolutions: tuple[str, ...]
     choice: HardwareChoice
+    resolution: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -256,12 +260,15 @@ class GameSettings:
 class UserSettings:
     """Settings kept between runs: UI language code, the hardware detected at the last start, the chosen one, the theme.
 
-    The detected CPU and NVIDIA GPUs (the most powerful first) are written at every start. The chosen CPU and GPU are
-    the ones the user picked in the lists, None when not picked: the detected ones are used then."""
+    The detected CPU, NVIDIA GPUs (the most powerful first) and screen resolution are written at every start. The
+    chosen CPU, GPU and resolution are the ones the user picked in the lists, None when not picked: the detected ones
+    are used then."""
 
     language: str | None = None
     detected_cpu: str | None = None
     detected_gpus: tuple[Gpu, ...] = ()
+    detected_resolution: str | None = None
     chosen_cpu: str | None = None
     chosen_gpu: Gpu | None = None
+    chosen_resolution: str | None = None
     theme: ThemeMode = ThemeMode.AUTO

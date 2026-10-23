@@ -1,4 +1,4 @@
-"""Detection of the user's hardware (CPU and NVIDIA GPUs from the registry, memory, Windows) and the bundled lists."""
+"""Detection of the user's hardware (CPU, NVIDIA GPUs, memory, screen, Windows version) and the bundled lists."""
 
 import ctypes
 import re
@@ -33,8 +33,37 @@ class _MemoryStatus(ctypes.Structure):  # pylint: disable=too-few-public-methods
     ]
 
 
+class _DisplayMode(ctypes.Structure):  # pylint: disable=too-few-public-methods
+    """DEVMODEW of the Windows API, as far as the display fields; dmSize tells the API how much of it is filled."""
+
+    _fields_ = [
+        ("dmDeviceName", ctypes.c_wchar * 32),
+        ("dmSpecVersion", ctypes.c_ushort),
+        ("dmDriverVersion", ctypes.c_ushort),
+        ("dmSize", ctypes.c_ushort),
+        ("dmDriverExtra", ctypes.c_ushort),
+        ("dmFields", ctypes.c_ulong),
+        ("dmPositionX", ctypes.c_long),
+        ("dmPositionY", ctypes.c_long),
+        ("dmDisplayOrientation", ctypes.c_ulong),
+        ("dmDisplayFixedOutput", ctypes.c_ulong),
+        ("dmColor", ctypes.c_short),
+        ("dmDuplex", ctypes.c_short),
+        ("dmYResolution", ctypes.c_short),
+        ("dmTTOption", ctypes.c_short),
+        ("dmCollate", ctypes.c_short),
+        ("dmFormName", ctypes.c_wchar * 32),
+        ("dmLogPixels", ctypes.c_ushort),
+        ("dmBitsPerPel", ctypes.c_ulong),
+        ("dmPelsWidth", ctypes.c_ulong),
+        ("dmPelsHeight", ctypes.c_ulong),
+        ("dmDisplayFlags", ctypes.c_ulong),
+        ("dmDisplayFrequency", ctypes.c_ulong),
+    ]
+
+
 class HardwareDetector:
-    """Reads the hardware NVIDIA identifies a system by.
+    """Reads the hardware NVIDIA identifies a system by, and the screen resolution.
 
     GPUs come from HARDWARE\\DEVICEMAP\\VIDEO, which Windows rebuilds at boot with the active adapters only, so a
     removed or disabled card left in the driver class key is never reported."""
@@ -46,6 +75,8 @@ class HardwareDetector:
     _NVIDIA_DEVICE_ID: re.Pattern[str] = re.compile(pattern=r"ven_10de&dev_([0-9a-f]{4})")
     # A 64-bit size in bytes; the 32-bit "HardwareInformation.MemorySize" stops at 4 GiB.
     _VIDEO_MEMORY_VALUE: str = "HardwareInformation.qwMemorySize"
+    # EnumDisplaySettings: the mode in use, not one of the registry.
+    _CURRENT_SETTINGS: int = -1
 
     @classmethod
     def cpu_name(cls) -> str | None:
@@ -98,6 +129,23 @@ class HardwareDetector:
         size: int = round(status.ullTotalPhys / 2**30)
         logger.info("Memory: {} GB", size)
         return size
+
+    @classmethod
+    def screen_resolution(cls) -> str | None:
+        """
+        Read the resolution of the primary screen in physical pixels, whatever the display scale.
+
+        :return: resolution as NVIDIA writes it, e.g. "2560x1600"; None when Windows doesn't report it
+        """
+        mode: _DisplayMode = _DisplayMode(dmSize=ctypes.sizeof(_DisplayMode))
+        # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
+        enum_display_settings: Any = ctypes.WinDLL(name="user32")["EnumDisplaySettingsW"]
+        if not enum_display_settings(None, cls._CURRENT_SETTINGS, ctypes.byref(mode)) or not mode.dmPelsWidth:
+            logger.warning("Screen resolution not detected")
+            return None
+        resolution: str = f"{mode.dmPelsWidth}x{mode.dmPelsHeight}"
+        logger.info("Screen: {}", resolution)
+        return resolution
 
     @staticmethod
     def os_version() -> str:

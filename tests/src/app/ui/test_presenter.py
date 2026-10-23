@@ -1,4 +1,4 @@
-"""Tests of the main window logic on a fake window and a runner that runs tasks in place."""
+"""Tests of the main window logic on a fake window, a runner that runs tasks in place and a debouncer run by hand."""
 
 # pylint: disable=too-many-lines
 
@@ -31,16 +31,7 @@ from app.core.models import (
 from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
-from app.ui.presenter import (
-    ChoiceGroup,
-    ChoiceView,
-    HardwareView,
-    Hint,
-    Presenter,
-    ResolutionRow,
-    SettingRow,
-    SettingsView,
-)
+from app.ui.presenter import ChoiceGroup, ChoiceView, HardwareView, Presenter, SettingRow, SettingsView
 
 __all__: tuple = ()
 
@@ -49,22 +40,27 @@ _DESKTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")
 _CPU: str = "13th Gen Intel(R) Core(TM) i9-13900HX"
 _AMD_CPU: str = "AMD Ryzen 7 7800X3D 8-Core Processor"
 _INTEL_CPU: str = "Intel(R) Core(TM) i7-14700K"
-# A laptop with its GPU detected, the RTX 4090 in the bundled list and no bundled CPUs.
+_SCREEN: str = "1920x1080"
+_BUNDLED_RESOLUTIONS: tuple[str, ...] = ("3840x2160", "2560x1600", "2560x1440")
+# A laptop with its GPU and screen detected, the RTX 4090 in the bundled list and no bundled CPUs.
 _SETUP: HardwareSetup = HardwareSetup(
-    system=SystemHardware(cpu_name=_CPU, gpus=(_LAPTOP_GPU,), memory_gb=16, os_version="10.0"),
+    system=SystemHardware(cpu_name=_CPU, gpus=(_LAPTOP_GPU,), memory_gb=16, os_version="10.0", resolution=_SCREEN),
     amd_cpus=(),
     intel_cpus=(),
     gpus=(_DESKTOP_GPU,),
+    resolutions=_BUNDLED_RESOLUTIONS,
     choice=HardwareChoice(cpu_name=_CPU, gpu=_LAPTOP_GPU),
+    resolution=_SCREEN,
 )
 _LAPTOP_VIEW: HardwareView = HardwareView(
-    cpu=_CPU, gpu="NVIDIA GeForce RTX 4060 Laptop GPU", memory="16 GB", video_memory="8 GB"
+    cpu=_CPU, gpu="NVIDIA GeForce RTX 4060 Laptop GPU", resolution=_SCREEN, memory="16 GB", video_memory="8 GB"
 )
 _GAMES: tuple[Game, ...] = (
     Game(game_id="baldurs_gate_3", name="Baldur's Gate 3"),
     Game(game_id="mordhau", name="MORDHAU"),
 )
 _PRESETS_FILE: RemoteFile = RemoteFile(url="https://cdn.example.test/pops", sha256="00", size=1)
+# No preset for 2560x1600: the one of 2560x1440 stands in; 4K is too much for the hardware.
 _PRESETS: GamePresets = GamePresets(
     profile="regular",
     version="1",
@@ -72,18 +68,9 @@ _PRESETS: GamePresets = GamePresets(
     resolutions=(
         ResolutionPreset(resolution="1920x1080", preset_index=2, rate=40, below_min_spec=False),
         ResolutionPreset(resolution="3840x2160", preset_index=1, rate=40, below_min_spec=True),
-        ResolutionPreset(resolution="2560x1440", preset_index=2, rate=35, below_min_spec=False),
+        ResolutionPreset(resolution="2560x1440", preset_index=3, rate=35, below_min_spec=False),
     ),
 )
-_WARNING: Hint = Hint(
-    title="Too demanding for this PC", text="Even the lowest settings may stutter at this resolution."
-)
-# The resolution list _PRESETS shows: the largest first, the warning on the one below the minimum requirements.
-_ROWS: list[ResolutionRow] = [
-    ResolutionRow(resolution="3840x2160", warning=_WARNING),
-    ResolutionRow(resolution="2560x1440", warning=None),
-    ResolutionRow(resolution="1920x1080", warning=None),
-]
 _SETTINGS: GameSettings = GameSettings(
     presets=PresetsFile(
         settings=(Setting(name="Shadows", type="ENUM"), Setting(name="Scale", type="FLOAT")),
@@ -99,6 +86,19 @@ _SETTINGS: GameSettings = GameSettings(
             }
         }
     ),
+)
+# The recommended preset of MORDHAU at the detected screen.
+_SHOWN: SettingsView = SettingsView(
+    title="MORDHAU",
+    position="2 / 3",
+    caption="optimal preset",
+    rows=(
+        SettingRow(name="Shadows", value="Medium", changed=False),
+        SettingRow(name="Scale", value="1.000", changed=False),
+    ),
+    count=3,
+    index=2,
+    optimal=True,
 )
 
 
@@ -149,11 +149,10 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.load_games: bool = False
         self.games: list[str] = []
         self.game_selected: int | None = None
-        self.resolutions: list[ResolutionRow] = []
-        self.settings_button: bool = False
         self.settings: SettingsView | None = None
         self.cpu_offers: list[ChoiceView] = []
         self.gpu_offers: list[ChoiceView] = []
+        self.resolution_offers: list[ChoiceView] = []
         self.warnings: list[str] = []
 
     def apply_language(self, *, translator: Translator) -> None:
@@ -211,6 +210,15 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.gpu_offers.append(choice)
 
+    def offer_resolutions(self, *, choice: ChoiceView) -> None:
+        """
+        Record a resolution choice offered.
+
+        :param choice: resolutions to choose from
+        :return: None
+        """
+        self.resolution_offers.append(choice)
+
     def show_status(self, *, text: str) -> None:
         """
         Record the status line.
@@ -248,24 +256,6 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.games = list(names)
         self.game_selected = selected
-
-    def show_resolutions(self, *, items: Sequence[ResolutionRow]) -> None:
-        """
-        Record the resolution list.
-
-        :param items: resolution rows
-        :return: None
-        """
-        self.resolutions = list(items)
-
-    def show_settings_button(self, *, visible: bool) -> None:
-        """
-        Record the "Show settings" button state.
-
-        :param visible: whether it is shown
-        :return: None
-        """
-        self.settings_button = visible
 
     def show_settings(self, *, settings: SettingsView) -> None:
         """
@@ -335,6 +325,43 @@ class _Runner:
             self._jobs.pop(0)()
 
 
+class _Debouncer:
+    """Runs actions at once, or keeps the last one of each key until fire() when held."""
+
+    def __init__(self) -> None:
+        """
+        Run actions at once until held is set.
+        """
+        self.held: bool = False
+        self.pending: dict[str, Callable[[], None]] = {}
+
+    def call(self, *, key: str, delay_ms: int, action: Callable[[], None]) -> None:
+        """
+        Run an action, or keep it in place of the one waiting under the key.
+
+        :param key: what the action is for
+        :param delay_ms: pause asked for, ignored
+        :param action: the action
+        :return: None
+        """
+        assert delay_ms > 0
+        if self.held:
+            self.pending[key] = action
+        else:
+            action()
+
+    def fire(self) -> None:
+        """
+        Run the actions kept.
+
+        :return: None
+        """
+        actions: list[Callable[[], None]] = list(self.pending.values())
+        self.pending.clear()
+        for action in actions:
+            action()
+
+
 class _PresenterTests:
     """Fixtures of the presenter tests: a started presenter over a mocked service with the laptop GPU ready."""
 
@@ -356,6 +383,15 @@ class _PresenterTests:
         """
         return _Runner()
 
+    @pytest.fixture(name="debouncer")
+    def _debouncer(self) -> _Debouncer:
+        """
+        Create the debouncer.
+
+        :return: debouncer running actions at once
+        """
+        return _Debouncer()
+
     @pytest.fixture(name="service")
     def _service(self) -> MagicMock:
         """
@@ -372,12 +408,15 @@ class _PresenterTests:
         return service
 
     @pytest.fixture(name="presenter")
-    def _presenter(self, view: _FakeView, runner: _Runner, service: MagicMock, locale_dir: Path) -> Presenter:
+    def _presenter(
+        self, view: _FakeView, runner: _Runner, debouncer: _Debouncer, service: MagicMock, locale_dir: Path
+    ) -> Presenter:
         """
         Create the presenter in English; tests start it themselves.
 
         :param view: fake window
         :param runner: runner
+        :param debouncer: debouncer
         :param service: service mock
         :param locale_dir: compiled catalogs
         :return: presenter under test
@@ -386,24 +425,22 @@ class _PresenterTests:
             view=view,
             service=service,
             runner=runner,
+            debouncer=debouncer,
             translator=Translator(language="en", locale_dir=locale_dir),
             theme=ThemeMode.AUTO,
             locale_dir=locale_dir,
         )
 
     @staticmethod
-    def show_settings(*, presenter: Presenter, resolution: int = 2) -> None:
+    def show_settings(*, presenter: Presenter) -> None:
         """
-        Start, pick MORDHAU and a resolution and show its settings.
+        Start and pick MORDHAU, which shows its settings for the detected screen.
 
         :param presenter: presenter under test
-        :param resolution: position of the resolution in the sorted list
         :return: None
         """
         presenter.start()
         presenter.select_game(index=1)
-        presenter.select_resolution(index=resolution)
-        presenter.show_settings()
 
 
 class TestStart(_PresenterTests):
@@ -446,7 +483,9 @@ class TestStart(_PresenterTests):
         # Act
         presenter.start()
         # Assert
-        assert view.hardware == HardwareView(cpu="Loading…", gpu="Loading…", memory="", video_memory="")
+        assert view.hardware == HardwareView(
+            cpu="Loading…", gpu="Loading…", resolution="Loading…", memory="", video_memory=""
+        )
 
     def test_nothing_detected(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
@@ -459,18 +498,24 @@ class TestStart(_PresenterTests):
         """
         # Arrange
         service.hardware_setup.return_value = HardwareSetup(
-            system=SystemHardware(cpu_name=None, gpus=(), memory_gb=8, os_version="10.0"),
+            system=SystemHardware(cpu_name=None, gpus=(), memory_gb=8, os_version="10.0", resolution=None),
             amd_cpus=(),
             intel_cpus=(),
             gpus=(_DESKTOP_GPU,),
+            resolutions=_BUNDLED_RESOLUTIONS,
             choice=HardwareChoice(cpu_name=None, gpu=None),
+            resolution="1920x1080",
         )
         service.check_hardware.return_value = HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
         # Act
         presenter.start()
         # Assert
         assert view.hardware == HardwareView(
-            cpu="Choose a processor", gpu="Choose a graphics card", memory="8 GB", video_memory="unknown"
+            cpu="Choose a processor",
+            gpu="Choose a graphics card",
+            resolution="1920x1080",
+            memory="8 GB",
+            video_memory="unknown",
         )
         assert view.warnings == [UiText.UNSUPPORTED_HARDWARE.value]
 
@@ -641,9 +686,9 @@ class TestGame(_PresenterTests):
         )
         service.game_presets.assert_not_called()
 
-    def test_resolutions(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+    def test_settings_shown(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Shows the resolutions of the game, the largest first, with a warning on those below the minimum requirements.
+        Requests the presets of the game and shows the recommended preset of the screen in use at once.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -656,8 +701,54 @@ class TestGame(_PresenterTests):
         presenter.select_game(index=1)
         # Assert
         service.game_presets.assert_called_once_with(game_id="mordhau", hardware=_Hardware.with_gpu(gpu=_LAPTOP_GPU))
-        assert view.resolutions == _ROWS
-        assert (view.status, view.settings_button) == ("", False)
+        service.game_settings.assert_called_once_with(game_id="mordhau", presets=_PRESETS)
+        assert (view.settings, view.status) == (_SHOWN, "")
+
+    def test_requests_wait_for_the_selection_to_rest(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, debouncer: _Debouncer
+    ) -> None:
+        """
+        Requests the presets of the game the selection rests on only, showing it loading meanwhile.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param debouncer: debouncer
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        debouncer.held = True
+        # Act
+        presenter.select_game(index=0)
+        presenter.select_game(index=1)
+        waiting: tuple[str, int] = (view.status, service.game_presets.call_count)
+        debouncer.fire()
+        # Assert
+        assert waiting == ("Loading…", 0)
+        service.game_presets.assert_called_once_with(game_id="mordhau", hardware=_Hardware.with_gpu(gpu=_LAPTOP_GPU))
+
+    def test_pending_request_dropped_without_hardware(
+        self, presenter: Presenter, service: MagicMock, debouncer: _Debouncer
+    ) -> None:
+        """
+        Requests nothing when the hardware is lost while the selection is still resting on a game.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :param debouncer: debouncer
+        :return: None
+        """
+        # Arrange
+        service.choose_hardware.return_value = HardwareCheck(state=HardwareState.REJECTED, failed=("gpu",))
+        presenter.start()
+        debouncer.held = True
+        presenter.select_game(index=1)
+        presenter.choose_gpu(position=1)
+        # Act
+        debouncer.fire()
+        # Assert
+        service.game_presets.assert_not_called()
 
     def test_no_recommendations(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
@@ -676,7 +767,25 @@ class TestGame(_PresenterTests):
         # Act
         presenter.select_game(index=0)
         # Assert
-        assert (view.resolutions, view.status) == ([], "No recommendations")
+        assert (view.settings, view.status) == (None, "No recommendations")
+        service.game_settings.assert_not_called()
+
+    def test_presets_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Reports a failed presets request.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.game_presets.side_effect = ConnectionError("timeout")
+        presenter.start()
+        # Act
+        presenter.select_game(index=1)
+        # Assert
+        assert (view.status, view.settings) == ("Could not get data from NVIDIA: timeout", None)
 
     def test_stale_answer_dropped(
         self, presenter: Presenter, view: _FakeView, service: MagicMock, runner: _Runner
@@ -691,85 +800,48 @@ class TestGame(_PresenterTests):
         :return: None
         """
         # Arrange
-        presets: dict[str, GamePresets] = {
-            "baldurs_gate_3": GamePresets(
-                profile="regular",
-                version="1",
-                presets_file=_PRESETS_FILE,
-                resolutions=(ResolutionPreset(resolution="1280x720", preset_index=1, rate=40, below_min_spec=False),),
-            ),
-            "mordhau": _PRESETS,
-        }
-        shown: list[list[ResolutionRow]] = []
+        shown: list[str] = []
 
-        def record(*, items: Sequence[ResolutionRow]) -> None:
+        def record(*, settings: SettingsView) -> None:
             """
-            Record every resolution list shown.
+            Record the title of every settings view shown.
 
-            :param items: resolution rows
+            :param settings: what is shown
             :return: None
             """
-            shown.append(list(items))
+            shown.append(settings.title)
 
-        service.game_presets.side_effect = lambda **kwargs: presets[kwargs["game_id"]]
         presenter.start()
         runner.deferred = True
-        view.show_resolutions = record  # type: ignore[method-assign]
+        view.show_settings = record  # type: ignore[method-assign]
         presenter.select_game(index=0)
         presenter.select_game(index=1)
         # Act
         runner.run_all()
         # Assert
-        assert [ResolutionRow(resolution="1280x720", warning=None)] not in shown
-        assert shown[-1] == _ROWS
+        assert shown == ["MORDHAU"]
+        assert service.game_settings.call_args.kwargs["game_id"] == "mordhau"
 
-
-class TestSettings(_PresenterTests):
-    """Tests of Presenter.select_resolution, show_settings, move_slider and back_to_optimal."""
-
-    def test_resolution_selected(self, presenter: Presenter, view: _FakeView) -> None:
+    def test_game_change_clears(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
         """
-        Offers the "Show settings" button for a chosen resolution.
+        Clears the settings as soon as another game is chosen.
 
         :param presenter: presenter under test
         :param view: fake window
+        :param runner: runner
         :return: None
         """
         # Arrange
-        presenter.start()
-        presenter.select_game(index=1)
-        # Act
-        presenter.select_resolution(index=0)
-        # Assert
-        assert (view.settings_button, view.settings) == (True, None)
-
-    def test_recommended_preset(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
-        """
-        Shows the recommended preset of the resolution with the slider on it and hides the button.
-
-        :param presenter: presenter under test
-        :param view: fake window
-        :param service: service mock
-        :return: None
-        """
-        # Arrange & Act
         self.show_settings(presenter=presenter)
+        runner.deferred = True
+        # Act
+        presenter.select_game(index=0)
         # Assert
-        service.game_settings.assert_called_once_with(game_id="mordhau", presets=_PRESETS)
-        assert view.settings == SettingsView(
-            title="MORDHAU",
-            subtitle="1920x1080, target 40 FPS",
-            position="2 / 3",
-            caption="optimal preset",
-            rows=(
-                SettingRow(name="Shadows", value="Medium", changed=False),
-                SettingRow(name="Scale", value="1.000", changed=False),
-            ),
-            count=3,
-            index=2,
-            optimal=True,
-        )
-        assert (view.settings_button, view.status) == (False, "")
+        assert (view.settings, view.status) == (None, "Loading…")
+
+
+class TestSettings(_PresenterTests):
+    """Tests of the settings shown, Presenter.move_slider and back_to_optimal."""
 
     def test_slider_and_back_to_optimal(self, presenter: Presenter, view: _FakeView) -> None:
         """
@@ -788,7 +860,6 @@ class TestSettings(_PresenterTests):
         # Assert
         assert moved == SettingsView(
             title="MORDHAU",
-            subtitle="1920x1080, target 40 FPS",
             position="3 / 3",
             caption="preset",
             rows=(
@@ -818,9 +889,27 @@ class TestSettings(_PresenterTests):
         # Assert
         assert view.settings is not None and view.settings.index == 2
 
+    def test_slider_without_settings(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Ignores the slider and the request for the recommended preset while no settings are shown.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.game_settings.side_effect = ConnectionError("timeout")
+        self.show_settings(presenter=presenter)
+        # Act
+        presenter.move_slider(index=1)
+        presenter.back_to_optimal()
+        # Assert
+        assert view.settings is None
+
     def test_settings_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Reports a failed settings request and brings the button back for a retry.
+        Reports a failed settings request.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -832,15 +921,71 @@ class TestSettings(_PresenterTests):
         # Act
         self.show_settings(presenter=presenter)
         # Assert
-        assert (view.status, view.settings_button, view.settings) == (
-            "Could not get data from NVIDIA: timeout",
-            True,
-            None,
-        )
+        assert (view.status, view.settings) == ("Could not get data from NVIDIA: timeout", None)
 
-    def test_same_resolution_kept(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+
+class TestResolution(_PresenterTests):
+    """Tests of Presenter.open_resolution_choice and choose_resolution."""
+
+    def test_resolutions_offered(self, presenter: Presenter, view: _FakeView) -> None:
         """
-        Keeps the settings shown when the window reports the chosen resolution again.
+        Offers the detected screen above the bundled resolutions, the one in use selected.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.open_resolution_choice()
+        # Assert
+        assert view.resolution_offers == [
+            ChoiceView(detected=(_SCREEN,), groups=(ChoiceGroup(title="", items=_BUNDLED_RESOLUTIONS),), selected=0)
+        ]
+
+    def test_no_screen_detected(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Offers only the bundled resolutions when no screen is detected, the one in use selected among them.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.hardware_setup.return_value = replace(
+            _SETUP, system=replace(_SETUP.system, resolution=None), resolution="2560x1600"
+        )
+        presenter.start()
+        # Act
+        presenter.open_resolution_choice()
+        # Assert
+        assert view.resolution_offers == [
+            ChoiceView(detected=(), groups=(ChoiceGroup(title="", items=_BUNDLED_RESOLUTIONS),), selected=1)
+        ]
+
+    def test_nothing_offered_before_detection(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
+        """
+        Offers nothing and takes no pick while the hardware is not detected yet.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param runner: runner
+        :return: None
+        """
+        # Arrange
+        runner.deferred = True
+        presenter.start()
+        # Act
+        presenter.open_resolution_choice()
+        presenter.choose_resolution(position=1)
+        # Assert
+        assert (view.resolution_offers, view.hardware is not None and view.hardware.resolution) == ([], "Loading…")
+
+    def test_chosen_saved_and_applied(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Saves the resolution picked, shows it and the settings of the game for it.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -850,24 +995,93 @@ class TestSettings(_PresenterTests):
         # Arrange
         self.show_settings(presenter=presenter)
         # Act
-        presenter.select_resolution(index=2)
+        presenter.choose_resolution(position=3)
         # Assert
-        assert (view.settings is not None, view.settings_button, service.game_settings.call_count) == (True, False, 1)
+        service.save_resolution.assert_called_once_with(resolution="2560x1440")
+        assert view.hardware is not None and view.hardware.resolution == "2560x1440"
+        assert view.settings is not None and (view.settings.index, view.status) == (3, "")
 
-    def test_no_resolution(self, presenter: Presenter, service: MagicMock) -> None:
+    def test_closest_smaller_resolution(self, presenter: Presenter, view: _FakeView) -> None:
         """
-        Requests no settings before a resolution is chosen.
+        Shows the preset of the closest smaller resolution when the game has none for the one in use, and says so.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :return: None
+        """
+        # Arrange
+        self.show_settings(presenter=presenter)
+        # Act
+        presenter.choose_resolution(position=2)
+        # Assert
+        assert view.settings is not None and view.settings.index == 3
+        assert view.status == "No preset for 2560x1600: showing the one for 2560x1440."
+
+    def test_smallest_when_all_larger(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Shows the preset of the smallest resolution when every one of the game is larger than the one in use.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.game_presets.return_value = replace(_PRESETS, resolutions=_PRESETS.resolutions[1:])
+        # Act
+        self.show_settings(presenter=presenter)
+        # Assert
+        assert view.settings is not None and view.settings.index == 3
+        assert view.status == "No preset for 1920x1080: showing the one for 2560x1440."
+
+    def test_below_min_spec_noted(self, presenter: Presenter, view: _FakeView) -> None:
+        """
+        Warns that the hardware is too weak for the resolution in use.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :return: None
+        """
+        # Arrange
+        self.show_settings(presenter=presenter)
+        # Act
+        presenter.choose_resolution(position=1)
+        # Assert
+        assert view.settings is not None and view.settings.index == 1
+        assert view.status == "Too demanding for this PC: even the lowest settings may stutter at this resolution."
+
+    def test_same_resolution(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Saves and requests nothing when the resolution in use is picked again.
 
         :param presenter: presenter under test
         :param service: service mock
         :return: None
         """
         # Arrange
-        presenter.start()
-        presenter.select_game(index=1)
+        self.show_settings(presenter=presenter)
         # Act
-        presenter.show_settings()
+        presenter.choose_resolution(position=0)
         # Assert
+        service.save_resolution.assert_not_called()
+        assert service.game_settings.call_count == 1
+
+    def test_chosen_without_game(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Saves and shows a resolution picked before any game is chosen, requesting nothing.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.choose_resolution(position=1)
+        # Assert
+        service.save_resolution.assert_called_once_with(resolution="3840x2160")
+        assert view.hardware is not None and view.hardware.resolution == "3840x2160"
         service.game_settings.assert_not_called()
 
     @pytest.mark.parametrize(argnames="fails", argvalues=[False, True], ids=["answer", "error"])
@@ -881,37 +1095,23 @@ class TestSettings(_PresenterTests):
         :param view: fake window
         :param service: service mock
         :param runner: runner
-        :param fails: True when the stale request fails
-        :return: None
-        """
-        # Arrange
-        if fails:
-            service.game_settings.side_effect = ConnectionError("timeout")
-        presenter.start()
-        presenter.select_game(index=1)
-        presenter.select_resolution(index=2)
-        runner.deferred = True
-        presenter.show_settings()
-        presenter.select_resolution(index=1)
-        # Act
-        runner.run_all()
-        # Assert
-        assert (view.settings, view.status, view.settings_button) == (None, "", True)
-
-    def test_game_change_clears(self, presenter: Presenter, view: _FakeView) -> None:
-        """
-        Clears the settings when another game is chosen.
-
-        :param presenter: presenter under test
-        :param view: fake window
+        :param fails: True when the requests fail
         :return: None
         """
         # Arrange
         self.show_settings(presenter=presenter)
+        if fails:
+            service.game_settings.side_effect = ConnectionError("timeout")
+        runner.deferred = True
+        presenter.choose_resolution(position=2)
+        presenter.choose_resolution(position=3)
         # Act
-        presenter.select_game(index=0)
+        runner.run_all()
         # Assert
-        assert (view.settings, view.settings_button) == (None, False)
+        if fails:
+            assert (view.settings, view.status) == (None, "Could not get data from NVIDIA: timeout")
+        else:
+            assert view.settings is not None and (view.settings.index, view.status) == (3, "")
 
 
 class TestLanguage(_PresenterTests):
@@ -919,7 +1119,7 @@ class TestLanguage(_PresenterTests):
 
     def test_switch(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Saves the language and re-renders every text shown, setting names and values included.
+        Saves the language and re-renders every text shown: setting names and values, the status note.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -928,28 +1128,22 @@ class TestLanguage(_PresenterTests):
         """
         # Arrange
         self.show_settings(presenter=presenter)
+        presenter.choose_resolution(position=2)
         # Act
         presenter.change_language(language="ru")
         # Assert
         service.save_language.assert_called_once_with(language="ru")
-        assert (presenter.language, view.language, view.resolutions[0]) == (
+        assert (presenter.language, view.language, view.status) == (
             "ru",
             "ru",
-            ResolutionRow(
-                resolution="3840x2160",
-                warning=Hint(
-                    title="Слишком тяжело для этого ПК",
-                    text="Даже на минимальных настройках в этом разрешении возможны подтормаживания.",
-                ),
-            ),
+            "Нет пресета для 2560x1600: показан пресет для 2560x1440.",
         )
         assert view.settings is not None
-        assert (view.settings.rows, view.settings.subtitle, view.settings.caption) == (
+        assert (view.settings.rows, view.settings.caption) == (
             (
-                SettingRow(name="Тени", value="Среднее", changed=False),
+                SettingRow(name="Тени", value="Высокое", changed=False),
                 SettingRow(name="Масштаб", value="1.000", changed=False),
             ),
-            "1920x1080, цель 40 FPS",
             "оптимальный пресет",
         )
 
@@ -986,6 +1180,28 @@ class TestSearch(_PresenterTests):
         presenter.search_games(text=" mord ")
         # Assert
         assert (view.games, view.game_selected) == (["MORDHAU"], None)
+
+    def test_filter_waits_for_the_typing_to_rest(
+        self, presenter: Presenter, view: _FakeView, debouncer: _Debouncer
+    ) -> None:
+        """
+        Filters the list by the text typed last only.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param debouncer: debouncer
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        debouncer.held = True
+        # Act
+        presenter.search_games(text="m")
+        presenter.search_games(text="mo")
+        typing: list[str] = list(view.games)
+        debouncer.fire()
+        # Assert
+        assert (typing, view.games) == (["Baldur's Gate 3", "MORDHAU"], ["MORDHAU"])
 
     def test_select_in_filtered_list(self, presenter: Presenter, service: MagicMock) -> None:
         """
@@ -1110,11 +1326,10 @@ class TestHardwareChoice(_PresenterTests):
         :return: None
         """
         # Arrange
-        service.hardware_setup.return_value = HardwareSetup(
-            system=_SETUP.system,
+        service.hardware_setup.return_value = replace(
+            _SETUP,
             amd_cpus=(_AMD_CPU,),
             intel_cpus=(_INTEL_CPU,),
-            gpus=_SETUP.gpus,
             choice=HardwareChoice(cpu_name=_INTEL_CPU, gpu=_LAPTOP_GPU),
         )
         presenter.start()
@@ -1164,7 +1379,7 @@ class TestHardwareChoice(_PresenterTests):
 
     def test_new_gpu_reloads_presets(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Uses the GPU NVIDIA accepts and requests the presets of the game shown again for it.
+        Uses the GPU NVIDIA accepts and requests the presets of the game shown again for it, at once.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1180,11 +1395,10 @@ class TestHardwareChoice(_PresenterTests):
         service.choose_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=_CPU, gpu=_DESKTOP_GPU))
         last_call: Any = service.game_presets.call_args
         assert last_call.kwargs == {"game_id": "mordhau", "hardware": _Hardware.with_gpu(gpu=_DESKTOP_GPU)}
-        assert (view.hardware, view.settings, view.settings_button) == (
-            HardwareView(cpu=_CPU, gpu="NVIDIA GeForce RTX 4090", memory="16 GB", video_memory="unknown"),
-            None,
-            False,
+        assert view.hardware == HardwareView(
+            cpu=_CPU, gpu="NVIDIA GeForce RTX 4090", resolution=_SCREEN, memory="16 GB", video_memory="unknown"
         )
+        assert view.settings == _SHOWN
 
     def test_new_cpu_accepted(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
@@ -1196,9 +1410,7 @@ class TestHardwareChoice(_PresenterTests):
         :return: None
         """
         # Arrange
-        service.hardware_setup.return_value = HardwareSetup(
-            system=_SETUP.system, amd_cpus=(_AMD_CPU,), intel_cpus=(), gpus=_SETUP.gpus, choice=_SETUP.choice
-        )
+        service.hardware_setup.return_value = replace(_SETUP, amd_cpus=(_AMD_CPU,))
         service.check_hardware.return_value = HardwareCheck(state=HardwareState.REJECTED, failed=("cpu",))
         service.choose_hardware.return_value = _Hardware.ready(gpu=_LAPTOP_GPU, cpu_name=_AMD_CPU)
         presenter.start()

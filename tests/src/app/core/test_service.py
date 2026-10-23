@@ -26,6 +26,7 @@ from app.core.models import (
     Translations,
     UserSettings,
 )
+from app.config import SCREEN_RESOLUTIONS
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
 
@@ -102,12 +103,18 @@ class TestHardwareSetup:
         # Assert
         assert setup == HardwareSetup(
             system=SystemHardware(
-                cpu_name=_DETECTED_CPU, gpus=(_DESKTOP_GPU, listed_detected), memory_gb=16, os_version="10.0"
+                cpu_name=_DETECTED_CPU,
+                gpus=(_DESKTOP_GPU, listed_detected),
+                memory_gb=16,
+                os_version="10.0",
+                resolution="2560x1600",
             ),
             amd_cpus=(_LISTED_CPU,),
             intel_cpus=("Intel(R) Core(TM) i7-14700K",),
             gpus=(),
+            resolutions=tuple(item for item in SCREEN_RESOLUTIONS if item != "2560x1600"),
             choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_DESKTOP_GPU),
+            resolution="2560x1600",
         )
 
     def test_nothing_detected(self, detector: MagicMock, service: PresetService) -> None:
@@ -120,14 +127,16 @@ class TestHardwareSetup:
         """
         # Arrange
         detector.cpu_name.return_value = None
+        detector.screen_resolution.return_value = None
         # Act
         setup: HardwareSetup = service.hardware_setup()
         # Assert
         assert (setup.choice, setup.gpus) == (HardwareChoice(cpu_name=None, gpu=None), (_LISTED_GPU,))
+        assert (setup.resolutions, setup.resolution) == (SCREEN_RESOLUTIONS, "1920x1080")
 
     def test_detected_saved(self, detector: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
         """
-        Saves the detected CPU and every detected GPU in place of the ones of the last start, keeping the rest.
+        Saves the detected CPU, GPUs and resolution in place of the ones of the last start, keeping the rest.
 
         :param detector: hardware detection mock
         :param store: settings store
@@ -138,7 +147,11 @@ class TestHardwareSetup:
         detector.nvidia_gpus.return_value = (_DESKTOP_GPU, _LAPTOP_GPU)
         store.save(
             settings=UserSettings(
-                language="ru", detected_cpu=_LISTED_CPU, detected_gpus=(_LISTED_GPU,), chosen_gpu=_LISTED_GPU
+                language="ru",
+                detected_cpu=_LISTED_CPU,
+                detected_gpus=(_LISTED_GPU,),
+                detected_resolution="1920x1080",
+                chosen_gpu=_LISTED_GPU,
             )
         )
         # Act
@@ -148,12 +161,13 @@ class TestHardwareSetup:
             language="ru",
             detected_cpu=_DETECTED_CPU,
             detected_gpus=(_DESKTOP_GPU, _LAPTOP_GPU),
+            detected_resolution="2560x1600",
             chosen_gpu=_LISTED_GPU,
         )
 
     def test_chosen(self, detector: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
         """
-        Starts from the chosen CPU and GPU; a chosen GPU that is installed comes with its video memory.
+        Starts from the chosen CPU, GPU and resolution; a chosen GPU that is installed comes with its video memory.
 
         :param detector: hardware detection mock
         :param store: settings store
@@ -163,12 +177,13 @@ class TestHardwareSetup:
         # Arrange
         detected_laptop: Gpu = Gpu(name=_LAPTOP_GPU.name, device_id=_LAPTOP_GPU.device_id, memory_gb=8.0)
         detector.nvidia_gpus.return_value = (_DESKTOP_GPU, detected_laptop)
-        store.save(settings=UserSettings(chosen_cpu=_LISTED_CPU, chosen_gpu=_LAPTOP_GPU))
+        store.save(settings=UserSettings(chosen_cpu=_LISTED_CPU, chosen_gpu=_LAPTOP_GPU, chosen_resolution="1920x1080"))
         # Act
         setup: HardwareSetup = service.hardware_setup()
         # Assert
         assert setup.choice == HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU)
         assert setup.choice.gpu is not None and setup.choice.gpu.memory_gb == 8.0
+        assert setup.resolution == "1920x1080"
 
     def test_detected_once(self, ops: MagicMock, detector: MagicMock, service: PresetService) -> None:
         """
@@ -186,10 +201,14 @@ class TestHardwareSetup:
         service.hardware_setup()
         service.check_hardware(choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_LAPTOP_GPU))
         # Assert
-        assert [
-            mock.call_count
-            for mock in (detector.cpu_name, detector.nvidia_gpus, detector.memory_gb, detector.os_version)
-        ] == [1, 1, 1, 1]
+        mocks: tuple[MagicMock, ...] = (
+            detector.cpu_name,
+            detector.nvidia_gpus,
+            detector.memory_gb,
+            detector.os_version,
+            detector.screen_resolution,
+        )
+        assert [mock.call_count for mock in mocks] == [1, 1, 1, 1, 1]
 
 
 class TestCheckHardware:
@@ -514,6 +533,25 @@ class TestLanguage:
         service.save_language(language="fr")
         # Assert
         assert (service.saved_language(), store.load()) == ("fr", UserSettings(language="fr", chosen_gpu=_LISTED_GPU))
+
+
+class TestResolution:
+    """Tests of PresetService.save_resolution."""
+
+    def test_saved_keeping_others(self, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Saves the chosen resolution and keeps the language and the GPU.
+
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(language="ru", chosen_gpu=_LISTED_GPU))
+        # Act
+        service.save_resolution(resolution="3840x2160")
+        # Assert
+        assert store.load() == UserSettings(language="ru", chosen_gpu=_LISTED_GPU, chosen_resolution="3840x2160")
 
 
 class TestTheme:
