@@ -1,11 +1,12 @@
 """UI logic of the main window: user actions -> service calls in the background -> what the window shows."""
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Protocol, Sequence
+from typing import Callable, Sequence
 
 from app.config import LOCALE_DIR, REQUEST_DELAY_MS, SEARCH_DELAY_MS
 from app.core.models import (
+    DatabaseUpdate,
     Game,
     GamePresets,
     GameSettings,
@@ -22,180 +23,10 @@ from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.debouncer import Debouncer
+from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, MainView, SettingRow, SettingsView
 from app.ui.worker import TaskRunner
 
-__all__: tuple[str, ...] = (
-    "ChoiceGroup",
-    "ChoiceView",
-    "HardwareView",
-    "MainView",
-    "Presenter",
-    "SettingRow",
-    "SettingsView",
-)
-
-
-@dataclass(frozen=True, slots=True)
-class HardwareView:
-    """The hardware block, translated: CPU, GPU and resolution in use (texts of their choice links), memory sizes."""
-
-    cpu: str
-    gpu: str
-    resolution: str
-    memory: str
-    video_memory: str
-
-
-@dataclass(frozen=True, slots=True)
-class ChoiceGroup:
-    """A part of a choice list below the line; with several groups each one is a tab named by its title."""
-
-    title: str
-    items: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class ChoiceView:
-    """A CPU, GPU or resolution choice: detected items above a line, bundled groups below it.
-
-    Positions run through the detected items, then through the groups in order; selected is the one in use."""
-
-    detected: tuple[str, ...]
-    groups: tuple[ChoiceGroup, ...]
-    selected: int | None
-
-
-@dataclass(frozen=True, slots=True)
-class SettingRow:
-    """A row of the settings table; changed means the value differs from the one of the recommended preset."""
-
-    name: str
-    value: str
-    changed: bool
-
-
-@dataclass(frozen=True, slots=True)
-class SettingsView:
-    """What the settings panel shows for one preset, translated.
-
-    The title is the game; position ("16 / 19") and caption name the preset the slider is on."""
-
-    title: str
-    position: str
-    caption: str
-    rows: tuple[SettingRow, ...]
-    count: int
-    index: int
-    optimal: bool
-
-
-class MainView(Protocol):
-    """The widgets the presenter fills; texts come translated."""
-
-    def apply_language(self, *, translator: Translator) -> None:
-        """
-        Translate the fixed texts of the window: labels, buttons, headings.
-
-        :param translator: translator of the UI language
-        :return: None
-        """
-
-    def apply_theme(self, *, mode: ThemeMode) -> None:
-        """
-        Switch the colors of the window; AUTO follows the Windows app mode.
-
-        :param mode: theme mode
-        :return: None
-        """
-
-    def show_themes(self, *, names: Sequence[str], selected: int) -> None:
-        """
-        Fill the theme choice.
-
-        :param names: theme names in list order
-        :param selected: position of the theme in use
-        :return: None
-        """
-
-    def show_hardware(self, *, hardware: HardwareView) -> None:
-        """
-        Show the CPU, GPU and resolution in use and the memory sizes.
-
-        :param hardware: what to show
-        :return: None
-        """
-
-    def offer_cpus(self, *, choice: ChoiceView) -> None:
-        """
-        Open the CPU choice; a pick is passed to Presenter.choose_cpu.
-
-        :param choice: CPUs to choose from
-        :return: None
-        """
-
-    def offer_gpus(self, *, choice: ChoiceView) -> None:
-        """
-        Open the GPU choice; a pick is passed to Presenter.choose_gpu.
-
-        :param choice: GPUs to choose from
-        :return: None
-        """
-
-    def offer_resolutions(self, *, choice: ChoiceView) -> None:
-        """
-        Open the resolution choice; a pick is passed to Presenter.choose_resolution.
-
-        :param choice: resolutions to choose from
-        :return: None
-        """
-
-    def show_status(self, *, text: str) -> None:
-        """
-        Show progress, an error or a notice; an empty text clears the line.
-
-        :param text: the line to show
-        :return: None
-        """
-
-    def warn(self, *, text: str) -> None:
-        """
-        Show a warning in a dialog the user closes with OK.
-
-        :param text: the warning
-        :return: None
-        """
-
-    def show_load_games(self, *, visible: bool) -> None:
-        """
-        Show or hide the button that requests the game list again.
-
-        :param visible: True to show the button
-        :return: None
-        """
-
-    def show_games(self, *, names: Sequence[str], selected: int | None) -> None:
-        """
-        Fill the game list.
-
-        :param names: display names in list order
-        :param selected: position of the chosen game, None when it is not in the list
-        :return: None
-        """
-
-    def show_settings(self, *, settings: SettingsView) -> None:
-        """
-        Show the settings of a preset with the slider at its position.
-
-        :param settings: what to show
-        :return: None
-        """
-
-    def clear_settings(self) -> None:
-        """
-        Hide the settings table and the slider.
-
-        :return: None
-        """
+__all__: tuple[str, ...] = ("Presenter",)
 
 
 class Presenter:  # pylint: disable=too-many-instance-attributes
@@ -206,13 +37,11 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
     to a request made before the user changed the game or the resolution is dropped. Texts are kept as functions, so
     a language switch re-renders them.
 
-    Why no presets can be requested stays in the status line until NVIDIA accepts the hardware."""
+    Why no presets can be requested stays in the status line until NVIDIA accepts the hardware.
 
-    _THEMES: dict[ThemeMode, UiText] = {
-        ThemeMode.AUTO: UiText.THEME_AUTO,
-        ThemeMode.LIGHT: UiText.THEME_LIGHT,
-        ThemeMode.DARK: UiText.THEME_DARK,
-    }
+    The database update runs once the first hardware check has answered, so a slow download never delays the start;
+    a new database refreshes the game names and the choice lists."""
+
     _COMPONENTS: dict[str, UiText] = {
         "cpu": UiText.COMPONENT_CPU,
         "gpu": UiText.COMPONENT_GPU,
@@ -235,6 +64,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         debouncer: Debouncer,
         translator: Translator,
         theme: ThemeMode,
+        auto_update: bool,
         locale_dir: Path = LOCALE_DIR,
     ) -> None:
         """
@@ -246,6 +76,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param debouncer: delays the preset requests and the search while the user is still changing them
         :param translator: translator of the initial UI language
         :param theme: initial theme mode
+        :param auto_update: whether the database is updated automatically
         :param locale_dir: folder of the compiled catalogs, for language switches
         """
         self._view: MainView = view
@@ -255,6 +86,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._translator: Translator = translator
         self._locale_dir: Path = locale_dir
         self._theme: ThemeMode = theme
+        self._auto_update: bool = auto_update
+        self._database_checked: bool = False
         self._setup: HardwareSetup | None = None
         self._choice: HardwareChoice = HardwareChoice(cpu_name=None, gpu=None)
         self._hardware: Hardware | None = None
@@ -288,7 +121,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         self._view.apply_theme(mode=self._theme)
         self._view.apply_language(translator=self._translator)
-        self._render_themes()
+        self._view.show_auto_update(enabled=self._auto_update)
         self._render_hardware()
         self.load_games()
         self._runner.submit(task=self._service.hardware_setup, on_done=self._on_setup, on_error=self._on_setup_error)
@@ -369,27 +202,43 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             on_error=lambda _: None,
         )
         self._view.apply_language(translator=self._translator)
-        self._render_themes()
         self._render_hardware()
         self._set_status(text=self._status)
         if self._settings is not None:
             self._render_settings()
 
-    def change_theme(self, *, index: int) -> None:
+    def change_theme(self, *, mode: ThemeMode) -> None:
         """
         Switch the theme and save it.
 
-        :param index: position of the theme in the theme choice
+        :param mode: theme mode
         :return: None
         """
-        theme: ThemeMode = list(self._THEMES)[index]
-        if theme is self._theme:
+        if mode is self._theme:
             return
-        self._theme = theme
+        self._theme = mode
         self._runner.submit(
-            task=lambda: self._service.save_theme(theme=theme), on_done=lambda _: None, on_error=lambda _: None
+            task=lambda: self._service.save_theme(theme=mode), on_done=lambda _: None, on_error=lambda _: None
         )
-        self._view.apply_theme(mode=theme)
+        self._view.apply_theme(mode=mode)
+
+    def change_auto_update(self, *, enabled: bool) -> None:
+        """
+        Switch the automatic database update and save it; switching it on runs an update if one is due.
+
+        :param enabled: True to update the database automatically
+        :return: None
+        """
+        if enabled == self._auto_update:
+            return
+        self._auto_update = enabled
+        self._runner.submit(
+            task=lambda: self._service.save_auto_update(enabled=enabled),
+            on_done=lambda _: None,
+            on_error=lambda _: None,
+        )
+        if enabled:
+            self._update_database()
 
     def open_cpu_choice(self) -> None:
         """
@@ -540,6 +389,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self._lose_hardware(text=self._text(item=UiText.HARDWARE_FAILED, error=str(error)))
+        self._update_database_once()
 
     def _choose(self, *, choice: HardwareChoice) -> None:
         """
@@ -576,6 +426,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
                 self._request_presets()
         else:
             self._lose_hardware(text=self._problem_text(check=check))
+        self._update_database_once()
 
     def _on_check_error(self, *, previous: HardwareChoice, error: Exception) -> None:
         """
@@ -588,10 +439,11 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         text: Callable[[], str] = self._text(item=UiText.REQUEST_FAILED, error=str(error))
         if self._hardware is None:
             self._lose_hardware(text=text)
-            return
-        self._choice = previous
-        self._render_hardware()
-        self._set_status(text=text)
+        else:
+            self._choice = previous
+            self._render_hardware()
+            self._set_status(text=text)
+        self._update_database_once()
 
     def _problem_text(self, *, check: HardwareCheck) -> Callable[[], str]:
         """
@@ -738,16 +590,68 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             selected=self._shown_games.index(self._game) if self._game in self._shown_games else None,
         )
 
-    def _render_themes(self) -> None:
+    def _update_database_once(self) -> None:
         """
-        Fill the theme choice in the UI language.
+        Update the database the first time the hardware is answered for: the start is not delayed by a download.
 
         :return: None
         """
-        self._view.show_themes(
-            names=[self._translator.text(item=item) for item in self._THEMES.values()],
-            selected=list(self._THEMES).index(self._theme),
+        if not self._database_checked:
+            self._database_checked = True
+            self._update_database()
+
+    def _update_database(self) -> None:
+        """
+        Update the database if one is due; a failure is only logged, the database in use stays.
+
+        :return: None
+        """
+        self._runner.submit(
+            task=self._service.update_database_if_due, on_done=self._on_database_update, on_error=lambda _: None
         )
+
+    def _on_database_update(self, result: DatabaseUpdate) -> None:
+        """
+        Read the choice lists and the game names again when a new database is in use.
+
+        :param result: outcome of the update
+        :return: None
+        """
+        if result is not DatabaseUpdate.UPDATED:
+            return
+        if self._setup is not None:
+            self._runner.submit(
+                task=self._service.hardware_setup, on_done=self._on_setup_refresh, on_error=lambda _: None
+            )
+        if self._games:
+            games: tuple[Game, ...] = self._games
+            self._runner.submit(
+                task=lambda: self._service.rename_games(games=games),
+                on_done=self._on_games_renamed,
+                on_error=lambda _: None,
+            )
+
+    def _on_setup_refresh(self, setup: HardwareSetup) -> None:
+        """
+        Take the choice lists of a new database; the hardware and resolution in use stay as they are.
+
+        :param setup: detected hardware, bundled lists and what is saved
+        :return: None
+        """
+        self._setup = setup
+
+    def _on_games_renamed(self, games: tuple[Game, ...]) -> None:
+        """
+        Show the game names of a new database, keeping the chosen game.
+
+        :param games: games named again, sorted by name
+        :return: None
+        """
+        self._games = games
+        if self._game is not None:
+            game_id: str = self._game.game_id
+            self._game = next((game for game in games if game.game_id == game_id), self._game)
+        self._render_games()
 
     def _render_hardware(self) -> None:
         """

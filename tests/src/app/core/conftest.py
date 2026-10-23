@@ -1,5 +1,6 @@
 """Fixtures shared by the core tests."""
 
+from datetime import date
 from pathlib import Path
 from typing import Iterator
 from unittest.mock import MagicMock, create_autospec
@@ -7,6 +8,7 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 import responses
 
+from app.core.database import AppData, AppDatabase
 from app.core.game_names import GameNames
 from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
 from app.core.models import Gpu
@@ -78,22 +80,58 @@ def _store(tmp_path: Path) -> UserSettingsStore:
     return UserSettingsStore(path=tmp_path / "settings.json")
 
 
-@pytest.fixture(name="service")
-def _service(ops: MagicMock, detector: MagicMock, store: UserSettingsStore) -> PresetService:
+@pytest.fixture(name="data")
+def _data() -> AppData:
     """
-    Create the service over mocked NVIDIA and hardware, with small CPU and GPU lists and named games.
+    Make small CPU and GPU lists and two named games, as if read from the database.
 
-    :param ops: NVIDIA endpoints mock
-    :param detector: hardware detection mock
-    :param store: settings store
-    :return: service under test
+    :return: database contents
     """
-    return PresetService(
-        api=ops,
+    return AppData(
         names=GameNames(names={"mordhau": "MORDHAU", "baldurs_gate_3": "Baldur's Gate 3"}),
         cpu_list=CpuList(amd=("AMD Ryzen 7 7800X3D 8-Core Processor",), intel=("Intel(R) Core(TM) i7-14700K",)),
         gpu_list=GpuList(gpus=(Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"),)),
         ranks=GpuRanks(ranks={}),
-        detector=detector,
-        store=store,
     )
+
+
+@pytest.fixture(name="database")
+def _database(data: AppData) -> MagicMock:
+    """
+    Stand in for the database file whose download changes nothing and whose load gives the same contents.
+
+    :param data: database contents
+    :return: mock with the interface of AppDatabase
+    """
+    database: MagicMock = create_autospec(spec=AppDatabase, instance=True)
+    database.download.return_value = False
+    database.load.return_value = data
+    return database
+
+
+@pytest.fixture(name="clock")
+def _clock() -> MagicMock:
+    """
+    Fix the current date to 2026-10-23.
+
+    :return: callable giving the date
+    """
+    return MagicMock(return_value=date(2026, 10, 23))
+
+
+@pytest.fixture(name="service")
+def _service(
+    ops: MagicMock, database: MagicMock, data: AppData, detector: MagicMock, store: UserSettingsStore, clock: MagicMock
+) -> PresetService:
+    """
+    Create the service over mocked NVIDIA, database and hardware, with small CPU and GPU lists and named games.
+
+    :param ops: NVIDIA endpoints mock
+    :param database: database mock
+    :param data: database contents
+    :param detector: hardware detection mock
+    :param store: settings store
+    :param clock: gives the current date
+    :return: service under test
+    """
+    return PresetService(api=ops, database=database, data=data, detector=detector, store=store, today=clock)

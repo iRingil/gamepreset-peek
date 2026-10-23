@@ -8,7 +8,7 @@ from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLineEdit, QListWidget, QListWidgetItem, QTabWidget, QWidget
 
 from app.ui.choice_popup import ChoicePopup
-from app.ui.presenter import ChoiceGroup, ChoiceView
+from app.ui.views import ChoiceGroup, ChoiceView
 
 __all__: tuple = ()
 

@@ -1,6 +1,7 @@
-"""Settings kept between runs: language, theme, detected and chosen CPU, GPU and resolution; JSON in app data."""
+"""Settings kept between runs: language, theme, hardware, resolution and database updates; JSON in app data."""
 
 import json
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -56,6 +57,8 @@ class UserSettingsStore:
             "chosen_cpu": settings.chosen_cpu,
             "chosen_gpu": None if settings.chosen_gpu is None else self._gpu_document(gpu=settings.chosen_gpu),
             "chosen_resolution": settings.chosen_resolution,
+            "auto_update": settings.auto_update,
+            "database_updated": None if settings.database_updated is None else settings.database_updated.isoformat(),
         }
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(data=json.dumps(obj=document, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -84,6 +87,8 @@ class UserSettingsStore:
             chosen_cpu=cls._optional_str(value=document.get("chosen_cpu")),
             chosen_gpu=None if chosen_gpu is None else cls._gpu(document=chosen_gpu),
             chosen_resolution=cls._optional_str(value=document.get("chosen_resolution")),
+            auto_update=cls._bool(value=document.get("auto_update", True)),
+            database_updated=cls._optional_date(value=document.get("database_updated")),
         )
 
     @staticmethod
@@ -131,3 +136,25 @@ class UserSettingsStore:
         if not isinstance(value, str):
             raise TypeError(f"expected a string, got {value!r}")
         return value
+
+    @staticmethod
+    def _bool(*, value: Any) -> bool:
+        """
+        Check that a value is a boolean.
+
+        :param value: parsed JSON value
+        :return: the value
+        """
+        if not isinstance(value, bool):
+            raise TypeError(f"expected a boolean, got {value!r}")
+        return value
+
+    @classmethod
+    def _optional_date(cls, *, value: Any) -> date | None:
+        """
+        Read a date written as "2026-10-23", or null.
+
+        :param value: parsed JSON value
+        :return: the date
+        """
+        return None if value is None else date.fromisoformat(cls._required_str(value=value))

@@ -9,9 +9,11 @@ from app.ui.vendor import qdarktheme
 __all__: tuple[str, ...] = ("Theme",)
 
 # Lists and tables run their rows up to the frame; a list in a tab page leaves the frame to the tab pane.
+# A check box gets no underline on hover: it looked like a link.
 _QSS: str = """
 QListView, QTreeView {padding:0}
 QTabWidget > QStackedWidget > QAbstractItemView[frameShape=NoFrame] {margin:0;border:none}
+QCheckBox:hover {border-bottom:2px solid transparent}
 """
 
 

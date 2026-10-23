@@ -1,12 +1,18 @@
 """Tests of the service the UI calls."""
 
+from dataclasses import replace
+from datetime import date
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
+from app.core.database import AppData
+from app.core.game_names import GameNames
+from app.core.hardware import CpuList, GpuList, GpuRanks
 from app.core.models import (
     Compatibility,
+    DatabaseUpdate,
     Game,
     GamePresets,
     GameSettings,
@@ -82,6 +88,154 @@ class TestGames:
             Game(game_id="mordhau", name="MORDHAU"),
             Game(game_id="nba_2k27", name="Nba 2k27"),
         )
+
+
+class TestRenameGames:
+    """Tests of PresetService.rename_games."""
+
+    def test_renamed_and_sorted(self, service: PresetService) -> None:
+        """
+        Names the games again with the database in use and sorts them by the new names.
+
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        games: tuple[Game, ...] = (Game(game_id="mordhau", name="Zz"), Game(game_id="baldurs_gate_3", name="Aa"))
+        # Act
+        renamed: tuple[Game, ...] = service.rename_games(games=games)
+        # Assert
+        assert renamed == (
+            Game(game_id="baldurs_gate_3", name="Baldur's Gate 3"),
+            Game(game_id="mordhau", name="MORDHAU"),
+        )
+
+
+class TestDatabaseUpdate:
+    """Tests of PresetService.update_database_if_due."""
+
+    @pytest.mark.parametrize(
+        argnames=("settings", "result"),
+        argvalues=[
+            (UserSettings(auto_update=False), DatabaseUpdate.SKIPPED),
+            (UserSettings(database_updated=date(2026, 10, 16)), DatabaseUpdate.SKIPPED),
+            (UserSettings(database_updated=date(2026, 10, 30)), DatabaseUpdate.SKIPPED),
+            (UserSettings(database_updated=date(2026, 10, 15)), DatabaseUpdate.UNCHANGED),
+            (UserSettings(), DatabaseUpdate.UNCHANGED),
+        ],
+        ids=["switched off", "7 days ago", "in the future", "8 days ago", "never updated"],
+    )
+    def test_due(
+        self,
+        database: MagicMock,
+        store: UserSettingsStore,
+        service: PresetService,
+        settings: UserSettings,
+        result: DatabaseUpdate,
+    ) -> None:
+        """
+        Downloads only when updates are on and the last one is more than 7 days old or missing; records the day.
+
+        :param database: database mock
+        :param store: settings store
+        :param service: service under test
+        :param settings: saved settings
+        :param result: expected outcome
+        :return: None
+        """
+        # Arrange
+        store.save(settings=settings)
+        # Act
+        outcome: DatabaseUpdate = service.update_database_if_due()
+        # Assert
+        assert outcome is result
+        if result is DatabaseUpdate.SKIPPED:
+            database.download.assert_not_called()
+            assert store.load() == settings
+        else:
+            database.download.assert_called_once_with()
+            assert store.load() == replace(settings, database_updated=date(2026, 10, 23))
+
+    def test_new_database_loaded(
+        self, database: MagicMock, store: UserSettingsStore, service: PresetService, ops: MagicMock
+    ) -> None:
+        """
+        Reads the lists again from a new database, keeping the other settings when recording the day.
+
+        :param database: database mock
+        :param store: settings store
+        :param service: service under test
+        :param ops: NVIDIA endpoints mock
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(language="ru", chosen_gpu=_LISTED_GPU))
+        database.download.return_value = True
+        database.load.return_value = AppData(
+            names=GameNames(names={"mordhau": "Mordhau II"}),
+            cpu_list=CpuList(amd=(), intel=()),
+            gpu_list=GpuList(gpus=()),
+            ranks=GpuRanks(ranks={}),
+        )
+        ops.games.return_value = ("mordhau",)
+        # Act
+        outcome: DatabaseUpdate = service.update_database_if_due()
+        saved: UserSettings = store.load()
+        # Assert
+        assert outcome is DatabaseUpdate.UPDATED
+        assert saved == UserSettings(language="ru", chosen_gpu=_LISTED_GPU, database_updated=date(2026, 10, 23))
+        assert service.games() == (Game(game_id="mordhau", name="Mordhau II"),)
+        assert service.hardware_setup().amd_cpus == ()
+
+    def test_failed_download_not_recorded(
+        self, database: MagicMock, store: UserSettingsStore, service: PresetService
+    ) -> None:
+        """
+        Lets a failed download through and records no update, so the next start tries again.
+
+        :param database: database mock
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        database.download.side_effect = ConnectionError("offline")
+        # Act & Assert
+        with pytest.raises(ConnectionError):
+            service.update_database_if_due()
+        assert store.load() == UserSettings()
+
+
+class TestAutoUpdate:
+    """Tests of PresetService.saved_auto_update and save_auto_update."""
+
+    def test_nothing_saved(self, service: PresetService) -> None:
+        """
+        Updates automatically before anything is saved.
+
+        :param service: service under test
+        :return: None
+        """
+        # Arrange & Act
+        enabled: bool = service.saved_auto_update()
+        # Assert
+        assert enabled is True
+
+    def test_saved_keeping_others(self, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Saves the switch and keeps the language and the GPU.
+
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(language="ru", chosen_gpu=_LISTED_GPU))
+        # Act
+        service.save_auto_update(enabled=False)
+        # Assert
+        assert service.saved_auto_update() is False
+        assert store.load() == UserSettings(language="ru", chosen_gpu=_LISTED_GPU, auto_update=False)
 
 
 class TestHardwareSetup:

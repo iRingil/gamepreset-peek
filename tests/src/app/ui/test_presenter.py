@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 
 from app.core.models import (
+    DatabaseUpdate,
     Game,
     GamePresets,
     GameSettings,
@@ -31,7 +32,8 @@ from app.core.models import (
 from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
-from app.ui.presenter import ChoiceGroup, ChoiceView, HardwareView, Presenter, SettingRow, SettingsView
+from app.ui.presenter import Presenter
+from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, SettingRow, SettingsView
 
 __all__: tuple = ()
 
@@ -143,7 +145,7 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.language: str | None = None
         self.theme: ThemeMode | None = None
-        self.themes: tuple[list[str], int] | None = None
+        self.auto_update: bool | None = None
         self.hardware: HardwareView | None = None
         self.status: str = ""
         self.load_games: bool = False
@@ -173,15 +175,14 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.theme = mode
 
-    def show_themes(self, *, names: Sequence[str], selected: int) -> None:
+    def show_auto_update(self, *, enabled: bool) -> None:
         """
-        Record the theme choice.
+        Record the database update switch.
 
-        :param names: theme names
-        :param selected: position of the theme in use
+        :param enabled: whether the database is updated automatically
         :return: None
         """
-        self.themes = (list(names), selected)
+        self.auto_update = enabled
 
     def show_hardware(self, *, hardware: HardwareView) -> None:
         """
@@ -405,6 +406,7 @@ class _PresenterTests:
         service.check_hardware.return_value = _Hardware.ready(gpu=_LAPTOP_GPU)
         service.game_presets.return_value = _PRESETS
         service.game_settings.return_value = _SETTINGS
+        service.update_database_if_due.return_value = DatabaseUpdate.SKIPPED
         return service
 
     @pytest.fixture(name="presenter")
@@ -412,7 +414,7 @@ class _PresenterTests:
         self, view: _FakeView, runner: _Runner, debouncer: _Debouncer, service: MagicMock, locale_dir: Path
     ) -> Presenter:
         """
-        Create the presenter in English; tests start it themselves.
+        Create the presenter in English with automatic database updates on; tests start it themselves.
 
         :param view: fake window
         :param runner: runner
@@ -428,6 +430,7 @@ class _PresenterTests:
             debouncer=debouncer,
             translator=Translator(language="en", locale_dir=locale_dir),
             theme=ThemeMode.AUTO,
+            auto_update=True,
             locale_dir=locale_dir,
         )
 
@@ -458,7 +461,7 @@ class TestStart(_PresenterTests):
         # Arrange & Act
         presenter.start()
         # Assert
-        assert (view.theme, view.themes) == (ThemeMode.AUTO, (["Auto", "Light", "Dark"], 0))
+        assert (view.theme, view.auto_update) == (ThemeMode.AUTO, True)
         assert (view.language, view.games, view.hardware, view.status, view.load_games) == (
             "en",
             ["Baldur's Gate 3", "MORDHAU"],
@@ -467,6 +470,7 @@ class TestStart(_PresenterTests):
             False,
         )
         service.check_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=_CPU, gpu=_LAPTOP_GPU))
+        service.update_database_if_due.assert_called_once_with()
         assert not view.warnings
 
     def test_hardware_loading(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
@@ -1255,7 +1259,7 @@ class TestTheme(_PresenterTests):
         # Arrange
         presenter.start()
         # Act
-        presenter.change_theme(index=2)
+        presenter.change_theme(mode=ThemeMode.DARK)
         # Assert
         assert view.theme is ThemeMode.DARK
         service.save_theme.assert_called_once_with(theme=ThemeMode.DARK)
@@ -1271,25 +1275,227 @@ class TestTheme(_PresenterTests):
         # Arrange
         presenter.start()
         # Act
-        presenter.change_theme(index=0)
+        presenter.change_theme(mode=ThemeMode.AUTO)
         # Assert
         service.save_theme.assert_not_called()
 
-    def test_names_translated(self, presenter: Presenter, view: _FakeView) -> None:
+
+class TestAutoUpdate(_PresenterTests):
+    """Tests of Presenter.change_auto_update."""
+
+    def test_switched_off(self, presenter: Presenter, service: MagicMock) -> None:
         """
-        Translates the theme names with the UI language, keeping the theme in use selected.
+        Saves the switch; switching off runs no update.
 
         :param presenter: presenter under test
-        :param view: fake window
+        :param service: service mock
         :return: None
         """
         # Arrange
         presenter.start()
-        presenter.change_theme(index=1)
         # Act
-        presenter.change_language(language="ru")
+        presenter.change_auto_update(enabled=False)
         # Assert
-        assert view.themes == (["Авто", "Светлая", "Тёмная"], 1)
+        service.save_auto_update.assert_called_once_with(enabled=False)
+        assert service.update_database_if_due.call_count == 1
+
+    def test_switched_on_updates(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Saves the switch and runs an update when switched on.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        presenter.change_auto_update(enabled=False)
+        # Act
+        presenter.change_auto_update(enabled=True)
+        # Assert
+        service.save_auto_update.assert_called_with(enabled=True)
+        assert service.update_database_if_due.call_count == 2
+
+    def test_same_state(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Does nothing when the switch doesn't change.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.change_auto_update(enabled=True)
+        # Assert
+        service.save_auto_update.assert_not_called()
+        assert service.update_database_if_due.call_count == 1
+
+
+class TestDatabaseUpdate(_PresenterTests):
+    """Tests of the database update run at the start."""
+
+    _RENAMED: tuple[Game, ...] = (
+        Game(game_id="baldurs_gate_3", name="Baldur's Gate III"),
+        Game(game_id="mordhau", name="Mordhau II"),
+    )
+
+    @pytest.mark.parametrize(
+        argnames="result",
+        argvalues=[DatabaseUpdate.SKIPPED, DatabaseUpdate.UNCHANGED],
+        ids=["skipped", "unchanged"],
+    )
+    def test_nothing_refreshed(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, result: DatabaseUpdate
+    ) -> None:
+        """
+        Keeps the names and lists shown when the database didn't change.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param result: outcome of the update
+        :return: None
+        """
+        # Arrange
+        service.update_database_if_due.return_value = result
+        # Act
+        presenter.start()
+        # Assert
+        service.rename_games.assert_not_called()
+        assert (service.hardware_setup.call_count, view.games) == (1, ["Baldur's Gate 3", "MORDHAU"])
+
+    def test_names_and_lists_refreshed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Shows the game names of a new database, keeping the chosen game, and offers its CPU list.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.rename_games.return_value = self._RENAMED
+        service.hardware_setup.side_effect = [_SETUP, replace(_SETUP, amd_cpus=(_AMD_CPU,))]
+        self.show_settings(presenter=presenter)
+        service.update_database_if_due.return_value = DatabaseUpdate.UPDATED
+        presenter.change_auto_update(enabled=False)
+        # Act
+        presenter.change_auto_update(enabled=True)
+        presenter.open_cpu_choice()
+        # Assert
+        service.rename_games.assert_called_once_with(games=_GAMES)
+        assert (view.games, view.game_selected) == (["Baldur's Gate III", "Mordhau II"], 1)
+        assert view.settings is not None
+        assert view.cpu_offers[0].groups[0].items == (_AMD_CPU,)
+        assert view.hardware == _LAPTOP_VIEW
+
+    def test_chosen_game_gone(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Keeps the chosen game, unselected, when the new database doesn't list it any more.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.rename_games.return_value = self._RENAMED[:1]
+        self.show_settings(presenter=presenter)
+        service.update_database_if_due.return_value = DatabaseUpdate.UPDATED
+        presenter.change_auto_update(enabled=False)
+        # Act
+        presenter.change_auto_update(enabled=True)
+        # Assert
+        assert (view.games, view.game_selected, view.settings is not None) == (["Baldur's Gate III"], None, True)
+
+    def test_once_per_start(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Runs the update after the first hardware answer only, not after later hardware choices.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        service.choose_hardware.return_value = _Hardware.ready(gpu=_DESKTOP_GPU)
+        # Act
+        presenter.choose_gpu(position=1)
+        # Assert
+        assert service.update_database_if_due.call_count == 1
+
+    @pytest.mark.parametrize(argnames="failure", argvalues=["setup", "check"], ids=["setup fails", "check fails"])
+    def test_after_hardware_failure(self, presenter: Presenter, service: MagicMock, failure: str) -> None:
+        """
+        Runs the update also when the hardware detection or its check fails.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :param failure: which call fails
+        :return: None
+        """
+        # Arrange
+        if failure == "setup":
+            service.hardware_setup.side_effect = OSError("no registry")
+        else:
+            service.check_hardware.side_effect = ConnectionError("timeout")
+        # Act
+        presenter.start()
+        # Assert
+        service.update_database_if_due.assert_called_once_with()
+
+    def test_failed_update(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Changes nothing shown when the update fails.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.update_database_if_due.side_effect = ConnectionError("offline")
+        # Act
+        presenter.start()
+        # Assert
+        assert (view.games, view.status) == (["Baldur's Gate 3", "MORDHAU"], "")
+
+    def test_refresh_without_setup(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Renames the games but asks for no lists when the hardware detection failed.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.hardware_setup.side_effect = OSError("no registry")
+        service.update_database_if_due.return_value = DatabaseUpdate.UPDATED
+        service.rename_games.return_value = self._RENAMED
+        # Act
+        presenter.start()
+        # Assert
+        assert (service.hardware_setup.call_count, view.games) == (1, ["Baldur's Gate III", "Mordhau II"])
+
+    def test_refresh_without_games(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Renames nothing when the game list failed to load.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.games.side_effect = ConnectionError("offline")
+        service.update_database_if_due.return_value = DatabaseUpdate.UPDATED
+        # Act
+        presenter.start()
+        # Assert
+        service.rename_games.assert_not_called()
+        assert service.hardware_setup.call_count == 2
 
 
 class TestHardwareChoice(_PresenterTests):

@@ -1,15 +1,18 @@
 """Orchestration of the NVIDIA data for the UI: games, the hardware to request presets with, settings of a preset."""
 
 from dataclasses import dataclass, replace
+from datetime import date
 from functools import cached_property
+from typing import Callable, Iterable
 
 from loguru import logger
 
-from app.config import DEFAULT_RESOLUTION, SCREEN_RESOLUTIONS
-from app.core.game_names import GameNames
-from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
+from app.config import DB_UPDATE_DAYS, DEFAULT_RESOLUTION, SCREEN_RESOLUTIONS
+from app.core.database import AppData, AppDatabase
+from app.core.hardware import HardwareDetector
 from app.core.models import (
     Compatibility,
+    DatabaseUpdate,
     Game,
     GamePresets,
     GameSettings,
@@ -51,31 +54,28 @@ class PresetService:
         self,
         *,
         api: OpsApi,
-        names: GameNames,
-        cpu_list: CpuList,
-        gpu_list: GpuList,
-        ranks: GpuRanks,
+        database: AppDatabase,
+        data: AppData,
         detector: HardwareDetector,
         store: UserSettingsStore,
+        today: Callable[[], date] = date.today,
     ) -> None:
         """
         Use the given data sources.
 
         :param api: NVIDIA endpoints client
-        :param names: display names of games
-        :param cpu_list: CPUs the user can choose from
-        :param gpu_list: GPUs the user can choose from
-        :param ranks: performance ranks to order detected GPUs by
+        :param database: the database file and its updates
+        :param data: game names, CPU and GPU lists and GPU ranks read from the database
         :param detector: hardware detection
         :param store: saved user settings
+        :param today: gives the current date, for the database update schedule
         """
         self._api: OpsApi = api
-        self._names: GameNames = names
-        self._cpu_list: CpuList = cpu_list
-        self._gpu_list: GpuList = gpu_list
-        self._ranks: GpuRanks = ranks
+        self._database: AppDatabase = database
+        self._data: AppData = data
         self._detector: HardwareDetector = detector
         self._store: UserSettingsStore = store
+        self._today: Callable[[], date] = today
         self._files: _GameFiles | None = None
 
     def games(self) -> tuple[Game, ...]:
@@ -84,12 +84,37 @@ class PresetService:
 
         :return: games sorted by display name, case-insensitive
         """
-        return tuple(
-            sorted(
-                (Game(game_id=game_id, name=self._names.name(game_id=game_id)) for game_id in self._api.games()),
-                key=lambda game: game.name.casefold(),
-            )
-        )
+        return self._named(game_ids=self._api.games())
+
+    def rename_games(self, *, games: Iterable[Game]) -> tuple[Game, ...]:
+        """
+        Name games again with the database in use, e.g. after an update.
+
+        :param games: games named before
+        :return: the games sorted by display name, case-insensitive
+        """
+        return self._named(game_ids=(game.game_id for game in games))
+
+    def update_database_if_due(self) -> DatabaseUpdate:
+        """
+        Download the latest database when automatic updates are on and the last one is older than the update interval.
+
+        A download is recorded as an update whether or not it changed anything.
+
+        :return: SKIPPED when no update is due, UNCHANGED when the download equals the database in use, UPDATED when
+            a new database is in use
+        """
+        saved: UserSettings = self._store.load()
+        today: date = self._today()
+        if not saved.auto_update or (
+            saved.database_updated is not None and (today - saved.database_updated).days <= DB_UPDATE_DAYS
+        ):
+            return DatabaseUpdate.SKIPPED
+        changed: bool = self._database.download()
+        if changed:
+            self._data = self._database.load()
+        self._store.save(settings=replace(self._store.load(), database_updated=today))
+        return DatabaseUpdate.UPDATED if changed else DatabaseUpdate.UNCHANGED
 
     def hardware_setup(self) -> HardwareSetup:
         """
@@ -111,9 +136,9 @@ class PresetService:
         detected_ids: set[str] = {item.device_id for item in system.gpus}
         return HardwareSetup(
             system=system,
-            amd_cpus=self._cpu_list.amd,
-            intel_cpus=self._cpu_list.intel,
-            gpus=tuple(item for item in self._gpu_list.gpus if item.device_id not in detected_ids),
+            amd_cpus=self._data.cpu_list.amd,
+            intel_cpus=self._data.cpu_list.intel,
+            gpus=tuple(item for item in self._data.gpu_list.gpus if item.device_id not in detected_ids),
             resolutions=tuple(item for item in SCREEN_RESOLUTIONS if item != system.resolution),
             choice=HardwareChoice(cpu_name=saved.chosen_cpu or system.cpu_name, gpu=gpu),
             resolution=saved.chosen_resolution or system.resolution or DEFAULT_RESOLUTION,
@@ -216,6 +241,23 @@ class PresetService:
         """
         self._store.save(settings=replace(self._store.load(), theme=theme))
 
+    def saved_auto_update(self) -> bool:
+        """
+        Read whether the database is updated automatically.
+
+        :return: True when it is, also when nothing was saved
+        """
+        return self._store.load().auto_update
+
+    def save_auto_update(self, *, enabled: bool) -> None:
+        """
+        Save whether the database is updated automatically, keeping the other settings.
+
+        :param enabled: True to update it
+        :return: None
+        """
+        self._store.save(settings=replace(self._store.load(), auto_update=enabled))
+
     def game_presets(self, *, game_id: str, hardware: Hardware) -> GamePresets:
         """
         Request the presets NVIDIA recommends for a game.
@@ -256,10 +298,24 @@ class PresetService:
         """
         return SystemHardware(
             cpu_name=self._detector.cpu_name(),
-            gpus=self._detector.nvidia_gpus(ranks=self._ranks),
+            gpus=self._detector.nvidia_gpus(ranks=self._data.ranks),
             memory_gb=self._detector.memory_gb(),
             os_version=self._detector.os_version(),
             resolution=self._detector.screen_resolution(),
+        )
+
+    def _named(self, *, game_ids: Iterable[str]) -> tuple[Game, ...]:
+        """
+        Name games with the database in use.
+
+        :param game_ids: game identifiers
+        :return: the games sorted by display name, case-insensitive
+        """
+        return tuple(
+            sorted(
+                (Game(game_id=game_id, name=self._data.names.name(game_id=game_id)) for game_id in game_ids),
+                key=lambda game: game.name.casefold(),
+            )
         )
 
     @property

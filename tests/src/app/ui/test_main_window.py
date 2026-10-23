@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QAbstractItemView,
     QApplication,
+    QCheckBox,
     QComboBox,
     QLabel,
     QLineEdit,
@@ -29,9 +30,12 @@ from app.config import LANGUAGE_NAMES
 from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.ui.choice_popup import ChoicePopup
+from app.ui.icons import IconButton
 from app.ui.main_window import MainWindow
-from app.ui.presenter import ChoiceGroup, ChoiceView, HardwareView, Presenter, SettingRow, SettingsView
+from app.ui.presenter import Presenter
+from app.ui.settings_menu import SettingsMenu
 from app.ui.theme import Theme
+from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, SettingRow, SettingsView
 
 __all__: tuple = ()
 
@@ -431,23 +435,56 @@ class TestMainWindow:
         # Assert
         method.assert_called_once_with(window.presenter)
 
-    def test_themes_and_language(self, window: _Window) -> None:
+    def test_settings_menu(self, window: _Window, monkeypatch: pytest.MonkeyPatch) -> None:
         """
-        Fills the theme choice and passes the theme and the language the user picks on.
+        Opens the settings menu with the theme, language and update switch in use; picks go to the presenter.
 
         :param window: the window
+        :param monkeypatch: pytest monkeypatch
         :return: None
         """
         # Arrange
-        window.widget.show_themes(names=["Auto", "Light", "Dark"], selected=2)
-        themes, languages = window.widget.findChildren(QComboBox)
+        monkeypatch.setattr(target=Theme, name="apply", value=MagicMock())
+        window.widget.apply_theme(mode=ThemeMode.DARK)
+        window.widget.show_auto_update(enabled=False)
+        gear: IconButton = window.child(parent=window.widget, kind=IconButton)
         # Act
-        themes.activated.emit(1)
+        gear.click()
+        menu: SettingsMenu = window.child(parent=window.widget, kind=SettingsMenu)
+        themes: list[IconButton] = menu.findChildren(IconButton)
+        languages: QComboBox = window.child(parent=menu, kind=QComboBox)
+        update: QCheckBox = window.child(parent=menu, kind=QCheckBox)
+        shown: tuple[bool, list[bool], str, bool] = (
+            menu.isVisible(),
+            [button.isChecked() for button in themes],
+            languages.currentText(),
+            update.isChecked(),
+        )
+        themes[2].click()
+        update.click()
         languages.activated.emit(list(LANGUAGE_NAMES).index("ru"))
         # Assert
-        assert (themes.currentText(), languages.currentText()) == ("Dark", LANGUAGE_NAMES["en"])
-        window.presenter.change_theme.assert_called_once_with(index=1)
+        assert (gear.toolTip(), shown) == ("Settings", (True, [False, True, False], "EN", False))
+        window.presenter.change_theme.assert_called_once_with(mode=ThemeMode.LIGHT)
+        window.presenter.change_auto_update.assert_called_once_with(enabled=True)
         window.presenter.change_language.assert_called_once_with(language="ru")
+        assert not menu.isVisible()
+
+    def test_settings_menu_before_language(self, qt_app: QApplication) -> None:
+        """
+        Opens no menu before a language is applied: there are no texts to show yet.
+
+        :param qt_app: Qt application
+        :return: None
+        """
+        # Arrange
+        widget: MainWindow = MainWindow(log_lines=Queue())
+        gear: IconButton = _Window.child(parent=widget, kind=IconButton)
+        # Act
+        gear.click()
+        qt_app.processEvents()
+        # Assert
+        assert widget.findChild(SettingsMenu) is None
 
     def test_status(self, window: _Window) -> None:
         """

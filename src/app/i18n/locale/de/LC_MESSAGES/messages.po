@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-23 13:14+0300\n"
+"POT-Creation-Date: 2026-10-23 15:50+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -45,6 +45,18 @@ msgstr "Hell"
 #. THEME_DARK
 msgid "Dark"
 msgstr "Dunkel"
+
+#. SETTINGS
+msgid "Settings"
+msgstr "Einstellungen"
+
+#. AUTO_UPDATE
+msgid "Auto-update"
+msgstr "Automatische Aktualisierung"
+
+#. AUTO_UPDATE_HINT
+msgid "Downloads the latest lists of processors, graphics cards and games once a week."
+msgstr "Lädt einmal pro Woche die neuesten Listen der Prozessoren, Grafikkarten und Spiele herunter."
 
 #. SEARCH
 msgid "Search"

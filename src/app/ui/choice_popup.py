@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.ui.presenter import ChoiceView
+from app.ui.views import ChoiceView
 
 __all__: tuple[str, ...] = ("ChoicePopup",)
 

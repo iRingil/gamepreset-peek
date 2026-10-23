@@ -1,10 +1,12 @@
 """Data classes of the NVIDIA presets data, of the user's hardware and of the saved user settings."""
 
 from dataclasses import dataclass, field
+from datetime import date
 from enum import StrEnum
 
 __all__: tuple[str, ...] = (
     "Compatibility",
+    "DatabaseUpdate",
     "Game",
     "GamePresets",
     "GameSettings",
@@ -91,6 +93,14 @@ class ThemeMode(StrEnum):
     AUTO = "auto"
     LIGHT = "light"
     DARK = "dark"
+
+
+class DatabaseUpdate(StrEnum):
+    """Outcome of a database update: not due, downloaded but equal to the database in use, or a new one in use."""
+
+    SKIPPED = "skipped"
+    UNCHANGED = "unchanged"
+    UPDATED = "updated"
 
 
 class HardwareState(StrEnum):
@@ -258,11 +268,11 @@ class GameSettings:
 
 @dataclass(frozen=True, slots=True)
 class UserSettings:
-    """Settings kept between runs: UI language code, the hardware detected at the last start, the chosen one, the theme.
+    """Settings kept between runs: language, theme, detected and chosen hardware, the database update choice and date.
 
     The detected CPU, NVIDIA GPUs (the most powerful first) and screen resolution are written at every start. The
     chosen CPU, GPU and resolution are the ones the user picked in the lists, None when not picked: the detected ones
-    are used then."""
+    are used then. The database update date is the day of the last download, None before the first one."""
 
     language: str | None = None
     detected_cpu: str | None = None
@@ -272,3 +282,5 @@ class UserSettings:
     chosen_gpu: Gpu | None = None
     chosen_resolution: str | None = None
     theme: ThemeMode = ThemeMode.AUTO
+    auto_update: bool = True
+    database_updated: date | None = None

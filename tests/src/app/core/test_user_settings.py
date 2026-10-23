@@ -1,5 +1,6 @@
 """Tests of the saved user settings."""
 
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -50,6 +51,8 @@ class TestUserSettingsStore:
                 chosen_gpu=Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"),
                 chosen_resolution="1920x1080",
                 theme=ThemeMode.DARK,
+                auto_update=False,
+                database_updated=date(2026, 10, 23),
             ),
             UserSettings(language="de"),
             UserSettings(),
@@ -89,6 +92,9 @@ class TestUserSettingsStore:
             '{"chosen_resolution": ["1920x1080"]}',
             '{"theme": "sepia"}',
             '{"theme": 1}',
+            '{"auto_update": "yes"}',
+            '{"database_updated": "yesterday"}',
+            '{"database_updated": 20261023}',
         ],
         ids=[
             "not json",
@@ -105,6 +111,9 @@ class TestUserSettingsStore:
             "chosen resolution not a string",
             "unknown theme",
             "theme not a string",
+            "auto update not a boolean",
+            "update date not a date",
+            "update date not a string",
         ],
     )
     def test_broken_file(self, path: Path, content: str) -> None:
@@ -125,7 +134,7 @@ class TestUserSettingsStore:
 
     def test_file_without_theme(self, path: Path) -> None:
         """
-        Reads a file saved before the theme existed with the AUTO theme.
+        Reads a file saved before the theme and the database update existed with their defaults.
 
         :param path: settings file path
         :return: None
@@ -136,4 +145,4 @@ class TestUserSettingsStore:
         # Act
         settings: UserSettings = UserSettingsStore(path=path).load()
         # Assert
-        assert settings == UserSettings(language="de", theme=ThemeMode.AUTO)
+        assert settings == UserSettings(language="de", theme=ThemeMode.AUTO, auto_update=True, database_updated=None)

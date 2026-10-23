@@ -9,8 +9,8 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from app.config import APP_ICON_FILE, APP_USER_MODEL_ID
-from app.core.game_names import GameNames
-from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
+from app.core.database import AppDatabase
+from app.core.hardware import HardwareDetector
 from app.core.ops_api import OpsApi
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
@@ -43,12 +43,11 @@ class _Application:  # pylint: disable=too-few-public-methods
         :return: None
         """
         with HttpClient() as http:
+            database: AppDatabase = AppDatabase(http=http)
             service: PresetService = PresetService(
                 api=OpsApi(http=http),
-                names=GameNames.load(),
-                cpu_list=CpuList.load(),
-                gpu_list=GpuList.load(),
-                ranks=GpuRanks.load(),
+                database=database,
+                data=database.load(),
                 detector=HardwareDetector(),
                 store=UserSettingsStore(),
             )
@@ -66,6 +65,7 @@ class _Application:  # pylint: disable=too-few-public-methods
                 debouncer=QtDebouncer(parent=window),
                 translator=translator,
                 theme=service.saved_theme(),
+                auto_update=service.saved_auto_update(),
             )
             window.attach(presenter=presenter)
             presenter.start()

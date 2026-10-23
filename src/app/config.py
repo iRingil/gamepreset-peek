@@ -10,13 +10,17 @@ __all__: tuple[str, ...] = (
     "APP_ICON_FILE",
     "APP_TITLE",
     "APP_USER_MODEL_ID",
+    "DB_UPDATE_DAYS",
+    "DB_UPDATE_URL",
     "DEFAULT_LANGUAGE",
     "DEFAULT_RESOLUTION",
+    "FLAGS_DIR",
     "GETTEXT_DOMAIN",
     "HTTP_CONNECT_TIMEOUT",
     "HTTP_MAX_RETRIES",
     "HTTP_READ_TIMEOUT",
     "HTTP_RETRY_BACKOFF",
+    "ICONS_DIR",
     "LANGUAGE_NAMES",
     "LOCALE_DIR",
     "LOG_FILE",
@@ -49,8 +53,14 @@ SETTINGS_FILE: Path = APP_DATA_DIR / "settings.json"
 _DATA_DIR: Path = Path(__file__).parent / "data"
 APP_DB: Path = _DATA_DIR / "app.db"
 APP_ICON_FILE: Path = _DATA_DIR / "app.ico"
+ICONS_DIR: Path = _DATA_DIR / "icons"
+FLAGS_DIR: Path = _DATA_DIR / "flags"
 LOCALE_DIR: Path = Path(__file__).parent / "i18n" / "locale"
 GETTEXT_DOMAIN: str = "messages"
+# The latest database; a download replaces APP_DB in place (the build is a folder, so the file is writable).
+DB_UPDATE_URL: str = "https://raw.githubusercontent.com/iRingil/gamepreset-peek/master/src/app/data/app.db"
+# Days after a database update before the next one is downloaded.
+DB_UPDATE_DAYS: int = 7
 
 # UI languages and the NVIDIA translation language of each.
 UI_LANGUAGES: dict[str, str] = {"en": "en_US", "ru": "ru_RU", "de": "de_DE", "fr": "fr_FR", "es": "es_ES"}

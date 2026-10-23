@@ -4,11 +4,10 @@ import html
 from queue import Queue
 from typing import Callable, Sequence
 
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QStringListModel, Qt
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QPoint, QStringListModel, Qt
 from PySide6.QtGui import QFont, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QComboBox,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
@@ -26,13 +25,16 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from app.config import APP_TITLE, LANGUAGE_NAMES, WINDOW_MIN_SIZE, WINDOW_SIZE
+from app.config import APP_TITLE, WINDOW_MIN_SIZE, WINDOW_SIZE
 from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.choice_popup import ChoicePopup
+from app.ui.icons import IconButton
 from app.ui.log_panel import LogPanel
-from app.ui.presenter import ChoiceView, HardwareView, Presenter, SettingsView
+from app.ui.presenter import Presenter
+from app.ui.views import ChoiceView, HardwareView, SettingsView
+from app.ui.settings_menu import SettingsMenu
 from app.ui.theme import Theme
 
 __all__: tuple[str, ...] = ("MainWindow",)
@@ -302,7 +304,7 @@ class _HardwareBlock(QWidget):
         parent: QWidget | None = None,
     ) -> None:
         """
-        Build the block: rows of a caption and a value, CPU with RAM, GPU with VRAM, the resolution alone.
+        Build the block: three columns of a caption and a value, CPU over GPU, RAM over VRAM, the resolution.
 
         :param on_cpu: called when the user opens the CPU choice
         :param on_gpu: called when the user opens the GPU choice
@@ -320,19 +322,19 @@ class _HardwareBlock(QWidget):
         self._video_memory: QLabel = self._value()
         grid: QGridLayout = QGridLayout(self)
         grid.setContentsMargins(0, 0, 0, 0)
+        # Caption, value, gap, caption, value, gap, caption, value.
         grid.setColumnMinimumWidth(2, _PAD * 4)
-        links: tuple[tuple[UiText, QLabel], ...] = (
-            (UiText.CPU, self.cpu),
-            (UiText.GPU, self.gpu),
-            (UiText.RESOLUTION, self.resolution),
+        grid.setColumnMinimumWidth(5, _PAD * 4)
+        cells: tuple[tuple[UiText, QLabel, int, int], ...] = (
+            (UiText.CPU, self.cpu, 0, 0),
+            (UiText.GPU, self.gpu, 1, 0),
+            (UiText.RAM, self._memory, 0, 3),
+            (UiText.VRAM, self._video_memory, 1, 3),
+            (UiText.RESOLUTION, self.resolution, 0, 6),
         )
-        sizes: tuple[tuple[UiText, QLabel], ...] = ((UiText.RAM, self._memory), (UiText.VRAM, self._video_memory))
-        for row, (name, link) in enumerate(links):
-            grid.addWidget(self._captions[name], row, 0)
-            grid.addWidget(link, row, 1)
-        for row, (name, size) in enumerate(sizes):
-            grid.addWidget(self._captions[name], row, 3)
-            grid.addWidget(size, row, 4)
+        for name, value, row, column in cells:
+            grid.addWidget(self._captions[name], row, column)
+            grid.addWidget(value, row, column + 1)
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -399,7 +401,7 @@ class _HardwareBlock(QWidget):
 
 
 class _TopBar(QWidget):
-    """The hardware block, and the theme and language choices."""
+    """The hardware block, and the button that opens the settings menu in the corner."""
 
     def __init__(
         self,
@@ -407,8 +409,7 @@ class _TopBar(QWidget):
         on_cpu: Callable[[], None],
         on_gpu: Callable[[], None],
         on_resolution: Callable[[], None],
-        on_theme: Callable[[int], None],
-        on_language: Callable[[str], None],
+        on_settings: Callable[[], None],
         parent: QWidget | None = None,
     ) -> None:
         """
@@ -417,8 +418,7 @@ class _TopBar(QWidget):
         :param on_cpu: called when the user opens the CPU choice
         :param on_gpu: called when the user opens the GPU choice
         :param on_resolution: called when the user opens the resolution choice
-        :param on_theme: called with the position of the chosen theme
-        :param on_language: called with the code of the chosen language
+        :param on_settings: called when the user opens the settings menu
         :param parent: widget the bar belongs to
         """
         super().__init__(parent)
@@ -426,45 +426,21 @@ class _TopBar(QWidget):
         self.hardware: _HardwareBlock = _HardwareBlock(
             on_cpu=on_cpu, on_gpu=on_gpu, on_resolution=on_resolution, parent=self
         )
-        self._theme_label: QLabel = QLabel(parent=self)
-        self._themes: QComboBox = QComboBox(parent=self)
-        # Activated: chosen by the user, not set by the program.
-        self._themes.activated.connect(on_theme)
-        self._language_label: QLabel = QLabel(parent=self)
-        self._language: QComboBox = QComboBox(parent=self)
-        self._language.addItems(list(LANGUAGE_NAMES.values()))
-        self._language.activated.connect(lambda index: on_language(list(LANGUAGE_NAMES)[index]))
+        self.settings: IconButton = IconButton(symbol="settings", parent=self)
+        self.settings.clicked.connect(on_settings)
         layout.addWidget(self.hardware)
         layout.addStretch(1)
-        layout.addWidget(self._theme_label)
-        layout.addWidget(self._themes)
-        layout.addSpacing(_PAD * 2)
-        layout.addWidget(self._language_label)
-        layout.addWidget(self._language)
+        layout.addWidget(self.settings, alignment=Qt.AlignmentFlag.AlignTop)
 
     def apply_language(self, *, translator: Translator) -> None:
         """
-        Translate the fixed texts of the bar and show the language in use.
+        Translate the fixed texts of the bar.
 
         :param translator: translator of the UI language
         :return: None
         """
         self.hardware.apply_language(translator=translator)
-        self._theme_label.setText(translator.text(item=UiText.THEME))
-        self._language_label.setText(translator.text(item=UiText.LANGUAGE))
-        self._language.setCurrentIndex(list(LANGUAGE_NAMES).index(translator.language))
-
-    def show_themes(self, *, names: Sequence[str], selected: int) -> None:
-        """
-        Fill the theme choice.
-
-        :param names: theme names in list order
-        :param selected: position of the theme in use
-        :return: None
-        """
-        self._themes.clear()
-        self._themes.addItems(list(names))
-        self._themes.setCurrentIndex(selected)
+        self.settings.setToolTip(translator.text(item=UiText.SETTINGS))
 
 
 class _GamesColumn(QWidget):
@@ -536,6 +512,8 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         super().__init__()
         self._presenter: Presenter | None = None
         self._translator: Translator | None = None
+        self._theme: ThemeMode = ThemeMode.AUTO
+        self._auto_update: bool = True
         self.setWindowTitle(APP_TITLE)
         self.resize(*WINDOW_SIZE)
         self.setMinimumSize(*WINDOW_MIN_SIZE)
@@ -545,8 +523,7 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
             on_cpu=lambda: self._call(action=Presenter.open_cpu_choice),
             on_gpu=lambda: self._call(action=Presenter.open_gpu_choice),
             on_resolution=lambda: self._call(action=Presenter.open_resolution_choice),
-            on_theme=lambda index: self._call(action=lambda presenter: presenter.change_theme(index=index)),
-            on_language=lambda code: self._call(action=lambda presenter: presenter.change_language(language=code)),
+            on_settings=self._open_settings,
             parent=self,
         )
         layout.addWidget(self._top)
@@ -598,17 +575,17 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         :param mode: theme mode
         :return: None
         """
+        self._theme = mode
         Theme.apply(mode=mode)
 
-    def show_themes(self, *, names: Sequence[str], selected: int) -> None:
+    def show_auto_update(self, *, enabled: bool) -> None:
         """
-        Fill the theme choice.
+        Keep whether the database is updated automatically, for the settings menu.
 
-        :param names: theme names in list order
-        :param selected: position of the theme in use
+        :param enabled: True when it is
         :return: None
         """
-        self._top.show_themes(names=names, selected=selected)
+        self._auto_update = enabled
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -744,6 +721,30 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         popup: ChoicePopup = ChoicePopup(parent=self, choice=choice, search_hint=search_hint, on_choose=on_choose)
         popup.move(anchor.mapToGlobal(anchor.rect().bottomLeft()))
         popup.show()
+
+    def _open_settings(self) -> None:
+        """
+        Open the settings menu under the settings button, its right edge at the button's; picks go to the presenter.
+
+        :return: None
+        """
+        if self._translator is None:
+            return
+        menu: SettingsMenu = SettingsMenu(
+            parent=self,
+            translator=self._translator,
+            theme=self._theme,
+            auto_update=self._auto_update,
+            on_theme=lambda mode: self._call(action=lambda presenter: presenter.change_theme(mode=mode)),
+            on_language=lambda code: self._call(action=lambda presenter: presenter.change_language(language=code)),
+            on_auto_update=lambda enabled: self._call(
+                action=lambda presenter: presenter.change_auto_update(enabled=enabled)
+            ),
+        )
+        menu.adjustSize()
+        corner: QPoint = self._top.settings.mapToGlobal(self._top.settings.rect().bottomRight())
+        menu.move(corner.x() - menu.width(), corner.y())
+        menu.show()
 
     def _call(self, *, action: Callable[[Presenter], None]) -> None:
         """
