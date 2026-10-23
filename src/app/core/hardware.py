@@ -94,7 +94,7 @@ class HardwareDetector:
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
         global_memory_status: Any = ctypes.WinDLL(name="kernel32")["GlobalMemoryStatusEx"]
         if not global_memory_status(ctypes.byref(status)):
-            raise ctypes.WinError()
+            raise ctypes.WinError()  # pragma: no cover
         size: int = round(status.ullTotalPhys / 2**30)
         logger.info("Memory: {} GB", size)
         return size

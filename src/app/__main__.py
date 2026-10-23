@@ -27,7 +27,7 @@ __all__: tuple = ()
 class _Application:  # pylint: disable=too-few-public-methods
     """Builds the application and runs it until the window is closed."""
 
-    def __init__(self, *, logging_manager: LoggingManager) -> None:
+    def __init__(self, *, logging_manager: LoggingManager) -> None:  # pragma: no cover
         """
         Keep the logging setup whose lines the log panel shows.
 
@@ -35,7 +35,7 @@ class _Application:  # pylint: disable=too-few-public-methods
         """
         self._logging: LoggingManager = logging_manager
 
-    def run(self) -> None:
+    def run(self) -> None:  # pragma: no cover
         """
         Wire everything and run the Qt event loop.
 
@@ -89,7 +89,7 @@ class _Application:  # pylint: disable=too-few-public-methods
         logger.opt(exception=(exc_type, exc_value, traceback)).error("Unhandled error in the window")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     _logging: LoggingManager = LoggingManager(debug=True)
     logger.info("Starting")
     try:

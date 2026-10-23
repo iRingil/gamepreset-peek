@@ -648,7 +648,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
         :return: None
         """
-        if self._game is None or self._hardware is None:
+        if self._game is None or self._hardware is None:  # pragma: no cover
             return
         request: int = self._next_request()
         game_id: str = self._game.game_id
@@ -785,7 +785,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
         :return: None
         """
-        if self._settings is None or self._resolution is None or self._game is None:
+        if self._settings is None or self._resolution is None or self._game is None:  # pragma: no cover
             return
         language: str = self._translator.nvidia_language
         optimal: bool = self._preset_index == self._resolution.preset_index

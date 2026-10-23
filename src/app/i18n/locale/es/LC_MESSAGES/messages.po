@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-21 15:54+0300\n"
+"POT-Creation-Date: 2026-10-23 02:21+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: es\n"
@@ -79,21 +79,42 @@ msgstr "Mostrar registro"
 msgid "Hide logs"
 msgstr "Ocultar registro"
 
-#. CHANGE_GPU
-msgid "Change graphics card"
-msgstr "Cambiar tarjeta gráfica"
-
-#. OK
-msgid "OK"
-msgstr "Aceptar"
-
-#. CANCEL
-msgid "Cancel"
-msgstr "Cancelar"
-
 #. LOADING
 msgid "Loading…"
 msgstr "Cargando…"
+
+#. CPU
+msgid "CPU:"
+msgstr "CPU:"
+
+#. GPU
+msgid "GPU:"
+msgstr "GPU:"
+
+#. RAM
+msgid "RAM:"
+msgstr "RAM:"
+
+#. VRAM
+msgid "VRAM:"
+msgstr "VRAM:"
+
+#. SIZE_GB
+#, python-brace-format
+msgid "{size} GB"
+msgstr "{size} GB"
+
+#. UNKNOWN
+msgid "unknown"
+msgstr "desconocida"
+
+#. CHOOSE_CPU
+msgid "Choose a processor"
+msgstr "Elegir un procesador"
+
+#. CHOOSE_GPU
+msgid "Choose a graphics card"
+msgstr "Elegir una tarjeta gráfica"
 
 #. GAMES_FAILED
 #, python-brace-format
@@ -109,15 +130,13 @@ msgstr "No se pudieron obtener los datos de NVIDIA: {error}"
 msgid "No recommendations"
 msgstr "Sin recomendaciones"
 
-#. NO_HARDWARE
-msgid "Choose a graphics card first."
-msgstr "Elija primero una tarjeta gráfica."
-
 #. RESOLUTION_BELOW_MIN_SPEC
-msgid "This PC is below the minimum requirements for this resolution: even the lowest settings may stutter."
-msgstr ""
-"Este PC está por debajo de los requisitos mínimos para esta resolución: incluso con los ajustes más bajos puede haber"
-" tirones."
+msgid "Too demanding for this PC"
+msgstr "Demasiado exigente para este PC"
+
+#. RESOLUTION_BELOW_MIN_SPEC_HINT
+msgid "Even the lowest settings may stutter at this resolution."
+msgstr "Incluso con los ajustes más bajos, el juego puede ir a tirones a esta resolución."
 
 #. PERFORMANCE
 msgid "Performance"
@@ -139,18 +158,34 @@ msgstr "preajuste óptimo"
 msgid "Back to optimal"
 msgstr "Volver al óptimo"
 
-#. CURRENT_GPU
-#, python-brace-format
-msgid "Graphics card: {gpu}"
-msgstr "Tarjeta gráfica: {gpu}"
-
-#. GPU_NOT_CHOSEN
-msgid "No graphics card chosen."
-msgstr "No se ha elegido ninguna tarjeta gráfica."
-
 #. NO_NVIDIA_GPU
 msgid "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only."
 msgstr "No se encontró ninguna tarjeta gráfica NVIDIA. NVIDIA solo recomienda ajustes para tarjetas gráficas NVIDIA."
+
+#. UNSUPPORTED_HARDWARE
+msgid ""
+"GamePreset Peek works only with NVIDIA graphics cards and AMD or Intel processors. Choose your processor and graphics"
+" card in the links at the top."
+msgstr ""
+"GamePreset Peek solo funciona con tarjetas gráficas NVIDIA y procesadores AMD o Intel. Elija su procesador y su "
+"tarjeta gráfica en los enlaces de arriba."
+
+#. CPU_NOT_DETECTED
+msgid "Could not detect the processor. Choose yours from the list."
+msgstr "No se pudo detectar el procesador. Elija el suyo de la lista."
+
+#. CPU_REJECTED
+msgid "NVIDIA does not know your processor. Choose it from the list."
+msgstr "NVIDIA no conoce su procesador. Elíjalo de la lista."
+
+#. GPU_REJECTED
+msgid "NVIDIA does not know your graphics card. Choose the closest one from the list."
+msgstr "NVIDIA no conoce su tarjeta gráfica. Elija la más parecida de la lista."
+
+#. HARDWARE_FAILED
+#, python-brace-format
+msgid "Could not detect the hardware: {error}"
+msgstr "No se pudo detectar el hardware: {error}"
 
 #. HARDWARE_REJECTED
 #, python-brace-format
@@ -172,20 +207,4 @@ msgstr "memoria"
 #. COMPONENT_OS
 msgid "Windows version"
 msgstr "versión de Windows"
-
-#. CHOOSE_GPU_TITLE
-msgid "Graphics card"
-msgstr "Tarjeta gráfica"
-
-#. CHOOSE_DETECTED_GPU
-msgid "Several NVIDIA graphics cards found. Choose the one you play on."
-msgstr "Se encontraron varias tarjetas gráficas NVIDIA. Elija la que usa para jugar."
-
-#. CHOOSE_LISTED_GPU
-msgid "NVIDIA does not know your graphics card. Choose the closest one from the list."
-msgstr "NVIDIA no conoce su tarjeta gráfica. Elija la más parecida de la lista."
-
-#. CHOOSE_ANY_GPU
-msgid "Choose the graphics card to get recommended settings for."
-msgstr "Elija la tarjeta gráfica para la que desea obtener los ajustes recomendados."
 

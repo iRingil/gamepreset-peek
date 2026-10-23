@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
 )
 
 from app.ui.presenter import ChoiceView
-from app.ui.theme import RoundedView
 
 __all__: tuple[str, ...] = ("ChoicePopup",)
 
@@ -174,7 +173,6 @@ class ChoicePopup(QFrame):
         view.setUniformItemSizes(True)
         view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         view.addItems(list(items))
-        RoundedView(view=view)
         if selected is not None and 0 <= selected - offset < len(items):
             view.setCurrentRow(selected - offset)
             view.scrollToItem(view.currentItem(), QAbstractItemView.ScrollHint.PositionAtCenter)

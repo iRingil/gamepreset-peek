@@ -41,5 +41,5 @@ class _PotMaker:
         logger.info("Wrote {} messages to {}", len(UiText), output)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     _PotMaker.make(output=LOCALE_DIR / f"{GETTEXT_DOMAIN}.pot")

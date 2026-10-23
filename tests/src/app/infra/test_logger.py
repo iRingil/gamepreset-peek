@@ -134,6 +134,21 @@ class TestLoggingManager:
         assert len(lines) == 1
         assert lines[0].endswith("| WARNING  | Retrying request")
 
+    def test_stdlib_custom_level(self) -> None:
+        """
+        Redirects a standard logging record of a level loguru has no name for by its number.
+
+        :return: None
+        """
+        # Arrange
+        manager: LoggingManager = LoggingManager(debug=False)
+        # Act
+        logging.getLogger(name="third.party").log(level=25, msg="Custom level")
+        # Assert
+        lines: list[str] = self._drain(manager=manager)
+        assert len(lines) == 1
+        assert lines[0].endswith("| Level 25 | Custom level")
+
     def test_stdlib_record_attributed_to_caller(self, log_file: Path) -> None:
         """
         Attributes an intercepted standard logging record to its real caller, not to the logging module.

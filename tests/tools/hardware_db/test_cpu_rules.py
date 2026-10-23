@@ -20,6 +20,7 @@ class TestRejection:
             "Intel(R) Core(TM) 7 150U",
             "Intel(R) Core(TM) i3-N305",
             "Intel(R) Processor U300",
+            "Intel(R) Processor 300",
             "11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz",
             "Intel(R) Core(TM) i5-1035G1 CPU @ 1.00GHz",
             "Intel(R) Core(TM) i9-10900K CPU @ 3.70GHz",

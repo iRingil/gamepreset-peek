@@ -179,11 +179,11 @@ class TestHardwareDetector:
         registry.install(monkeypatch=monkeypatch)
         return registry
 
-    def test_cpu_name(self, registry: _FakeRegistry) -> None:
+    @pytest.mark.usefixtures("registry")
+    def test_cpu_name(self) -> None:
         """
         Reads the CPU name without the trailing spaces Windows pads it with.
 
-        :param registry: fake registry
         :return: None
         """
         # Arrange & Act
@@ -193,8 +193,13 @@ class TestHardwareDetector:
 
     @pytest.mark.parametrize(
         argnames="keys",
-        argvalues=[{}, {_CPU: {"ProcessorNameString": "   "}}, {_CPU: {"Identifier": "Intel64 Family 6"}}],
-        ids=["no key", "blank name", "no name"],
+        argvalues=[
+            {},
+            {_CPU: {"ProcessorNameString": "   "}},
+            {_CPU: {"Identifier": "Intel64 Family 6"}},
+            {_CPU: {"ProcessorNameString": 6}},
+        ],
+        ids=["no key", "blank name", "no name", "name not a string"],
     )
     def test_cpu_not_detected(self, monkeypatch: pytest.MonkeyPatch, keys: dict[str, dict[str, Any]]) -> None:
         """
@@ -220,11 +225,11 @@ class TestHardwareDetector:
         """
         return GpuRanks(ranks={"2882": (6, 1.0), "2204": (5, 4.0)})
 
-    def test_nvidia_gpus(self, registry: _FakeRegistry, ranks: GpuRanks) -> None:
+    @pytest.mark.usefixtures("registry")
+    def test_nvidia_gpus(self, ranks: GpuRanks) -> None:
         """
         Reports each active NVIDIA adapter once, the most powerful one first, with the video memory it reports.
 
-        :param registry: fake registry
         :param ranks: GPU ranks
         :return: None
         """

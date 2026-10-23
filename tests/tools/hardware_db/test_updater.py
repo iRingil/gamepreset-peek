@@ -133,6 +133,25 @@ class TestUpdateGpus(_UpdaterTests):
         assert db.gpu_names() == {"NVIDIA GeForce RTX 4090", "NVIDIA GeForce RTX 5090"}
         assert updater.report.ranks_changed
 
+    def test_rejected_gpu(self, updater: HardwareUpdater, db: HardwareDbWriter, api: MagicMock) -> None:
+        """
+        Leaves out a GPU the compatibility check rejects without asking for its presets.
+
+        :param updater: updater under test
+        :param db: database writer
+        :param api: NVIDIA API mock
+        :return: None
+        """
+        # Arrange
+        api.check_compatibility.side_effect = lambda hardware: Compatibility(
+            ok=hardware.gpu_device_id != "2c02", failed=() if hardware.gpu_device_id != "2c02" else ("gpu",)
+        )
+        # Act
+        updater.update_gpus(pci_ids=PciIds(text=_PCI_IDS))
+        # Assert
+        assert db.gpu_names() == {"NVIDIA GeForce RTX 4090", "NVIDIA GeForce RTX 5090"}
+        assert "2c02" not in [call.kwargs["hardware"].gpu_device_id for call in api.game_presets.call_args_list]
+
     def test_nvidia_error(self, updater: HardwareUpdater, api: MagicMock) -> None:
         """
         Stops on an NVIDIA error other than 404 instead of taking the GPU as unknown.

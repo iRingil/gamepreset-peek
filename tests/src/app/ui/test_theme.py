@@ -1,7 +1,12 @@
 """Tests of app.ui.theme."""
 
+from typing import Iterator
+from unittest.mock import MagicMock
+
 import pytest
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QApplication
 
 from app.core.models import ThemeMode
 from app.ui.theme import Theme
@@ -33,3 +38,33 @@ class TestTheme:
         scheme: Qt.ColorScheme = Theme.scheme(mode=mode)
         # Assert
         assert scheme == expected
+
+    @pytest.fixture(name="themed")
+    def _themed(self, qt_app: QApplication) -> Iterator[QApplication]:
+        """
+        Give the application back its plain look after a test themes it.
+
+        :param qt_app: Qt application
+        :return: the application
+        """
+        yield qt_app
+        qt_app.setStyleSheet("")
+        qt_app.setPalette(qt_app.style().standardPalette())
+
+    def test_apply(self, themed: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        Sets the color scheme of the mode and a style sheet that runs list rows up to the frame.
+
+        :param themed: Qt application, restored after the test
+        :param monkeypatch: pytest monkeypatch
+        :return: None
+        """
+        # Arrange
+        hints: MagicMock = MagicMock()
+        # The off-screen platform ignores color schemes, so the call itself is checked.
+        monkeypatch.setattr(target=QGuiApplication, name="styleHints", value=lambda: hints)
+        # Act
+        Theme.apply(mode=ThemeMode.DARK)
+        # Assert
+        hints.setColorScheme.assert_called_once_with(Qt.ColorScheme.Dark)
+        assert "QListView, QTreeView {padding:0}" in themed.styleSheet()

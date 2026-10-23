@@ -124,7 +124,7 @@ class TestBoincHosts:
     @responses.activate
     def test_dump_down(self, http: HttpClient) -> None:
         """
-        Skips a dump that can't be downloaded or isn't gzip and keeps the CPUs of the others.
+        Skips a dump that can't be downloaded and keeps the CPUs of the others.
 
         :param http: HTTP client
         :return: None
@@ -216,6 +216,29 @@ class TestInstLatDumps:
         # Assert
         assert downloaded == Downloaded(
             cpus={Cpu(name="13th Gen Intel(R) Core(TM) i9-13900KF", vendor="intel")}, failed=()
+        )
+
+    @responses.activate
+    def test_dump_down(self, http: HttpClient) -> None:
+        """
+        Skips a dump that can't be downloaded and keeps the CPUs of the others.
+
+        :param http: HTTP client
+        :return: None
+        """
+        # Arrange
+        good: str = "GenuineIntel/GenuineIntel00B0671_RaptorLake_02_CPUID.txt"
+        missing: str = "AuthenticAMD/AuthenticAMD0B40F40_Zen5_CPUID.txt"
+        tree: list[dict[str, str]] = [{"path": good, "type": "blob"}, {"path": missing, "type": "blob"}]
+        responses.get(url=InstLatDumps.TREE_URL, json={"tree": tree})
+        responses.get(url=InstLatDumps.RAW_URL + good, body=_RAPTOR_LAKE_DUMP)
+        responses.get(url=InstLatDumps.RAW_URL + missing, status=404)
+        # Act
+        downloaded: Downloaded = InstLatDumps.download(http=http)
+        # Assert
+        assert downloaded == Downloaded(
+            cpus={Cpu(name="13th Gen Intel(R) Core(TM) i9-13900KF", vendor="intel")},
+            failed=(InstLatDumps.RAW_URL + missing,),
         )
 
     @responses.activate

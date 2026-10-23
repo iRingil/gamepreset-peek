@@ -37,7 +37,7 @@ from app.ui.choice_popup import ChoicePopup
 from app.ui.icons import Icons
 from app.ui.log_panel import LogPanel
 from app.ui.presenter import ChoiceView, HardwareView, Hint, Presenter, ResolutionRow, SettingsView
-from app.ui.theme import RoundedView, Theme
+from app.ui.theme import Theme
 
 __all__: tuple[str, ...] = ("MainWindow",)
 
@@ -178,7 +178,6 @@ class _ChoiceList(QListView):
         self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         self._warnings: dict[int, Hint] = {}
         self.setItemDelegate(_SignDelegate(parent=self, warnings=lambda: self._warnings))
-        RoundedView(view=self)
         self.selectionModel().currentChanged.connect(
             # A refill resets the current item to none, which is no choice.
             lambda current, _: on_select(current.row()) if current.isValid() else None
@@ -381,7 +380,6 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         header.setStretchLastSection(False)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.resizeSection(1, _VALUE_WIDTH)
-        RoundedView(view=table)
         table.hide()
         return table
 

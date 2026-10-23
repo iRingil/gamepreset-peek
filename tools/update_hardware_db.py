@@ -55,7 +55,7 @@ class _Update:  # pylint: disable=too-few-public-methods
             report.write_text(data=text, encoding="utf-8", newline="\n")
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     _parser: argparse.ArgumentParser = argparse.ArgumentParser(description="Update the hardware database.")
     _parser.add_argument("--db", type=Path, default=HARDWARE_DB, help="database file (default: the bundled one)")
     _parser.add_argument("--report", type=Path, help="write the Markdown report to this file")

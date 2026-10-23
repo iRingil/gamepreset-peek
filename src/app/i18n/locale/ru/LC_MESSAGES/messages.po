@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-21 15:54+0300\n"
+"POT-Creation-Date: 2026-10-23 02:21+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -79,21 +79,42 @@ msgstr "Показать журнал"
 msgid "Hide logs"
 msgstr "Скрыть журнал"
 
-#. CHANGE_GPU
-msgid "Change graphics card"
-msgstr "Сменить видеокарту"
-
-#. OK
-msgid "OK"
-msgstr "OK"
-
-#. CANCEL
-msgid "Cancel"
-msgstr "Отмена"
-
 #. LOADING
 msgid "Loading…"
 msgstr "Загрузка…"
+
+#. CPU
+msgid "CPU:"
+msgstr "Процессор:"
+
+#. GPU
+msgid "GPU:"
+msgstr "Видеокарта:"
+
+#. RAM
+msgid "RAM:"
+msgstr "ОЗУ:"
+
+#. VRAM
+msgid "VRAM:"
+msgstr "Видеопамять:"
+
+#. SIZE_GB
+#, python-brace-format
+msgid "{size} GB"
+msgstr "{size} ГБ"
+
+#. UNKNOWN
+msgid "unknown"
+msgstr "неизвестно"
+
+#. CHOOSE_CPU
+msgid "Choose a processor"
+msgstr "Выберите процессор"
+
+#. CHOOSE_GPU
+msgid "Choose a graphics card"
+msgstr "Выберите видеокарту"
 
 #. GAMES_FAILED
 #, python-brace-format
@@ -109,13 +130,13 @@ msgstr "Не удалось получить данные от NVIDIA: {error}"
 msgid "No recommendations"
 msgstr "Нет рекомендаций"
 
-#. NO_HARDWARE
-msgid "Choose a graphics card first."
-msgstr "Сначала выберите видеокарту."
-
 #. RESOLUTION_BELOW_MIN_SPEC
-msgid "This PC is below the minimum requirements for this resolution: even the lowest settings may stutter."
-msgstr "Компьютер ниже минимальных требований для этого разрешения: даже на самых низких настройках возможны подтормаживания."
+msgid "Too demanding for this PC"
+msgstr "Слишком тяжело для этого ПК"
+
+#. RESOLUTION_BELOW_MIN_SPEC_HINT
+msgid "Even the lowest settings may stutter at this resolution."
+msgstr "Даже на минимальных настройках в этом разрешении возможны подтормаживания."
 
 #. PERFORMANCE
 msgid "Performance"
@@ -137,18 +158,34 @@ msgstr "оптимальный пресет"
 msgid "Back to optimal"
 msgstr "Вернуть оптимальный"
 
-#. CURRENT_GPU
-#, python-brace-format
-msgid "Graphics card: {gpu}"
-msgstr "Видеокарта: {gpu}"
-
-#. GPU_NOT_CHOSEN
-msgid "No graphics card chosen."
-msgstr "Видеокарта не выбрана."
-
 #. NO_NVIDIA_GPU
 msgid "No NVIDIA graphics card found. NVIDIA recommends settings for NVIDIA graphics cards only."
 msgstr "Видеокарта NVIDIA не найдена. NVIDIA рекомендует настройки только для видеокарт NVIDIA."
+
+#. UNSUPPORTED_HARDWARE
+msgid ""
+"GamePreset Peek works only with NVIDIA graphics cards and AMD or Intel processors. Choose your processor and graphics"
+" card in the links at the top."
+msgstr ""
+"GamePreset Peek работает только с видеокартами NVIDIA и процессорами AMD или Intel. Выберите свой процессор и "
+"видеокарту по ссылкам вверху."
+
+#. CPU_NOT_DETECTED
+msgid "Could not detect the processor. Choose yours from the list."
+msgstr "Не удалось определить процессор. Выберите свой из списка."
+
+#. CPU_REJECTED
+msgid "NVIDIA does not know your processor. Choose it from the list."
+msgstr "NVIDIA не знает ваш процессор. Выберите его из списка."
+
+#. GPU_REJECTED
+msgid "NVIDIA does not know your graphics card. Choose the closest one from the list."
+msgstr "NVIDIA не знает вашу видеокарту. Выберите самую похожую из списка."
+
+#. HARDWARE_FAILED
+#, python-brace-format
+msgid "Could not detect the hardware: {error}"
+msgstr "Не удалось определить оборудование: {error}"
 
 #. HARDWARE_REJECTED
 #, python-brace-format
@@ -170,20 +207,4 @@ msgstr "память"
 #. COMPONENT_OS
 msgid "Windows version"
 msgstr "версия Windows"
-
-#. CHOOSE_GPU_TITLE
-msgid "Graphics card"
-msgstr "Видеокарта"
-
-#. CHOOSE_DETECTED_GPU
-msgid "Several NVIDIA graphics cards found. Choose the one you play on."
-msgstr "Найдено несколько видеокарт NVIDIA. Выберите ту, на которой играете."
-
-#. CHOOSE_LISTED_GPU
-msgid "NVIDIA does not know your graphics card. Choose the closest one from the list."
-msgstr "NVIDIA не знает вашу видеокарту. Выберите самую похожую из списка."
-
-#. CHOOSE_ANY_GPU
-msgid "Choose the graphics card to get recommended settings for."
-msgstr "Выберите видеокарту, для которой нужны рекомендуемые настройки."
 

@@ -515,6 +515,24 @@ class TestStart(_PresenterTests):
         assert view.status == "Could not detect the hardware: no registry"
         service.check_hardware.assert_not_called()
 
+    def test_first_check_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Reports a failed first hardware check and requests no presets with the unchecked hardware.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.check_hardware.side_effect = ConnectionError("timeout")
+        presenter.start()
+        # Act
+        presenter.select_game(index=1)
+        # Assert
+        assert (view.status, view.hardware) == ("Could not get data from NVIDIA: timeout", _LAPTOP_VIEW)
+        service.game_presets.assert_not_called()
+
     def test_games_failed_then_reloaded(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
         Reports a failed game list with the "Load games" button, which requests it again.
@@ -580,16 +598,13 @@ class TestStart(_PresenterTests):
         # Assert
         assert view.status == expected
 
-    def test_problem_outlives_game_list(
-        self, presenter: Presenter, view: _FakeView, service: MagicMock, runner: _Runner
-    ) -> None:
+    def test_problem_outlives_game_list(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
         Keeps the hardware problem in the status line when the game list arrives after it.
 
         :param presenter: presenter under test
         :param view: fake window
         :param service: service mock
-        :param runner: runner
         :return: None
         """
         # Arrange
@@ -823,6 +838,66 @@ class TestSettings(_PresenterTests):
             None,
         )
 
+    def test_same_resolution_kept(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Keeps the settings shown when the window reports the chosen resolution again.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        self.show_settings(presenter=presenter)
+        # Act
+        presenter.select_resolution(index=2)
+        # Assert
+        assert (view.settings is not None, view.settings_button, service.game_settings.call_count) == (True, False, 1)
+
+    def test_no_resolution(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Requests no settings before a resolution is chosen.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        presenter.select_game(index=1)
+        # Act
+        presenter.show_settings()
+        # Assert
+        service.game_settings.assert_not_called()
+
+    @pytest.mark.parametrize(argnames="fails", argvalues=[False, True], ids=["answer", "error"])
+    def test_stale_settings_dropped(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, runner: _Runner, fails: bool
+    ) -> None:
+        """
+        Drops the settings, or the error, of a resolution the user left before they arrived.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param runner: runner
+        :param fails: True when the stale request fails
+        :return: None
+        """
+        # Arrange
+        if fails:
+            service.game_settings.side_effect = ConnectionError("timeout")
+        presenter.start()
+        presenter.select_game(index=1)
+        presenter.select_resolution(index=2)
+        runner.deferred = True
+        presenter.show_settings()
+        presenter.select_resolution(index=1)
+        # Act
+        runner.run_all()
+        # Assert
+        assert (view.settings, view.status, view.settings_button) == (None, "", True)
+
     def test_game_change_clears(self, presenter: Presenter, view: _FakeView) -> None:
         """
         Clears the settings when another game is chosen.
@@ -860,7 +935,13 @@ class TestLanguage(_PresenterTests):
         assert (presenter.language, view.language, view.resolutions[0]) == (
             "ru",
             "ru",
-            ResolutionRow(resolution="3840x2160", warning=_WARNING),
+            ResolutionRow(
+                resolution="3840x2160",
+                warning=Hint(
+                    title="Слишком тяжело для этого ПК",
+                    text="Даже на минимальных настройках в этом разрешении возможны подтормаживания.",
+                ),
+            ),
         )
         assert view.settings is not None
         assert (view.settings.rows, view.settings.subtitle, view.settings.caption) == (
