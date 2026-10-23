@@ -3,7 +3,6 @@
 import ctypes
 import re
 import winreg
-from contextlib import closing
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Self
@@ -12,33 +11,14 @@ import pytest
 
 from app.config import APP_DB
 from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
-from app.core.app_db import AppDb
 from app.core.models import Gpu
+from db_files import DbFiles
 
 __all__: tuple = ()
 
 _VIDEO_MAP: str = r"hardware\devicemap\video"
 _CPU: str = r"hardware\description\system\centralprocessor\0"
 _DRIVER: str = r"System\CurrentControlSet\Control\Video\{{{guid}}}\0000"
-
-
-class _Db:
-    """Hardware databases written for a test."""
-
-    @staticmethod
-    def create(*, path: Path, statements: list[tuple[str, tuple[object, ...]]]) -> Path:
-        """
-        Create a database with the app's schema and the given rows.
-
-        :param path: database file
-        :param statements: SQL statements with their parameters
-        :return: the database file
-        """
-        with closing(AppDb.write(path=path)) as db:
-            for sql, parameters in statements:
-                db.execute(sql, parameters)
-            db.commit()
-        return path
 
 
 class _FakeKey:
@@ -188,7 +168,7 @@ class TestHardwareDetector:
         :return: None
         """
         # Arrange & Act
-        name: str = HardwareDetector.cpu_name()
+        name: str | None = HardwareDetector.cpu_name()
         # Assert
         assert name == "AMD Ryzen 7 7800X3D 8-Core Processor"
 
@@ -327,7 +307,7 @@ class TestCpuList:
         """
         # Arrange
         sql: str = "INSERT INTO cpus (name, vendor) VALUES (?, ?)"
-        path: Path = _Db.create(
+        path: Path = DbFiles.create(
             path=tmp_path / "app.db",
             statements=[
                 (sql, ("AMD Ryzen 7 7800X3D 8-Core Processor", "amd")),
@@ -383,7 +363,7 @@ class TestGpuList:
         """
         # Arrange
         sql: str = "INSERT INTO gpus (name, device_id) VALUES (?, ?)"
-        path: Path = _Db.create(
+        path: Path = DbFiles.create(
             path=tmp_path / "app.db",
             statements=[(sql, ("NVIDIA GeForce RTX 4090", "2684")), (sql, ("NVIDIA GeForce GTX 1060 6GB", "1c03"))],
         )
@@ -456,7 +436,7 @@ class TestGpuRanks:
         :return: None
         """
         # Arrange
-        path: Path = _Db.create(
+        path: Path = DbFiles.create(
             path=tmp_path / "app.db",
             statements=[
                 (

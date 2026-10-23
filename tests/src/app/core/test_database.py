@@ -1,15 +1,14 @@
 """Tests of the database file and its download."""
 
-from contextlib import closing
 from pathlib import Path
 from typing import Iterator
 
 import pytest
 import responses
 
-from app.core.app_db import AppDb
 from app.core.database import AppData, AppDatabase
 from app.infra.http_client import HttpClient, HttpClientError
+from db_files import DbFiles
 
 __all__: tuple = ()
 
@@ -59,10 +58,9 @@ class TestAppDatabase:
         :param name: display name of the game
         :return: the file
         """
-        with closing(AppDb.write(path=path)) as db:
-            db.execute("INSERT INTO games (game_id, name) VALUES (?, ?)", ("mordhau", name))
-            db.commit()
-        return path
+        return DbFiles.create(
+            path=path, statements=[("INSERT INTO games (game_id, name) VALUES (?, ?)", ("mordhau", name))]
+        )
 
     def test_loaded(self, database: AppDatabase, path: Path) -> None:
         """

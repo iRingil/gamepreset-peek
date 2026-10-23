@@ -8,6 +8,7 @@ import pytest
 from app.config import APP_DB
 from app.core.app_db import AppDb
 from app.core.game_names import GameNames
+from db_files import DbFiles
 
 __all__: tuple = ()
 
@@ -72,10 +73,10 @@ class TestLoad:
         :return: None
         """
         # Arrange
-        path: Path = tmp_path / "app.db"
-        with closing(AppDb.write(path=path)) as db:
-            db.execute("INSERT INTO games (game_id, name) VALUES ('hitman', 'Hitman™')")
-            db.commit()
+        path: Path = DbFiles.create(
+            path=tmp_path / "app.db",
+            statements=[("INSERT INTO games (game_id, name) VALUES (?, ?)", ("hitman", "Hitman™"))],
+        )
         # Act
         names: GameNames = GameNames.load(path=path)
         # Assert
