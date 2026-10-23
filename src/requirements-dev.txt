@@ -1,7 +1,7 @@
 -c requirements.txt
 
 babel==2.18.0
-black==26.10.0
+black==26.10.1
 coverage==7.17.0
 mypy==2.4.0
 pylint==4.1.2
