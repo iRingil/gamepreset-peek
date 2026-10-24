@@ -39,8 +39,9 @@ class TestTypography:
         Typography.install()
         # Assert
         assert (QApplication.font().family(), QApplication.font().pointSizeF()) == ("Golos Text", 10)
+        # PySide's stubs take the class name as bytes only, but bytes finds no font at run time.
         # noinspection PyTypeChecker
-        assert QApplication.font("QAbstractItemView").family() == "Golos Text"
+        assert QApplication.font("QAbstractItemView").family() == "Golos Text"  # type: ignore[call-overload]
 
     def test_install_without_font_file(self, font_kept: QFont, monkeypatch: pytest.MonkeyPatch) -> None:
         """

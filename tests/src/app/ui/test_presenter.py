@@ -25,7 +25,7 @@ from app.core.models import (
 )
 from app.ui.presenter import Presenter
 from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, SettingRow, SettingsView, StatusLevel
-from presenter_fakes import (
+from tests.src.app.ui.presenter_fakes import (
     AMD_CPU,
     BG3_EXE,
     BUNDLED_RESOLUTIONS,

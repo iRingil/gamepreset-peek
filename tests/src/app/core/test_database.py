@@ -9,7 +9,7 @@ import responses
 
 from app.core.database import AppData, AppDatabase
 from app.infra.http_client import HttpClient, HttpClientError
-from db_files import DbFiles
+from tests.src.app.core.db_files import DbFiles
 
 __all__: tuple = ()
 

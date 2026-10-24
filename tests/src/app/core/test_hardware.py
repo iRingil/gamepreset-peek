@@ -12,7 +12,7 @@ import pytest
 from app.config import APP_DB, DEFAULT_MEMORY_GB
 from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
 from app.core.models import Gpu
-from db_files import DbFiles
+from tests.src.app.core.db_files import DbFiles
 
 __all__: tuple = ()
 

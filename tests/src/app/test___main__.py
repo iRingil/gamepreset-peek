@@ -1,6 +1,5 @@
 """Tests of the entry point's handling of errors raised in Qt slots."""
 
-import sys
 from types import TracebackType
 from typing import Iterator
 from unittest.mock import MagicMock
@@ -50,13 +49,9 @@ class TestLogUnhandled:
         :param error: exception to raise
         :return: type, exception and traceback
         """
-        # noinspection PyBroadException
-        try:
+        with pytest.raises(expected_exception=type(error)) as caught:
             raise error
-        except BaseException:  # pylint: disable=broad-exception-caught
-            exc_type, exc_value, traceback = sys.exc_info()
-            assert exc_type is not None and exc_value is not None
-            return exc_type, exc_value, traceback
+        return caught.type, caught.value, caught.tb
 
     def test_error_logged(self, records: list[str], quit_app: MagicMock) -> None:
         """

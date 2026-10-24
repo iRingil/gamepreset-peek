@@ -7,7 +7,7 @@ import pytest
 from app.config import APP_DB
 from app.core.game_catalog import GameCatalog
 from app.core.models import FileRole, Game, GameSource, RegistryValue, SourceFile
-from db_files import DbFiles
+from tests.src.app.core.db_files import DbFiles
 
 __all__: tuple = ()
 

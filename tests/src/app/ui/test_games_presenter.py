@@ -8,7 +8,7 @@ import pytest
 from app.core.models import GameChoice, GamesTab, InstalledGame
 from app.ui.presenter import Presenter
 from app.ui.views import InstalledGameView
-from presenter_fakes import (
+from tests.src.app.ui.presenter_fakes import (
     BG3_EXE,
     COVER,
     FOLDERS,

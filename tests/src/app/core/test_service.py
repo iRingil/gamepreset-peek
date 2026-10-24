@@ -39,36 +39,15 @@ from app.config import DEFAULT_GAME_FOLDERS, GAME_FILES_CACHED, SCREEN_RESOLUTIO
 from app.core.ops_api import OpsFormatError
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
+from tests.src.app.core.hardware_fakes import DETECTED_CPU, FakeHardware
 
 __all__: tuple = ()
 
 _LAPTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4060 Laptop GPU", device_id="28e0")
 _DESKTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")
 _LISTED_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507")
-_DETECTED_CPU: str = "13th Gen Intel(R) Core(TM) i9-13900HX"
 _LISTED_CPU: str = "AMD Ryzen 7 7800X3D 8-Core Processor"
 _ACCEPTED: Compatibility = Compatibility(ok=True, failed=())
-
-
-class _Hardware:
-    """Hardware the service builds from the detection mock of conftest."""
-
-    @staticmethod
-    def with_gpu(*, gpu: Gpu, cpu_name: str = _DETECTED_CPU) -> Hardware:
-        """
-        Build the hardware of the detected system with a GPU.
-
-        :param gpu: the GPU
-        :param cpu_name: the CPU
-        :return: hardware sent to NVIDIA
-        """
-        return Hardware(
-            cpu_name=cpu_name,
-            gpu_name=gpu.name,
-            gpu_device_id=gpu.device_id,
-            memory_gb=16,
-            os_version="10.0",
-        )
 
 
 class TestGames:
@@ -403,7 +382,7 @@ class TestHardwareSetup:
         # Assert
         assert setup == HardwareSetup(
             system=SystemHardware(
-                cpu_name=_DETECTED_CPU,
+                cpu_name=DETECTED_CPU,
                 gpus=(_DESKTOP_GPU, listed_detected),
                 memory_gb=16,
                 os_version="10.0",
@@ -413,7 +392,7 @@ class TestHardwareSetup:
             intel_cpus=("Intel(R) Core(TM) i7-14700K",),
             gpus=(),
             resolutions=tuple(item for item in SCREEN_RESOLUTIONS if item != "2560x1600"),
-            choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_DESKTOP_GPU),
+            choice=HardwareChoice(cpu_name=DETECTED_CPU, gpu=_DESKTOP_GPU),
             resolution="2560x1600",
         )
 
@@ -459,7 +438,7 @@ class TestHardwareSetup:
         # Assert
         assert store.load() == UserSettings(
             language="ru",
-            detected_cpu=_DETECTED_CPU,
+            detected_cpu=DETECTED_CPU,
             detected_gpus=(_DESKTOP_GPU, _LAPTOP_GPU),
             detected_resolution="2560x1600",
             chosen_gpu=_LISTED_GPU,
@@ -499,7 +478,7 @@ class TestHardwareSetup:
         # Act
         service.hardware_setup()
         service.hardware_setup()
-        service.check_hardware(choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_LAPTOP_GPU))
+        service.check_hardware(choice=HardwareChoice(cpu_name=DETECTED_CPU, gpu=_LAPTOP_GPU))
         # Assert
         mocks: tuple[MagicMock, ...] = (
             detector.cpu_name,
@@ -528,7 +507,7 @@ class TestCheckHardware:
         # Act
         check: HardwareCheck = service.check_hardware(choice=HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU))
         # Assert
-        hardware: Hardware = _Hardware.with_gpu(gpu=_LAPTOP_GPU, cpu_name=_LISTED_CPU)
+        hardware: Hardware = FakeHardware.with_gpu(gpu=_LAPTOP_GPU, cpu_name=_LISTED_CPU)
         assert check == HardwareCheck(state=HardwareState.READY, hardware=hardware)
         ops.check_compatibility.assert_called_once_with(hardware=hardware)
         assert store.load() == UserSettings()
@@ -536,7 +515,7 @@ class TestCheckHardware:
     @pytest.mark.parametrize(
         argnames=("choice", "missing"),
         argvalues=[
-            (HardwareChoice(cpu_name=_DETECTED_CPU, gpu=None), ("gpu",)),
+            (HardwareChoice(cpu_name=DETECTED_CPU, gpu=None), ("gpu",)),
             (HardwareChoice(cpu_name=None, gpu=None), ("cpu", "gpu")),
             (HardwareChoice(cpu_name=None, gpu=_LAPTOP_GPU), ("cpu",)),
         ],
@@ -617,7 +596,7 @@ class TestChooseHardware:
         detector.nvidia_gpus.return_value = (_LAPTOP_GPU,)
         ops.check_compatibility.return_value = _ACCEPTED
         # Act
-        service.choose_hardware(choice=HardwareChoice(cpu_name=_DETECTED_CPU, gpu=_LISTED_GPU))
+        service.choose_hardware(choice=HardwareChoice(cpu_name=DETECTED_CPU, gpu=_LISTED_GPU))
         # Assert
         assert store.load() == UserSettings(chosen_gpu=_LISTED_GPU)
 
@@ -742,7 +721,7 @@ class TestGameSettings:
         :return: None
         """
         # Arrange
-        hardware: Hardware = _Hardware.with_gpu(gpu=_LAPTOP_GPU)
+        hardware: Hardware = FakeHardware.with_gpu(gpu=_LAPTOP_GPU)
         # Act
         result: GamePresets = service.game_presets(game_id="mordhau", hardware=hardware)
         # Assert

@@ -14,11 +14,8 @@ from app.core.models import (
     GamesTab,
     GameSettings,
     Gpu,
-    Hardware,
-    HardwareCheck,
     HardwareChoice,
     HardwareSetup,
-    HardwareState,
     InstalledGame,
     PresetsFile,
     RemoteFile,
@@ -35,6 +32,7 @@ from app.ui.exe_icons import ExeIcons
 from app.ui.presenter import Presenter
 from app.ui.views import ChoiceView, HardwareView, InstalledGameView, SettingRow, SettingsView, StatusLevel
 from app.ui.worker import Runners
+from tests.src.app.core.hardware_fakes import DETECTED_CPU, FakeHardware
 
 __all__: tuple[str, ...] = (
     "AMD_CPU",
@@ -65,7 +63,7 @@ __all__: tuple[str, ...] = (
 
 LAPTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4060 Laptop GPU", device_id="28e0", memory_gb=8.0)
 DESKTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")
-CPU: str = "13th Gen Intel(R) Core(TM) i9-13900HX"
+CPU: str = DETECTED_CPU
 AMD_CPU: str = "AMD Ryzen 7 7800X3D 8-Core Processor"
 INTEL_CPU: str = "Intel(R) Core(TM) i7-14700K"
 SCREEN: str = "1920x1080"
@@ -134,38 +132,6 @@ SHOWN: SettingsView = SettingsView(
     recommended=2,
     optimal=True,
 )
-
-
-class FakeHardware:
-    """Hardware the service mock reports."""
-
-    @staticmethod
-    def with_gpu(*, gpu: Gpu, cpu_name: str = CPU) -> Hardware:
-        """
-        Build hardware with a GPU.
-
-        :param gpu: the GPU
-        :param cpu_name: the CPU
-        :return: hardware
-        """
-        return Hardware(
-            cpu_name=cpu_name,
-            gpu_name=gpu.name,
-            gpu_device_id=gpu.device_id,
-            memory_gb=16,
-            os_version="10.0",
-        )
-
-    @classmethod
-    def ready(cls, *, gpu: Gpu, cpu_name: str = CPU) -> HardwareCheck:
-        """
-        Build a READY check result.
-
-        :param gpu: the GPU in use
-        :param cpu_name: the CPU in use
-        :return: check result
-        """
-        return HardwareCheck(state=HardwareState.READY, hardware=cls.with_gpu(gpu=gpu, cpu_name=cpu_name))
 
 
 class FakeView:  # pylint: disable=too-many-instance-attributes
@@ -575,10 +541,10 @@ class PresenterTests:
         return Presenter(
             view=view,
             service=service,
+            translator=Translator(language="en", locale_dir=locale_dir),
             runners=runners,
             debouncer=debouncer,
             icons=icons,
-            translator=Translator(language="en", locale_dir=locale_dir),
             theme=ThemeMode.AUTO,
             auto_update=True,
             locale_dir=locale_dir,

@@ -6,12 +6,14 @@ on:
     branches: [ "master" ]
     paths:
       - 'src/**'
+      - 'tests/**'
       - 'pyproject.toml'
       - '.github/workflows/**'
   pull_request:
     branches: [ "master" ]
     paths:
       - 'src/**'
+      - 'tests/**'
       - 'pyproject.toml'
       - '.github/workflows/**'
 
@@ -35,4 +37,4 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r src/requirements.txt -r src/requirements-dev.txt
       - name: Check with mypy
-        run: mypy src
+        run: mypy src tests
