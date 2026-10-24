@@ -64,8 +64,8 @@ class TestLoad:
             path=tmp_path / "app.db",
             statements=[
                 (
-                    "INSERT INTO games (game_id, name, box_art_url) VALUES (?, ?, ?)",
-                    ("baldurs_gate_3", "Baldur's Gate 3", "https://img.example.test/bg3.jpg"),
+                    "INSERT INTO games (game_id, name, app_id, box_art_url) VALUES (?, ?, ?, ?)",
+                    ("baldurs_gate_3", "Baldur's Gate 3", "bg3-app", "https://img.example.test/bg3.jpg"),
                 ),
                 ("INSERT INTO games (game_id, name) VALUES (?, ?)", ("mordhau", "MORDHAU")),
                 ("INSERT INTO game_sources VALUES (?, ?, ?, ?)", ("baldurs_gate_3", 2, "UWP", "Larian.BG3_x")),
@@ -89,7 +89,7 @@ class TestLoad:
 
     def test_games(self, path: Path) -> None:
         """
-        Reads the games with their names and box art, sorted by name.
+        Reads the games with their names, box art and application ids, sorted by name.
 
         :param path: database file
         :return: None
@@ -97,9 +97,9 @@ class TestLoad:
         # Arrange & Act
         catalog: GameCatalog = GameCatalog.load(path=path)
         # Assert
-        assert [(game.game_id, game.name, game.cover_url) for game in catalog.games] == [
-            ("baldurs_gate_3", "Baldur's Gate 3", "https://img.example.test/bg3.jpg"),
-            ("mordhau", "MORDHAU", None),
+        assert [(game.game_id, game.name, game.cover_url, game.app_id) for game in catalog.games] == [
+            ("baldurs_gate_3", "Baldur's Gate 3", "https://img.example.test/bg3.jpg", "bg3-app"),
+            ("mordhau", "MORDHAU", None, None),
         ]
 
     def test_sources(self, path: Path) -> None:

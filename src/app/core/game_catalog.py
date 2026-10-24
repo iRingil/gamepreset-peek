@@ -66,8 +66,10 @@ class GameCatalog:
         """
         with closing(AppDb.read(path=path)) as db:
             games: tuple[Game, ...] = tuple(
-                Game(game_id=game_id, name=name, cover_url=cover_url)
-                for game_id, name, cover_url in db.execute("SELECT game_id, name, box_art_url FROM games")
+                Game(game_id=game_id, name=name, cover_url=cover_url, app_id=app_id)
+                for game_id, name, cover_url, app_id in db.execute(
+                    "SELECT game_id, name, box_art_url, app_id FROM games"
+                )
             )
             sources: tuple[GameSource, ...] = cls._sources_of(db=db)
         logger.debug("Loaded {} games and {} game copies from {}", len(games), len(sources), path)

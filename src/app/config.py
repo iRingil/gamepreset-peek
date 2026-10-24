@@ -40,6 +40,7 @@ __all__: tuple[str, ...] = (
     "LOG_PANEL_HEIGHT",
     "LOG_PANEL_MAX_LINES",
     "LOG_POLL_MS",
+    "NV_GAME_ART_URL",
     "OPS_COMMON_FILES_URL",
     "OPS_COMPATIBILITY_URL",
     "OPS_PRESETS_URL",
@@ -72,6 +73,8 @@ EXE_ICON_SIZE: int = 48
 INSTANCE_NAME: str = f"{APP_NAME}-{os.environ.get('USERNAME', '')}"
 # Width of a downloaded box art picture in pixels: twice the cover column, sharp at 200 % scale.
 COVER_WIDTH: int = 440
+# GraphQL service asked for the current box art URL of an application when the one from the database is gone.
+NV_GAME_ART_URL: str = "https://public.games.geforce.com/graphql"
 # Bundled data files live next to the package code.
 _DATA_DIR: Path = Path(__file__).parent / "data"
 APP_DB: Path = _DATA_DIR / "app.db"

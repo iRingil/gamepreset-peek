@@ -202,11 +202,15 @@ class RemoteFile:
 
 @dataclass(frozen=True, slots=True)
 class Game:
-    """A game NVIDIA has presets for, with its display name and the URL of its vertical box art, if it has one."""
+    """A game NVIDIA has presets for, with its display name and the URL of its vertical box art, if it has one.
+
+    The application id names the game in NVIDIA's image service; a box art URL that stopped working is found again
+    through it."""
 
     game_id: str
     name: str
     cover_url: str | None = field(default=None, compare=False)
+    app_id: str | None = field(default=None, compare=False)
 
 
 class FileRole(StrEnum):

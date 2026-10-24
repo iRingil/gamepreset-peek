@@ -207,7 +207,7 @@ class TestCover:
 
     def test_cached_picture(self, covers: MagicMock, service: PresetService) -> None:
         """
-        Gets the picture of a game's box art URL from the cache.
+        Gets the picture of a game's box art URL from the cache, passing its application id for a failed URL.
 
         :param covers: box art cache mock
         :param service: service under test
@@ -215,12 +215,17 @@ class TestCover:
         """
         # Arrange
         covers.get.return_value = Path("cover.jpg")
-        game: Game = Game(game_id="baldurs_gate_3", name="Baldur's Gate 3", cover_url="https://img.example.test/a.jpg")
+        game: Game = Game(
+            game_id="baldurs_gate_3",
+            name="Baldur's Gate 3",
+            cover_url="https://img.example.test/a.jpg",
+            app_id="bg3-app",
+        )
         # Act
         picture: Path | None = service.cover(game=game)
         # Assert
         assert picture == Path("cover.jpg")
-        covers.get.assert_called_once_with(url="https://img.example.test/a.jpg")
+        covers.get.assert_called_once_with(url="https://img.example.test/a.jpg", app_id="bg3-app")
 
     def test_no_box_art(self, covers: MagicMock, service: PresetService) -> None:
         """

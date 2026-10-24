@@ -153,7 +153,7 @@ class PresetService:
         :param game: the game
         :return: the picture file, None when the game has no box art
         """
-        return None if game.cover_url is None else self._covers.get(url=game.cover_url)
+        return None if game.cover_url is None else self._covers.get(url=game.cover_url, app_id=game.app_id)
 
     def update_database_if_due(self) -> DatabaseUpdate:
         """
