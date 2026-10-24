@@ -30,7 +30,6 @@ class DbFiles:
             game_id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
             app_id TEXT,
-            is_game INTEGER NOT NULL DEFAULT 1,
             box_art_url TEXT
         );
         CREATE TABLE game_sources (
