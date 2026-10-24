@@ -974,7 +974,9 @@ class TestSettings(_PresenterTests):
             position="3 / 3",
             caption="preset",
             rows=(
-                SettingRow(name="Shadows", value="High", changed=True),
+                SettingRow(
+                    name="Shadows", value="High", changed=True, hint="Differs from the recommended preset (Medium)"
+                ),
                 SettingRow(name="Scale", value="1.000", changed=False),
             ),
             count=3,

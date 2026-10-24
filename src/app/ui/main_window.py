@@ -118,6 +118,8 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         self._performance.setText(translator.text(item=UiText.PERFORMANCE))
         self._quality.setText(translator.text(item=UiText.QUALITY))
         self._optimal.setText(translator.text(item=UiText.OPTIMAL))
+        self._optimal.setToolTip(translator.text(item=UiText.OPTIMAL_HINT))
+        self.slider.setToolTip(translator.text(item=UiText.SLIDER_HINT))
         self._table.setHeaderLabels([translator.text(item=UiText.SETTING), translator.text(item=UiText.VALUE)])
 
     def show_settings(self, *, settings: SettingsView) -> None:
@@ -139,6 +141,7 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
             item: QTreeWidgetItem = QTreeWidgetItem([row.name, row.value])
             for column in range(2):
                 item.setData(column, _CHANGED_ROLE, row.changed)
+                item.setToolTip(column, row.hint)
             items.append(item)
         self._table.addTopLevelItems(items)
         self._slider_row.show()
@@ -282,6 +285,12 @@ class _HardwareBlock(QWidget):
         """
         for item, caption in self._captions.items():
             caption.setText(translator.text(item=item))
+        for link, hint in (
+            (self.cpu, UiText.CPU_HINT),
+            (self.gpu, UiText.GPU_HINT),
+            (self.resolution, UiText.RESOLUTION_HINT),
+        ):
+            link.setToolTip(translator.text(item=hint))
 
     def show_hardware(self, *, hardware: HardwareView) -> None:
         """

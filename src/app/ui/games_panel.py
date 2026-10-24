@@ -163,6 +163,7 @@ class _InstalledTab(QWidget):  # pylint: disable=too-many-instance-attributes
         self.remove.setToolTip(translator.text(item=UiText.REMOVE_FOLDER))
         self.change.setToolTip(translator.text(item=UiText.CHANGE_FOLDER))
         self.find_again.setText(translator.text(item=UiText.FIND_AGAIN))
+        self.find_again.setToolTip(translator.text(item=UiText.FIND_AGAIN_HINT))
 
     def show_finding(self) -> None:
         """

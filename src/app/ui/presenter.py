@@ -935,7 +935,16 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
                 position=f"{self._preset_index} / {self._settings.count}",
                 caption=self._translator.text(item=UiText.OPTIMAL_PRESET if optimal else UiText.PRESET),
                 rows=tuple(
-                    SettingRow(name=name, value=value, changed=value != recommended_value)
+                    SettingRow(
+                        name=name,
+                        value=value,
+                        changed=value != recommended_value,
+                        hint=(
+                            self._translator.text(item=UiText.CHANGED_HINT, value=recommended_value)
+                            if value != recommended_value
+                            else ""
+                        ),
+                    )
                     for (name, value), (_, recommended_value) in zip(rows, recommended, strict=True)
                 ),
                 count=self._settings.count,

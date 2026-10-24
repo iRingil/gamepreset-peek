@@ -72,11 +72,14 @@ class InstalledGameView:
 
 @dataclass(frozen=True, slots=True)
 class SettingRow:
-    """A row of the settings table; changed means the value differs from the one of the recommended preset."""
+    """A row of the settings table; changed means the value differs from the one of the recommended preset.
+
+    The hint, shown on hover, gives a changed row the value of the recommended preset."""
 
     name: str
     value: str
     changed: bool
+    hint: str = ""
 
 
 @dataclass(frozen=True, slots=True)

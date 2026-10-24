@@ -51,7 +51,7 @@ _SETTINGS: SettingsView = SettingsView(
     caption="optimal preset",
     rows=(
         SettingRow(name="Shadows", value="High", changed=False),
-        SettingRow(name="Textures", value="Ultra", changed=True),
+        SettingRow(name="Textures", value="Ultra", changed=True, hint="Differs from the recommended preset (High)"),
     ),
     count=3,
     index=2,
@@ -455,6 +455,40 @@ class TestMainWindow:
             QPalette.ColorRole.Link
         )
         window.presenter.move_slider.assert_called_once_with(index=3)
+
+    def test_hints(self, window: _Window) -> None:
+        """
+        Explains the hardware links, the slider, the Optimal button and a changed value on hover.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        window.widget.show_settings(settings=_SETTINGS)
+        table: QTreeWidget = window.table()
+        window.widget.show_hardware(
+            hardware=HardwareView(cpu="CPU", gpu="GPU", resolution="1920x1080", memory="", video_memory="")
+        )
+        links: list[QLabel] = [label for label in window.widget.findChildren(QLabel) if "href" in label.text()]
+        # Act
+        hints: tuple[str, ...] = (
+            window.child(parent=window.widget, kind=PresetSlider).toolTip(),
+            window.button(text="Optimal").toolTip(),
+            table.topLevelItem(0).toolTip(1),
+            table.topLevelItem(1).toolTip(1),
+        )
+        # Assert
+        assert [link.toolTip() for link in links] == [
+            "Choose another processor",
+            "Choose another graphics card",
+            "Choose another screen resolution",
+        ]
+        assert hints == (
+            "Other presets NVIDIA has for this game; the dot marks the recommended one",
+            "Go back to the preset NVIDIA recommends",
+            "",
+            "Differs from the recommended preset (High)",
+        )
 
     def test_unchanged_value_plain(self, window: _Window) -> None:
         """

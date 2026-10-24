@@ -61,7 +61,7 @@ class TestGamesPanel:
 
     def test_texts(self, panel: GamesPanel) -> None:
         """
-        Names the folder buttons in tooltips and the new search on its button.
+        Names the folder buttons in tooltips and the new search on its button, explained in its tooltip.
 
         :param panel: the panel
         :return: None
@@ -72,6 +72,7 @@ class TestGamesPanel:
             panel.installed.remove.toolTip(),
             panel.installed.change.toolTip(),
             panel.installed.find_again.text(),
+            panel.installed.find_again.toolTip(),
         )
         # Assert
         assert texts == (
@@ -79,6 +80,7 @@ class TestGamesPanel:
             "Remove the folder",
             "Change the folder",
             "Search again",
+            "Search the folders in the list for installed games again",
         )
         assert panel.all.search.placeholderText() == "Search"
 

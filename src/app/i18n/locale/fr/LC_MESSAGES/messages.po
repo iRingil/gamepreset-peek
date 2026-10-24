@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 12:20+0300\n"
+"POT-Creation-Date: 2026-10-24 12:30+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -45,6 +45,10 @@ msgstr "Retirer le dossier"
 #. FIND_AGAIN
 msgid "Search again"
 msgstr "Rechercher à nouveau"
+
+#. FIND_AGAIN_HINT
+msgid "Search the folders in the list for installed games again"
+msgstr "Rechercher à nouveau les jeux installés dans les dossiers de la liste"
 
 #. CHOOSE_FOLDER
 msgid "Choose a folder with games"
@@ -161,6 +165,18 @@ msgstr "Choisir un processeur"
 msgid "Choose a graphics card"
 msgstr "Choisir une carte graphique"
 
+#. CPU_HINT
+msgid "Choose another processor"
+msgstr "Choisir un autre processeur"
+
+#. GPU_HINT
+msgid "Choose another graphics card"
+msgstr "Choisir une autre carte graphique"
+
+#. RESOLUTION_HINT
+msgid "Choose another screen resolution"
+msgstr "Choisir une autre résolution d’écran"
+
 #. REQUEST_FAILED
 #, python-brace-format
 msgid "Could not get data from NVIDIA: {error}"
@@ -198,6 +214,19 @@ msgstr "préréglage optimal"
 #. OPTIMAL
 msgid "Optimal"
 msgstr "Optimal"
+
+#. OPTIMAL_HINT
+msgid "Go back to the preset NVIDIA recommends"
+msgstr "Revenir au préréglage recommandé par NVIDIA"
+
+#. SLIDER_HINT
+msgid "Other presets NVIDIA has for this game; the dot marks the recommended one"
+msgstr "Les autres préréglages NVIDIA pour ce jeu ; le point marque celui recommandé"
+
+#. CHANGED_HINT
+#, python-brace-format
+msgid "Differs from the recommended preset ({value})"
+msgstr "Diffère du préréglage recommandé ({value})"
 
 #. NO_NVIDIA_GPU
 msgid "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only."
