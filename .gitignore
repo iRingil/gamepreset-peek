@@ -139,10 +139,6 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Translations
-*.mo
-*.pot
-
 # Flask stuff:
 instance/
 .webassets-cache
