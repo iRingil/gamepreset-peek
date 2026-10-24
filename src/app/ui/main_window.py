@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.config import APP_TITLE, WINDOW_MIN_SIZE, WINDOW_SIZE
-from app.core.models import ThemeMode
+from app.core.models import GamesTab, ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.choice_popup import ChoicePopup
@@ -328,9 +328,11 @@ class _HardwareBlock(QWidget):
         """
         label: QLabel = self._value()
         label.setTextFormat(Qt.TextFormat.RichText)
-        label.setTextInteractionFlags(
-            Qt.TextInteractionFlag.LinksAccessibleByMouse | Qt.TextInteractionFlag.LinksAccessibleByKeyboard
+        # Combined as ints: PyCharm misreads the operand types of Flag.__or__.
+        flags: Qt.TextInteractionFlag = Qt.TextInteractionFlag(
+            Qt.TextInteractionFlag.LinksAccessibleByMouse.value | Qt.TextInteractionFlag.LinksAccessibleByKeyboard.value
         )
+        label.setTextInteractionFlags(flags)
         label.linkActivated.connect(lambda _: on_click())
         return label
 
@@ -420,6 +422,7 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
             on_remove_folder=lambda position: self._call(
                 action=lambda presenter: presenter.remove_folder(position=position)
             ),
+            on_tab=lambda tab: self._call(action=lambda presenter: presenter.select_tab(tab=tab)),
             parent=self,
         )
         self._cover: CoverView = CoverView(parent=self)
@@ -620,15 +623,14 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         """
         self._games.installed.show_games(games=games, selected=selected)
 
-    def select_game(self, *, position: int | None, installed_position: int | None) -> None:
+    def show_tab(self, *, tab: GamesTab) -> None:
         """
-        Select the chosen game in both lists without refilling them; None clears the selection of a list.
+        Bring a game tab to the front.
 
-        :param position: position in the list of all games as shown
-        :param installed_position: position in the list of installed games
+        :param tab: the tab
         :return: None
         """
-        self._games.select(position=position, installed_position=installed_position)
+        self._games.show_tab(tab=tab)
 
     def show_folders(self, *, folders: Sequence[str]) -> None:
         """

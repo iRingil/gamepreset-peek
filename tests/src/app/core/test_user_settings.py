@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from app.core.models import Gpu, ThemeMode, UserSettings
+from app.core.models import GameChoice, GamesTab, Gpu, ThemeMode, UserSettings
 from app.core.user_settings import UserSettingsStore
 
 __all__: tuple = ()
@@ -54,6 +54,9 @@ class TestUserSettingsStore:
                 auto_update=False,
                 database_updated=date(2026, 10, 23),
                 game_folders=(r"D:\Games", r"E:\SteamLibrary"),
+                game_choice=GameChoice(
+                    tab=GamesTab.ALL, installed_game_id="baldurs_gate_3", catalog_game_id="forza_horizon_5"
+                ),
             ),
             UserSettings(language="de"),
             UserSettings(game_folders=()),
@@ -99,6 +102,9 @@ class TestUserSettingsStore:
             '{"database_updated": 20261023}',
             '{"game_folders": "D:\\\\Games"}',
             '{"game_folders": [1]}',
+            '{"games_tab": "favorites"}',
+            '{"installed_game_id": 1}',
+            '{"catalog_game_id": ["mordhau"]}',
         ],
         ids=[
             "not json",
@@ -120,6 +126,9 @@ class TestUserSettingsStore:
             "update date not a string",
             "game folders not a list",
             "game folder not a string",
+            "unknown games tab",
+            "installed game not a string",
+            "catalog game not a string",
         ],
     )
     def test_broken_file(self, path: Path, content: str) -> None:
@@ -140,7 +149,7 @@ class TestUserSettingsStore:
 
     def test_file_without_theme(self, path: Path) -> None:
         """
-        Reads a file saved before the theme, the database update and the game folders existed with their defaults.
+        Reads a file saved before the theme, database update, game folders and game choice existed with defaults.
 
         :param path: settings file path
         :return: None
@@ -152,5 +161,10 @@ class TestUserSettingsStore:
         settings: UserSettings = UserSettingsStore(path=path).load()
         # Assert
         assert settings == UserSettings(
-            language="de", theme=ThemeMode.AUTO, auto_update=True, database_updated=None, game_folders=None
+            language="de",
+            theme=ThemeMode.AUTO,
+            auto_update=True,
+            database_updated=None,
+            game_folders=None,
+            game_choice=GameChoice(tab=GamesTab.INSTALLED, installed_game_id=None, catalog_game_id=None),
         )

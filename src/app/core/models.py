@@ -10,6 +10,8 @@ __all__: tuple[str, ...] = (
     "DatabaseUpdate",
     "FileRole",
     "Game",
+    "GameChoice",
+    "GamesTab",
     "GameSource",
     "GamePresets",
     "GameSettings",
@@ -144,6 +146,22 @@ class ThemeMode(StrEnum):
     AUTO = "auto"
     LIGHT = "light"
     DARK = "dark"
+
+
+class GamesTab(StrEnum):
+    """Tab of the game lists: the games installed on this computer or all games."""
+
+    INSTALLED = "installed"
+    ALL = "all"
+
+
+@dataclass(frozen=True, slots=True)
+class GameChoice:
+    """The game tab in use and the identifier of the game chosen in each tab, None until a game is chosen there."""
+
+    tab: GamesTab = GamesTab.INSTALLED
+    installed_game_id: str | None = None
+    catalog_game_id: str | None = None
 
 
 class DatabaseUpdate(StrEnum):
@@ -421,7 +439,8 @@ class UserSettings:
     chosen CPU, GPU and resolution are the ones the user picked in the lists, None when not picked: the detected ones
     are used then. The database update date is the day of the last download, None before the first one.
 
-    The game folders are where installed games are searched for; None until the list is first saved."""
+    The game folders are where installed games are searched for; None until the list is first saved. The game choice
+    keeps the tab in use and the game chosen in each tab."""
 
     language: str | None = None
     detected_cpu: str | None = None
@@ -434,3 +453,4 @@ class UserSettings:
     auto_update: bool = True
     database_updated: date | None = None
     game_folders: tuple[str, ...] | None = None
+    game_choice: GameChoice = GameChoice()

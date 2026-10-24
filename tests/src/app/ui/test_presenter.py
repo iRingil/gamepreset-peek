@@ -12,7 +12,9 @@ import pytest
 from app.core.models import (
     DatabaseUpdate,
     Game,
+    GameChoice,
     GamePresets,
+    GamesTab,
     GameSettings,
     Gpu,
     Hardware,
@@ -154,6 +156,7 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.auto_update: bool | None = None
         self.hardware: HardwareView | None = None
         self.status: str = ""
+        self.tab: GamesTab | None = None
         self.games: list[str] = []
         self.game_selected: int | None = None
         self.finding: bool = False
@@ -282,16 +285,14 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.installed = list(games)
         self.installed_selected = selected
 
-    def select_game(self, *, position: int | None, installed_position: int | None) -> None:
+    def show_tab(self, *, tab: GamesTab) -> None:
         """
-        Record the selection of both lists.
+        Record the game tab in front.
 
-        :param position: position in the list of all games
-        :param installed_position: position in the list of installed games
+        :param tab: the tab
         :return: None
         """
-        self.game_selected = position
-        self.installed_selected = installed_position
+        self.tab = tab
 
     def show_folders(self, *, folders: Sequence[str]) -> None:
         """
@@ -472,12 +473,13 @@ class _PresenterTests:
     @pytest.fixture(name="service")
     def _service(self) -> MagicMock:
         """
-        Mock the service: two games, one installed, the laptop accepted, presets, settings and box art of any game.
+        Mock the service: two games, one installed, the all games tab saved, the laptop accepted, presets and box art.
 
         :return: mock with the interface of PresetService
         """
         service: MagicMock = create_autospec(spec=PresetService, instance=True)
         service.games.return_value = _GAMES
+        service.saved_game_choice.return_value = GameChoice(tab=GamesTab.ALL)
         service.hardware_setup.return_value = _SETUP
         service.check_hardware.return_value = _Hardware.ready(gpu=_LAPTOP_GPU)
         service.game_presets.return_value = _PRESETS
@@ -522,6 +524,20 @@ class _PresenterTests:
         )
 
     @staticmethod
+    def start(*, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Start, then forget the requests made for the game chosen at the start.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        presenter.start()
+        service.game_presets.reset_mock()
+        service.game_settings.reset_mock()
+        service.cover.reset_mock()
+
+    @staticmethod
     def show_settings(*, presenter: Presenter) -> None:
         """
         Start and pick MORDHAU, which shows its settings for the detected screen.
@@ -538,7 +554,7 @@ class TestStart(_PresenterTests):
 
     def test_games_and_hardware(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Shows the games and the detected hardware, in the initial language, checks the hardware, warns of nothing.
+        Shows the games, the first one chosen, and the detected hardware in the initial language; warns of nothing.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -555,7 +571,8 @@ class TestStart(_PresenterTests):
             _LAPTOP_VIEW,
             "",
         )
-        assert (view.cover, view.settings, view.settings_loading) == ("empty", None, False)
+        assert (view.tab, view.game_selected, view.cover) == (GamesTab.ALL, 0, "picture")
+        assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
         service.check_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=_CPU, gpu=_LAPTOP_GPU))
         service.update_database_if_due.assert_called_once_with()
         assert not view.warnings
@@ -754,7 +771,7 @@ class TestGame(_PresenterTests):
         presenter.start()
         view.status = ""
         # Act
-        presenter.select_game(index=0)
+        presenter.select_game(index=1)
         # Assert
         assert view.status == (
             "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only."
@@ -771,7 +788,7 @@ class TestGame(_PresenterTests):
         :return: None
         """
         # Arrange
-        presenter.start()
+        self.start(presenter=presenter, service=service)
         # Act
         presenter.select_game(index=1)
         # Assert
@@ -792,9 +809,10 @@ class TestGame(_PresenterTests):
         :return: None
         """
         # Arrange
-        presenter.start()
+        self.start(presenter=presenter, service=service)
         debouncer.held = True
         # Act
+        presenter.select_game(index=1)
         presenter.select_game(index=0)
         presenter.select_game(index=1)
         waiting: tuple[str, int] = (view.status, service.game_presets.call_count)
@@ -816,7 +834,7 @@ class TestGame(_PresenterTests):
         """
         # Arrange
         service.choose_hardware.return_value = HardwareCheck(state=HardwareState.REJECTED, failed=("gpu",))
-        presenter.start()
+        self.start(presenter=presenter, service=service)
         debouncer.held = True
         presenter.select_game(index=1)
         presenter.choose_gpu(position=1)
@@ -889,13 +907,13 @@ class TestGame(_PresenterTests):
         presenter.start()
         runner.deferred = True
         view.show_settings = record  # type: ignore[method-assign]
-        presenter.select_game(index=0)
         presenter.select_game(index=1)
+        presenter.select_game(index=0)
         # Act
         runner.run_all()
         # Assert
-        assert shown == ["MORDHAU"]
-        assert service.game_settings.call_args.kwargs["game_id"] == "mordhau"
+        assert shown == ["Baldur's Gate 3"]
+        assert service.game_settings.call_args.kwargs["game_id"] == "baldurs_gate_3"
 
     def test_game_change_clears(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
         """
@@ -1136,22 +1154,28 @@ class TestResolution(_PresenterTests):
         """
         # Arrange
         self.show_settings(presenter=presenter)
+        service.game_settings.reset_mock()
         # Act
         presenter.choose_resolution(position=0)
         # Assert
         service.save_resolution.assert_not_called()
-        assert service.game_settings.call_count == 1
+        service.game_settings.assert_not_called()
 
-    def test_chosen_without_game(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+    def test_chosen_without_game(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, finder: _Runner
+    ) -> None:
         """
         Saves and shows a resolution picked before any game is chosen, requesting nothing.
 
         :param presenter: presenter under test
         :param view: fake window
         :param service: service mock
+        :param finder: runner of the search for installed games
         :return: None
         """
         # Arrange
+        service.saved_game_choice.return_value = GameChoice(tab=GamesTab.INSTALLED)
+        finder.deferred = True
         presenter.start()
         # Act
         presenter.choose_resolution(position=1)
@@ -1307,12 +1331,13 @@ class TestSearch(_PresenterTests):
         # Arrange
         self.show_settings(presenter=presenter)
         presenter.search_games(text="mord")
+        service.game_presets.reset_mock()
         # Act
         presenter.search_games(text="")
         presenter.select_game(index=1)
         # Assert
         assert (view.games, view.game_selected) == (["Baldur's Gate 3", "MORDHAU"], 1)
-        assert service.game_presets.call_count == 1
+        service.game_presets.assert_not_called()
         assert view.settings is not None
 
 
@@ -1467,7 +1492,7 @@ class TestDatabaseUpdate(_PresenterTests):
 
     def test_chosen_game_gone(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Keeps the chosen game, unselected, when the new database doesn't list it any more.
+        Chooses the first game when the new database doesn't list the chosen one any more.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1482,7 +1507,9 @@ class TestDatabaseUpdate(_PresenterTests):
         # Act
         presenter.change_auto_update(enabled=True)
         # Assert
-        assert (view.games, view.game_selected, view.settings is not None) == (["Baldur's Gate III"], None, True)
+        assert (view.games, view.game_selected) == (["Baldur's Gate III"], 0)
+        assert view.settings is not None and view.settings.title == "Baldur's Gate III"
+        assert service.save_game_choice.call_args.kwargs["choice"].catalog_game_id == "baldurs_gate_3"
 
     def test_once_per_start(self, presenter: Presenter, service: MagicMock) -> None:
         """
@@ -1712,7 +1739,7 @@ class TestHardwareChoice(_PresenterTests):
         """
         # Arrange
         service.choose_hardware.return_value = HardwareCheck(state=HardwareState.REJECTED, failed=("gpu",))
-        presenter.start()
+        self.start(presenter=presenter, service=service)
         # Act
         presenter.choose_gpu(position=1)
         presenter.select_game(index=1)
@@ -1763,7 +1790,7 @@ class TestInstalledGames(_PresenterTests):
         assert (view.finding, view.installed, view.installed_selected) == (
             False,
             [InstalledGameView(name="Baldur's Gate 3", executable=_BG3_EXE)],
-            None,
+            0,
         )
         service.find_games.assert_called_once_with(folders=_FOLDERS)
 
@@ -1826,7 +1853,7 @@ class TestInstalledGames(_PresenterTests):
 
     def test_installed_game_chosen(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Shows the settings of an installed game chosen and selects it in the list of all games too.
+        Shows the settings of an installed game chosen in the installed games tab.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1834,17 +1861,18 @@ class TestInstalledGames(_PresenterTests):
         :return: None
         """
         # Arrange
+        service.find_games.return_value = (*_INSTALLED, InstalledGame(game=_GAMES[1], executable=_BG3_EXE))
+        service.saved_game_choice.return_value = GameChoice(tab=GamesTab.INSTALLED)
         presenter.start()
         # Act
-        presenter.select_installed_game(index=0)
+        presenter.select_installed_game(index=1)
         # Assert
-        assert service.game_presets.call_args.kwargs["game_id"] == "baldurs_gate_3"
-        assert (view.game_selected, view.installed_selected) == (0, 0)
-        assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
+        assert service.game_presets.call_args.kwargs["game_id"] == "mordhau"
+        assert view.settings is not None and view.settings.title == "MORDHAU"
 
-    def test_game_not_installed(self, presenter: Presenter, view: _FakeView) -> None:
+    def test_game_per_tab(self, presenter: Presenter, view: _FakeView) -> None:
         """
-        Clears the selection of the installed games when a game they lack is chosen in the list of all games.
+        Keeps a game of its own in each tab and shows the one of the tab in use.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1852,11 +1880,13 @@ class TestInstalledGames(_PresenterTests):
         """
         # Arrange
         presenter.start()
-        presenter.select_installed_game(index=0)
-        # Act
         presenter.select_game(index=1)
+        # Act
+        presenter.select_tab(tab=GamesTab.INSTALLED)
+        installed: str | None = None if view.settings is None else view.settings.title
+        presenter.select_tab(tab=GamesTab.ALL)
         # Assert
-        assert (view.game_selected, view.installed_selected) == (1, None)
+        assert (installed, view.settings) == ("Baldur's Gate 3", _SHOWN)
 
     def test_choice_kept_after_search(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
@@ -1874,6 +1904,133 @@ class TestInstalledGames(_PresenterTests):
         presenter.find_games()
         # Assert
         assert (view.installed_selected, service.find_games.call_count) == (0, 2)
+
+
+class TestGameChoice(_PresenterTests):
+    """Tests of the saved game tab and the game chosen in each tab."""
+
+    def test_first_games_saved(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Chooses and saves the first game of each list when nothing is saved, showing the installed one.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.saved_game_choice.return_value = GameChoice()
+        # Act
+        presenter.start()
+        # Assert
+        assert view.tab is GamesTab.INSTALLED
+        assert (view.game_selected, view.installed_selected) == (0, 0)
+        assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
+        service.save_game_choice.assert_called_with(
+            choice=GameChoice(
+                tab=GamesTab.INSTALLED, installed_game_id="baldurs_gate_3", catalog_game_id="baldurs_gate_3"
+            )
+        )
+
+    def test_saved_games_restored(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Starts in the saved tab with the saved games selected, saving nothing.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.saved_game_choice.return_value = GameChoice(
+            tab=GamesTab.ALL, installed_game_id="baldurs_gate_3", catalog_game_id="mordhau"
+        )
+        # Act
+        presenter.start()
+        # Assert
+        assert (view.tab, view.game_selected, view.installed_selected, view.settings) == (GamesTab.ALL, 1, 0, _SHOWN)
+        service.save_game_choice.assert_not_called()
+
+    def test_changes_saved(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Saves the tab and the games as the user changes them.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        service.save_game_choice.reset_mock()
+        # Act
+        presenter.select_game(index=1)
+        presenter.select_tab(tab=GamesTab.INSTALLED)
+        presenter.select_installed_game(index=0)
+        # Assert
+        assert [call.kwargs["choice"] for call in service.save_game_choice.call_args_list] == [
+            GameChoice(tab=GamesTab.ALL, installed_game_id="baldurs_gate_3", catalog_game_id="mordhau"),
+            GameChoice(tab=GamesTab.INSTALLED, installed_game_id="baldurs_gate_3", catalog_game_id="mordhau"),
+        ]
+
+    def test_no_installed_games(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Shows no game in the installed games tab when none is found, keeping the saved one for a later search.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.find_games.return_value = ()
+        service.saved_game_choice.return_value = GameChoice(
+            tab=GamesTab.INSTALLED, installed_game_id="mordhau", catalog_game_id="baldurs_gate_3"
+        )
+        # Act
+        presenter.start()
+        # Assert
+        assert (view.cover, view.settings, view.settings_loading, view.status) == ("empty", None, False, "")
+        service.game_presets.assert_not_called()
+        service.save_game_choice.assert_not_called()
+
+    def test_installed_games_gone(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Clears the game shown in the installed games tab when a new search finds no games.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.find_games.side_effect = [_INSTALLED, ()]
+        service.saved_game_choice.return_value = GameChoice(tab=GamesTab.INSTALLED)
+        presenter.start()
+        # Act
+        presenter.find_games()
+        # Assert
+        assert (view.cover, view.settings, view.settings_loading, view.status) == ("empty", None, False, "")
+        assert service.save_game_choice.call_args.kwargs["choice"].installed_game_id == "baldurs_gate_3"
+
+    def test_installed_game_gone(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Moves to the first installed game when the chosen one is no longer found, showing it in its tab.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.find_games.side_effect = [(InstalledGame(game=_GAMES[1], executable=_BG3_EXE),), _INSTALLED]
+        service.saved_game_choice.return_value = GameChoice(tab=GamesTab.INSTALLED, installed_game_id="mordhau")
+        presenter.start()
+        # Act
+        presenter.find_games()
+        # Assert
+        assert view.installed_selected == 0
+        assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
+        assert service.save_game_choice.call_args.kwargs["choice"].installed_game_id == "baldurs_gate_3"
 
 
 class TestFolders(_PresenterTests):
@@ -1954,7 +2111,7 @@ class TestFolders(_PresenterTests):
         :param service: service mock
         :param position: position of the folder replaced
         :param folder: folder picked
-        :param expected: folders afterwards
+        :param expected: folders afterward
         :return: None
         """
         # Arrange
@@ -1980,7 +2137,7 @@ class TestFolders(_PresenterTests):
         :param view: fake window
         :param service: service mock
         :param position: position of the folder removed
-        :param expected: folders afterwards
+        :param expected: folders afterward
         :return: None
         """
         # Arrange
@@ -2006,9 +2163,8 @@ class TestCover(_PresenterTests):
         :return: None
         """
         # Arrange
-        presenter.start()
         debouncer.held = True
-        presenter.select_game(index=0)
+        presenter.start()
         waiting: str = view.cover
         # Act
         debouncer.fire()
@@ -2026,7 +2182,7 @@ class TestCover(_PresenterTests):
         :return: None
         """
         # Arrange
-        presenter.start()
+        self.start(presenter=presenter, service=service)
         # Act
         presenter.select_game(index=1)
         # Assert

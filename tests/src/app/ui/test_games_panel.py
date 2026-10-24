@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QWidget
 
+from app.core.models import GamesTab
 from app.i18n.translator import Translator
 from app.ui.games_panel import GamesPanel
 from app.ui.views import InstalledGameView
@@ -37,6 +38,7 @@ class TestGamesPanel:
                 "on_add_folder",
                 "on_change_folder",
                 "on_remove_folder",
+                "on_tab",
             )
         }
 
@@ -79,6 +81,25 @@ class TestGamesPanel:
             "Search again",
         )
         assert panel.all.search.placeholderText() == "Search"
+
+    def test_tabs(self, panel: GamesPanel, callbacks: dict[str, MagicMock]) -> None:
+        """
+        Brings the tab asked for to the front and reports each tab the front changes to.
+
+        :param panel: the panel
+        :param callbacks: callback mocks
+        :return: None
+        """
+        # Arrange
+        shown: list[QWidget | None] = []
+        # Act
+        panel.show_tab(tab=GamesTab.ALL)
+        shown.append(panel.currentWidget())
+        panel.show_tab(tab=GamesTab.INSTALLED)
+        shown.append(panel.currentWidget())
+        # Assert
+        assert shown == [panel.all, panel.installed]
+        assert [call.args for call in callbacks["on_tab"].call_args_list] == [(GamesTab.ALL,), (GamesTab.INSTALLED,)]
 
     def test_executable_icons(self, panel: GamesPanel) -> None:
         """

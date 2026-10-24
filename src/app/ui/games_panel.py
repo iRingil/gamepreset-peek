@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.core.models import GamesTab
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.icons import IconButton
@@ -308,6 +309,7 @@ class GamesPanel(QTabWidget):
         on_add_folder: Callable[[str], None],
         on_change_folder: Callable[[int, str], None],
         on_remove_folder: Callable[[int], None],
+        on_tab: Callable[[GamesTab], None],
         parent: QWidget | None = None,
     ) -> None:
         """
@@ -320,6 +322,7 @@ class GamesPanel(QTabWidget):
         :param on_add_folder: called with a folder to add
         :param on_change_folder: called with the position of a folder and the one to put in its place
         :param on_remove_folder: called with the position of a folder to remove
+        :param on_tab: called with the tab brought to the front
         :param parent: widget the panel belongs to
         """
         super().__init__(parent)
@@ -334,6 +337,7 @@ class GamesPanel(QTabWidget):
         self.all: _AllTab = _AllTab(on_search=on_search, on_select=on_select, parent=self)
         self.addTab(self.installed, "")
         self.addTab(self.all, "")
+        self.currentChanged.connect(lambda index: on_tab(self._tab(index=index)))
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -347,13 +351,20 @@ class GamesPanel(QTabWidget):
         self.installed.apply_language(translator=translator)
         self.all.search.setPlaceholderText(translator.text(item=UiText.SEARCH))
 
-    def select(self, *, position: int | None, installed_position: int | None) -> None:
+    def show_tab(self, *, tab: GamesTab) -> None:
         """
-        Select the chosen game in both lists without refilling them.
+        Bring a tab to the front.
 
-        :param position: position in the list of all games, None to clear its selection
-        :param installed_position: position in the list of installed games, None to clear its selection
+        :param tab: the tab
         :return: None
         """
-        self.all.list.select(position=position)
-        self.installed.list.select(position=installed_position)
+        self.setCurrentWidget(self.installed if tab is GamesTab.INSTALLED else self.all)
+
+    def _tab(self, *, index: int) -> GamesTab:
+        """
+        Tell which tab is at a position of the tab bar.
+
+        :param index: position of the tab
+        :return: the tab
+        """
+        return GamesTab.INSTALLED if self.widget(index) is self.installed else GamesTab.ALL

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, Sequence
 
-from app.core.models import ThemeMode
+from app.core.models import GamesTab, ThemeMode
 from app.i18n.translator import Translator
 
 __all__: tuple[str, ...] = (
@@ -182,12 +182,11 @@ class MainView(Protocol):
         :return: None
         """
 
-    def select_game(self, *, position: int | None, installed_position: int | None) -> None:
+    def show_tab(self, *, tab: GamesTab) -> None:
         """
-        Select the chosen game in both lists without refilling them; None clears the selection of a list.
+        Bring a game tab to the front.
 
-        :param position: position in the list of all games as shown
-        :param installed_position: position in the list of installed games
+        :param tab: the tab
         :return: None
         """
 

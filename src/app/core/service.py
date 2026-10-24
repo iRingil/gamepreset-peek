@@ -17,6 +17,7 @@ from app.core.models import (
     Compatibility,
     DatabaseUpdate,
     Game,
+    GameChoice,
     GamePresets,
     GameSettings,
     Gpu,
@@ -123,6 +124,23 @@ class PresetService:
         :return: None
         """
         self._store.save(settings=replace(self._store.load(), game_folders=tuple(folders)))
+
+    def saved_game_choice(self) -> GameChoice:
+        """
+        Read the saved game tab and the game chosen in each tab.
+
+        :return: the choice, the installed games tab and no games when none was saved
+        """
+        return self._store.load().game_choice
+
+    def save_game_choice(self, *, choice: GameChoice) -> None:
+        """
+        Save the game tab and the game chosen in each tab, keeping the other settings.
+
+        :param choice: the choice
+        :return: None
+        """
+        self._store.save(settings=replace(self._store.load(), game_choice=choice))
 
     def find_games(self, *, folders: Sequence[str]) -> tuple[InstalledGame, ...]:
         """
@@ -324,17 +342,17 @@ class PresetService:
         :return: presets and translations
         """
         key: tuple[str, str, RemoteFile] = (game_id, presets.profile, presets.presets_file)
-        if self._files is None or self._files.key != key:
-            self._files = _GameFiles(
-                key=key,
-                settings=GameSettings(
-                    presets=self._api.presets_file(file=presets.presets_file),
-                    translations=self._api.translations(
-                        file=self._api.translation_file(game_id=game_id, profile=presets.profile)
-                    ),
-                ),
-            )
-        return self._files.settings
+        cached: _GameFiles | None = self._files
+        if cached is not None and cached.key == key:
+            return cached.settings
+        settings: GameSettings = GameSettings(
+            presets=self._api.presets_file(file=presets.presets_file),
+            translations=self._api.translations(
+                file=self._api.translation_file(game_id=game_id, profile=presets.profile)
+            ),
+        )
+        self._files = _GameFiles(key=key, settings=settings)
+        return settings
 
     @cached_property
     def _system(self) -> SystemHardware:

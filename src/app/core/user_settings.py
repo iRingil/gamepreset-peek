@@ -1,4 +1,4 @@
-"""Settings kept between runs: language, theme, hardware, resolution, updates, game folders; JSON in app data."""
+"""Settings kept between runs: language, theme, hardware, resolution, updates, games; JSON in app data."""
 
 import json
 from datetime import date
@@ -8,7 +8,7 @@ from typing import Any
 from loguru import logger
 
 from app.config import SETTINGS_FILE
-from app.core.models import Gpu, ThemeMode, UserSettings
+from app.core.models import GameChoice, GamesTab, Gpu, ThemeMode, UserSettings
 
 __all__: tuple[str, ...] = ("UserSettingsStore",)
 
@@ -60,6 +60,9 @@ class UserSettingsStore:
             "auto_update": settings.auto_update,
             "database_updated": None if settings.database_updated is None else settings.database_updated.isoformat(),
             "game_folders": None if settings.game_folders is None else list(settings.game_folders),
+            "games_tab": settings.game_choice.tab.value,
+            "installed_game_id": settings.game_choice.installed_game_id,
+            "catalog_game_id": settings.game_choice.catalog_game_id,
         }
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(data=json.dumps(obj=document, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -95,6 +98,11 @@ class UserSettingsStore:
             database_updated=cls._optional_date(value=document.get("database_updated")),
             game_folders=(
                 None if game_folders is None else tuple(cls._required_str(value=folder) for folder in game_folders)
+            ),
+            game_choice=GameChoice(
+                tab=GamesTab(cls._required_str(value=document.get("games_tab", GamesTab.INSTALLED.value))),
+                installed_game_id=cls._optional_str(value=document.get("installed_game_id")),
+                catalog_game_id=cls._optional_str(value=document.get("catalog_game_id")),
             ),
         )
 

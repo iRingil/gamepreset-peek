@@ -25,10 +25,11 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTreeWidget,
+    QWidget,
 )
 
 from app.config import LANGUAGE_NAMES
-from app.core.models import ThemeMode
+from app.core.models import GamesTab, ThemeMode
 from app.i18n.translator import Translator
 from app.ui.choice_popup import ChoicePopup
 from app.ui.cover_view import CoverView
@@ -380,9 +381,9 @@ class TestMainWindow:
         window.presenter.select_installed_game.assert_called_once_with(index=0)
         method.assert_called_once_with(window.presenter)
 
-    def test_selection_and_folders(self, window: _Window, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_tab_and_folders(self, window: _Window, monkeypatch: pytest.MonkeyPatch) -> None:
         """
-        Selects the chosen game in both lists, shows the folders and passes folder changes to the presenter.
+        Brings a game tab to the front, shows the folders and passes tab and folder changes to the presenter.
 
         :param window: the window
         :param monkeypatch: pytest monkeypatch
@@ -391,17 +392,22 @@ class TestMainWindow:
         # Arrange
         monkeypatch.setattr(target=QFileDialog, name="getExistingDirectory", value=MagicMock(return_value="E:/Games"))
         panel: GamesPanel = window.panel()
-        window.widget.show_games(names=["Baldur's Gate 3", "MORDHAU"], selected=None)
         window.widget.show_folders(folders=["C:\\Games", "D:\\Games"])
         window.presenter.reset_mock()
         # Act
-        window.widget.select_game(position=1, installed_position=None)
+        window.widget.show_tab(tab=GamesTab.ALL)
+        shown: QWidget | None = panel.currentWidget()
+        panel.setCurrentWidget(panel.installed)
         panel.installed.folder_list.setCurrentRow(1)
         panel.installed.add.click()
         panel.installed.change.click()
         panel.installed.remove.click()
         # Assert
-        assert panel.all.list.currentIndex().row() == 1
+        assert shown is panel.all
+        assert [call.kwargs for call in window.presenter.select_tab.call_args_list] == [
+            {"tab": GamesTab.ALL},
+            {"tab": GamesTab.INSTALLED},
+        ]
         assert panel.installed.folder_list.count() == 2
         window.presenter.add_folder.assert_called_once_with(folder="E:/Games")
         window.presenter.change_folder.assert_called_once_with(position=1, folder="E:/Games")

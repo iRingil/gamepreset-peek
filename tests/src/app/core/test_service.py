@@ -14,8 +14,10 @@ from app.core.models import (
     Compatibility,
     DatabaseUpdate,
     Game,
+    GameChoice,
     GamePresets,
     GameSettings,
+    GamesTab,
     Gpu,
     Hardware,
     HardwareCheck,
@@ -161,6 +163,39 @@ class TestGameFolders:
         service.save_game_folders(folders=[r"D:\Games", r"C:\Games"])
         # Assert
         assert store.load() == UserSettings(language="de", game_folders=(r"D:\Games", r"C:\Games"))
+
+
+class TestGameChoice:
+    """Tests of PresetService.saved_game_choice and save_game_choice."""
+
+    def test_nothing_saved(self, service: PresetService) -> None:
+        """
+        Gives the installed games tab and no games before a choice is saved.
+
+        :param service: service under test
+        :return: None
+        """
+        # Arrange & Act
+        choice: GameChoice = service.saved_game_choice()
+        # Assert
+        assert choice == GameChoice(tab=GamesTab.INSTALLED, installed_game_id=None, catalog_game_id=None)
+
+    def test_saved_keeping_others(self, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Saves the tab and both games, keeping the other settings.
+
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(language="de", game_folders=(r"D:\Games",)))
+        choice: GameChoice = GameChoice(tab=GamesTab.ALL, installed_game_id="mordhau", catalog_game_id="baldurs_gate_3")
+        # Act
+        service.save_game_choice(choice=choice)
+        # Assert
+        assert service.saved_game_choice() == choice
+        assert store.load() == UserSettings(language="de", game_folders=(r"D:\Games",), game_choice=choice)
 
 
 class TestFindGames:

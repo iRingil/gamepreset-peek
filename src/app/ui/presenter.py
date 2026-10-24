@@ -10,7 +10,9 @@ from app.config import LOCALE_DIR, REQUEST_DELAY_MS, SEARCH_DELAY_MS
 from app.core.models import (
     DatabaseUpdate,
     Game,
+    GameChoice,
     GamePresets,
+    GamesTab,
     GameSettings,
     Gpu,
     Hardware,
@@ -26,6 +28,7 @@ from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.debouncer import Debouncer
+from app.ui.game_lists import GameLists
 from app.ui.views import (
     ChoiceGroup,
     ChoiceView,
@@ -52,6 +55,9 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     Installed games are searched for in a runner of their own, so a long search never holds up the presets; a search
     asked for while one runs starts again once it ends. Box art follows the chosen game like its presets.
+
+    Each game tab has a game of its own: the settings show the one of the tab in use. The tab and both games are saved
+    whenever they change, the first game of a list being chosen when the saved one is not there.
 
     The database update runs once the first hardware check has answered, so a slow download never delays the start;
     a new database refreshes the games, the installed ones and the choice lists."""
@@ -111,11 +117,9 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._hardware: Hardware | None = None
         self._resolution_name: str | None = None
         self._problem: Callable[[], str] | None = None
-        self._games: tuple[Game, ...] = ()
-        self._search: str = ""
-        self._shown_games: tuple[Game, ...] = ()
+        self._lists: GameLists = GameLists(choice=GameChoice())
+        self._saved_choice: GameChoice = GameChoice()
         self._folders: tuple[str, ...] = ()
-        self._installed: tuple[InstalledGame, ...] = ()
         self._finding: bool = False
         self._find_again: bool = False
         self._game: Game | None = None
@@ -138,7 +142,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def start(self) -> None:
         """
-        Theme and translate the window, show the games, then detect the hardware and search for installed games.
+        Theme and translate the window, show the saved tab and the games, then detect hardware and find installed games.
 
         :return: None
         """
@@ -148,11 +152,23 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._render_hardware()
         self._view.clear_cover(loading=False)
         self._view.clear_settings(loading=False)
-        self._games = self._service.games()
-        self._render_games()
+        self._saved_choice = self._service.saved_game_choice()
+        self._lists = GameLists(choice=self._saved_choice)
+        self._view.show_tab(tab=self._saved_choice.tab)
+        self._set_games(games=self._service.games())
         self._view.show_finding()
         self._runner.submit(task=self._service.hardware_setup, on_done=self._on_setup, on_error=self._on_setup_error)
         self._runner.submit(task=self._service.game_folders, on_done=self._on_folders, on_error=self._on_folders_error)
+
+    def select_tab(self, *, tab: GamesTab) -> None:
+        """
+        Use another game tab and show the game chosen there.
+
+        :param tab: the tab
+        :return: None
+        """
+        self._lists.choose_tab(tab=tab)
+        self._show_game()
 
     def select_game(self, *, index: int) -> None:
         """
@@ -161,7 +177,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param index: position of the game in the list as shown, i.e. after the search
         :return: None
         """
-        self._choose_game(game=self._shown_games[index])
+        self._lists.choose_shown(position=index)
+        self._show_game()
 
     def select_installed_game(self, *, index: int) -> None:
         """
@@ -170,7 +187,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param index: position of the game in the list
         :return: None
         """
-        self._choose_game(game=self._installed[index].game)
+        self._lists.choose_installed(position=index)
+        self._show_game()
 
     def find_games(self) -> None:
         """
@@ -225,7 +243,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param text: text typed by the user; empty shows every game
         :return: None
         """
-        self._search = text.strip().casefold()
+        self._lists.search(text=text)
         self._debouncer.call(key=self._SEARCH, delay_ms=SEARCH_DELAY_MS, action=self._render_games)
 
     def move_slider(self, *, index: int) -> None:
@@ -402,18 +420,23 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         if self._presets is not None:
             self._apply_resolution()
 
-    def _choose_game(self, *, game: Game) -> None:
+    def _show_game(self) -> None:
         """
-        Show the settings and the box art of a game, requesting them once the choice rests.
+        Save a changed game choice; show the settings and box art of the tab's game, requested once the choice rests.
 
-        :param game: the game chosen in one of the lists
         :return: None
         """
+        self._save_game_choice()
+        game: Game | None = self._lists.game
         # The window reports its own selection of the chosen game too, e.g. after a search.
         if game == self._game:
             return
         self._game = game
-        self._render_selection()
+        if game is None:
+            self._view.clear_cover(loading=False)
+            self._clear_game(loading=False)
+            self._set_status(text=self._problem)
+            return
         self._request_cover()
         self._clear_game(loading=self._hardware is not None)
         if self._hardware is None:
@@ -421,6 +444,20 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             return
         self._set_status(text=self._text(item=UiText.LOADING))
         self._debouncer.call(key=self._PRESETS, delay_ms=REQUEST_DELAY_MS, action=self._request_presets)
+
+    def _save_game_choice(self) -> None:
+        """
+        Save the game tab and the game of each tab when they differ from the saved ones.
+
+        :return: None
+        """
+        choice: GameChoice = self._lists.choice
+        if choice == self._saved_choice:
+            return
+        self._saved_choice = choice
+        self._runner.submit(
+            task=lambda: self._service.save_game_choice(choice=choice), on_done=lambda _: None, on_error=lambda _: None
+        )
 
     def _request_cover(self) -> None:
         """
@@ -528,8 +565,9 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             self._find_again = False
             self.find_games()
             return
-        self._installed = games
+        self._lists.set_installed(installed=games)
         self._render_installed()
+        self._show_game()
 
     def _on_find_error(self, error: Exception) -> None:
         """
@@ -538,8 +576,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param error: the failure
         :return: None
         """
-        self._set_status(text=self._text(item=UiText.FIND_FAILED, error=str(error)))
         self._on_found(games=())
+        self._set_status(text=self._text(item=UiText.FIND_FAILED, error=str(error)))
 
     def _on_setup(self, setup: HardwareSetup) -> None:
         """
@@ -761,14 +799,25 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             return self._text(item=UiText.RESOLUTION_BELOW_MIN_SPEC)
         return None
 
+    def _set_games(self, *, games: tuple[Game, ...]) -> None:
+        """
+        Use and show a new list of all games, and the game of the tab in use.
+
+        :param games: games in list order
+        :return: None
+        """
+        self._lists.set_games(games=games)
+        self._render_games()
+        self._show_game()
+
     def _render_games(self) -> None:
         """
         Fill the list of all games with the ones matching the search, keeping the chosen game selected when it is there.
 
         :return: None
         """
-        self._shown_games = tuple(game for game in self._games if self._search in game.name.casefold())
-        self._view.show_games(names=[game.name for game in self._shown_games], selected=self._shown_position())
+        self._lists.filter()
+        self._view.show_games(names=[game.name for game in self._lists.shown], selected=self._lists.shown_position)
 
     def _render_installed(self) -> None:
         """
@@ -777,33 +826,11 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self._view.show_installed_games(
-            games=[InstalledGameView(name=item.game.name, executable=item.executable) for item in self._installed],
-            selected=self._installed_position(),
+            games=[
+                InstalledGameView(name=item.game.name, executable=item.executable) for item in self._lists.installed
+            ],
+            selected=self._lists.installed_position,
         )
-
-    def _render_selection(self) -> None:
-        """
-        Select the chosen game in both lists, clearing the selection of a list without it.
-
-        :return: None
-        """
-        self._view.select_game(position=self._shown_position(), installed_position=self._installed_position())
-
-    def _shown_position(self) -> int | None:
-        """
-        Find the chosen game in the list of all games as shown.
-
-        :return: its position, None when it is not shown
-        """
-        return self._shown_games.index(self._game) if self._game in self._shown_games else None
-
-    def _installed_position(self) -> int | None:
-        """
-        Find the chosen game among the installed games.
-
-        :return: its position, None when it is not installed
-        """
-        return next((i for i, item in enumerate(self._installed) if item.game == self._game), None)
 
     def _update_database_once(self) -> None:
         """
@@ -829,7 +856,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         Read the choice lists and the games again and search for installed games when a new database is in use.
 
-        The chosen game is matched by its identifier and stays chosen when the new database still has it.
+        The chosen game is matched by its identifier and stays chosen when the new database still has it; otherwise
+        the first game of the tab is chosen.
 
         :param result: outcome of the update
         :return: None
@@ -840,11 +868,11 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             self._runner.submit(
                 task=self._service.hardware_setup, on_done=self._on_setup_refresh, on_error=lambda _: None
             )
-        self._games = self._service.games()
+        games: tuple[Game, ...] = self._service.games()
         if self._game is not None:
             game_id: str = self._game.game_id
-            self._game = next((game for game in self._games if game.game_id == game_id), self._game)
-        self._render_games()
+            self._game = next((game for game in games if game.game_id == game_id), self._game)
+        self._set_games(games=games)
         self.find_games()
 
     def _on_setup_refresh(self, setup: HardwareSetup) -> None:
