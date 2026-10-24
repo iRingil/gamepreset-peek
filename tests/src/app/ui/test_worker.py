@@ -2,6 +2,7 @@
 
 import sys
 import threading
+from functools import partial
 from types import TracebackType
 
 import pytest
@@ -24,6 +25,16 @@ class TestWorker:
         :return: None
         """
         raise AssertionError(f"unexpected callback with {value!r}")
+
+    @staticmethod
+    def _times_ten(*, value: int) -> int:
+        """
+        Compute a result that tells the tasks apart.
+
+        :param value: number of the task
+        :return: the number times ten
+        """
+        return value * 10
 
     @staticmethod
     def _finish(*, worker: Worker, qt_app: QApplication) -> None:
@@ -50,7 +61,9 @@ class TestWorker:
         worker: Worker = Worker()
         results: list[int] = []
         for number in range(3):
-            worker.submit(task=lambda value=number: value * 10, on_done=results.append, on_error=self._unexpected)
+            worker.submit(
+                task=partial(self._times_ten, value=number), on_done=results.append, on_error=self._unexpected
+            )
         # Act
         self._finish(worker=worker, qt_app=qt_app)
         # Assert
