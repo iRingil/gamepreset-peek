@@ -33,7 +33,7 @@ _MARK_GAP: float = 0.35
 
 
 class _DetectedDelegate(QStyledItemDelegate):
-    """Draws a detected item with a green check and a word saying it was detected at its right end."""
+    """Draws a detected item with a green check and a green word saying it was detected at its right end."""
 
     def __init__(self, *, mark: str, parent: QListWidget) -> None:
         """
@@ -68,14 +68,14 @@ class _DetectedDelegate(QStyledItemDelegate):
             item.text, Qt.TextElideMode.ElideRight, text.width() - size - word - 3 * gap
         )
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, item, painter, widget)
+        green: QColor = QColor(Theme.success_color(background=item.palette.color(QPalette.ColorRole.Base)))
         painter.save()
-        painter.setPen(item.palette.color(QPalette.ColorRole.PlaceholderText))
+        painter.setPen(green)
         word_box: QRect = QRect(text.right() - gap - word, text.top(), word, text.height())
         painter.drawText(word_box, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, self._mark)
-        background: QColor = item.palette.color(QPalette.ColorRole.Base)
         Icons.symbol(
             name="circle-check",
-            color=QColor(Theme.success_color(background=background)),
+            color=green,
             ratio=widget.devicePixelRatio() if widget is not None else 1.0,
         ).paint(painter, QRect(word_box.left() - gap - size, text.center().y() - size // 2, size, size))
         painter.restore()
