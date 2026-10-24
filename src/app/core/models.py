@@ -119,15 +119,6 @@ class HardwareSetup:
         """
         return () if self.system.resolution is None else (self.system.resolution,)
 
-    @property
-    def resolution_options(self) -> tuple[str, ...]:
-        """
-        List the resolutions in the order of the choice.
-
-        :return: the detected resolution, then the bundled ones
-        """
-        return self.detected_resolutions + self.resolutions
-
 
 @dataclass(frozen=True, slots=True)
 class Hardware:
@@ -297,6 +288,21 @@ class GamePresets:
     version: str
     presets_file: RemoteFile
     resolutions: tuple[ResolutionPreset, ...]
+
+    @property
+    def resolution_names(self) -> tuple[str, ...]:
+        """
+        List the resolutions NVIDIA has a preset for.
+
+        :return: the resolutions, the largest first
+        """
+        return tuple(
+            sorted(
+                (item.resolution for item in self.resolutions),
+                key=lambda name: self._pixels(resolution=name),
+                reverse=True,
+            )
+        )
 
     def preset_for(self, *, resolution: str) -> ResolutionPreset | None:
         """

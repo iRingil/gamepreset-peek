@@ -2,7 +2,16 @@
 
 import pytest
 
-from app.core.models import GameSettings, PresetsFile, Setting, SettingTranslation, Translations
+from app.core.models import (
+    GamePresets,
+    GameSettings,
+    PresetsFile,
+    RemoteFile,
+    ResolutionPreset,
+    Setting,
+    SettingTranslation,
+    Translations,
+)
 
 __all__: tuple = ()
 
@@ -178,3 +187,28 @@ class TestGameSettings:
         rows: tuple[tuple[str, str], ...] = settings.rows(index=index, language="ru_RU")
         # Assert
         assert rows == expected
+
+
+class TestGamePresets:
+    """Tests of GamePresets."""
+
+    def test_resolution_names(self) -> None:
+        """
+        Lists the resolutions of the game by pixel count, the largest first, whatever NVIDIA's order.
+
+        :return: None
+        """
+        # Arrange
+        presets: GamePresets = GamePresets(
+            profile="regular",
+            version="1",
+            presets_file=RemoteFile(url="https://cdn.example.test/pops", sha256="00", size=1),
+            resolutions=tuple(
+                ResolutionPreset(resolution=name, preset_index=1, rate=40, below_min_spec=False)
+                for name in ("1920x1200", "7680x4320", "1920x1080", "3840x2400", "3840x2160")
+            ),
+        )
+        # Act
+        names: tuple[str, ...] = presets.resolution_names
+        # Assert
+        assert names == ("7680x4320", "3840x2400", "3840x2160", "1920x1200", "1920x1080")

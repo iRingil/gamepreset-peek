@@ -111,6 +111,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._choice: HardwareChoice = HardwareChoice(cpu_name=None, gpu=None)
         self._hardware: Hardware | None = None
         self._resolution_name: str | None = None
+        self._offered_resolutions: tuple[str, ...] = ()
         self._problem: Status | None = None
         self._lists: GameLists = GameLists(choice=GameChoice())
         self._saved_choice: GameChoice = GameChoice()
@@ -359,18 +360,29 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def open_resolution_choice(self) -> None:
         """
-        Offer the detected screen resolution, then the bundled ones, the one in use selected.
+        Offer the detected screen resolution, then the game's resolutions, the one in use selected.
+
+        Before a game's presets arrive, the bundled resolutions stand in for the game's.
 
         :return: None
         """
         if self._setup is None:
             return
-        options: tuple[str, ...] = self._setup.resolution_options
+        detected: tuple[str, ...] = self._setup.detected_resolutions
+        others: tuple[str, ...] = self._setup.resolutions
+        if self._presets is not None:
+            others = tuple(item for item in self._presets.resolution_names if item not in detected)
+        # A pick maps to this list even if the game's presets arrive while the choice is open.
+        self._offered_resolutions = detected + others
         self._view.offer_resolutions(
             choice=ChoiceView(
-                detected=self._setup.detected_resolutions,
-                groups=(ChoiceGroup(title="", items=self._setup.resolutions),),
-                selected=options.index(self._resolution_name) if self._resolution_name in options else None,
+                detected=detected,
+                groups=(ChoiceGroup(title="", items=others),),
+                selected=(
+                    self._offered_resolutions.index(self._resolution_name)
+                    if self._resolution_name in self._offered_resolutions
+                    else None
+                ),
             )
         )
 
@@ -401,9 +413,9 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param position: position in the resolution choice
         :return: None
         """
-        if self._setup is None:
+        if self._setup is None or position >= len(self._offered_resolutions):
             return
-        resolution: str = self._setup.resolution_options[position]
+        resolution: str = self._offered_resolutions[position]
         if resolution == self._resolution_name:
             return
         self._resolution_name = resolution

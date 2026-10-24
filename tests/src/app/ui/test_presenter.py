@@ -1035,15 +1035,21 @@ class TestSettings(_PresenterTests):
 class TestResolution(_PresenterTests):
     """Tests of Presenter.open_resolution_choice and choose_resolution."""
 
-    def test_resolutions_offered(self, presenter: Presenter, view: _FakeView) -> None:
+    def test_resolutions_offered(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, finder: _Runner
+    ) -> None:
         """
-        Offers the detected screen above the bundled resolutions, the one in use selected.
+        Offers the detected screen above the bundled resolutions while no game's presets are known.
 
         :param presenter: presenter under test
         :param view: fake window
+        :param service: service mock
+        :param finder: runner of the search for installed games
         :return: None
         """
         # Arrange
+        service.saved_game_choice.return_value = GameChoice(tab=GamesTab.INSTALLED)
+        finder.deferred = True
         presenter.start()
         # Act
         presenter.open_resolution_choice()
@@ -1052,16 +1058,58 @@ class TestResolution(_PresenterTests):
             ChoiceView(detected=(_SCREEN,), groups=(ChoiceGroup(title="", items=_BUNDLED_RESOLUTIONS),), selected=0)
         ]
 
-    def test_no_screen_detected(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+    def test_game_resolutions_offered(self, presenter: Presenter, view: _FakeView) -> None:
+        """
+        Offers the detected screen above the game's own resolutions, the largest first, without repeating it.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :return: None
+        """
+        # Arrange
+        self.show_settings(presenter=presenter)
+        # Act
+        presenter.open_resolution_choice()
+        # Assert
+        assert view.resolution_offers == [
+            ChoiceView(
+                detected=(_SCREEN,), groups=(ChoiceGroup(title="", items=("3840x2160", "2560x1440")),), selected=0
+            )
+        ]
+
+    def test_pick_from_offered_list(self, presenter: Presenter, service: MagicMock) -> None:
+        """
+        Takes a pick from the list offered, even when the game's presets arrived after it was opened.
+
+        :param presenter: presenter under test
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        self.show_settings(presenter=presenter)
+        presenter.open_resolution_choice()
+        service.game_presets.return_value = replace(_PRESETS, resolutions=_PRESETS.resolutions[:1])
+        presenter.select_game(index=0)
+        # Act
+        presenter.choose_resolution(position=2)
+        # Assert
+        service.save_resolution.assert_called_once_with(resolution="2560x1440")
+
+    def test_no_screen_detected(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, finder: _Runner
+    ) -> None:
         """
         Offers only the bundled resolutions when no screen is detected, the one in use selected among them.
 
         :param presenter: presenter under test
         :param view: fake window
         :param service: service mock
+        :param finder: runner of the search for installed games
         :return: None
         """
         # Arrange
+        service.saved_game_choice.return_value = GameChoice(tab=GamesTab.INSTALLED)
+        finder.deferred = True
         service.hardware_setup.return_value = replace(
             _SETUP, system=replace(_SETUP.system, resolution=None), resolution="2560x1600"
         )
@@ -1102,25 +1150,27 @@ class TestResolution(_PresenterTests):
         """
         # Arrange
         self.show_settings(presenter=presenter)
+        presenter.open_resolution_choice()
         # Act
-        presenter.choose_resolution(position=3)
+        presenter.choose_resolution(position=2)
         # Assert
         service.save_resolution.assert_called_once_with(resolution="2560x1440")
         assert view.hardware is not None and view.hardware.resolution == "2560x1440"
         assert view.settings is not None and (view.settings.index, view.status) == (3, "")
 
-    def test_closest_smaller_resolution(self, presenter: Presenter, view: _FakeView) -> None:
+    def test_closest_smaller_resolution(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
         Shows the preset of the closest smaller resolution when the game has none for the one in use, and says so.
 
         :param presenter: presenter under test
         :param view: fake window
+        :param service: service mock
         :return: None
         """
         # Arrange
-        self.show_settings(presenter=presenter)
+        service.hardware_setup.return_value = replace(_SETUP, resolution="2560x1600")
         # Act
-        presenter.choose_resolution(position=2)
+        self.show_settings(presenter=presenter)
         # Assert
         assert view.settings is not None and view.settings.index == 3
         assert view.status == "No preset for 2560x1600: showing the one for 2560x1440."
@@ -1153,6 +1203,7 @@ class TestResolution(_PresenterTests):
         """
         # Arrange
         self.show_settings(presenter=presenter)
+        presenter.open_resolution_choice()
         # Act
         presenter.choose_resolution(position=1)
         # Assert
@@ -1170,6 +1221,7 @@ class TestResolution(_PresenterTests):
         """
         # Arrange
         self.show_settings(presenter=presenter)
+        presenter.open_resolution_choice()
         service.game_settings.reset_mock()
         # Act
         presenter.choose_resolution(position=0)
@@ -1193,6 +1245,7 @@ class TestResolution(_PresenterTests):
         service.saved_game_choice.return_value = GameChoice(tab=GamesTab.INSTALLED)
         finder.deferred = True
         presenter.start()
+        presenter.open_resolution_choice()
         # Act
         presenter.choose_resolution(position=1)
         # Assert
@@ -1218,9 +1271,10 @@ class TestResolution(_PresenterTests):
         self.show_settings(presenter=presenter)
         if fails:
             service.game_settings.side_effect = ConnectionError("timeout")
+        presenter.open_resolution_choice()
         runner.deferred = True
+        presenter.choose_resolution(position=1)
         presenter.choose_resolution(position=2)
-        presenter.choose_resolution(position=3)
         # Act
         runner.run_all()
         # Assert
@@ -1243,8 +1297,8 @@ class TestLanguage(_PresenterTests):
         :return: None
         """
         # Arrange
+        service.hardware_setup.return_value = replace(_SETUP, resolution="2560x1600")
         self.show_settings(presenter=presenter)
-        presenter.choose_resolution(position=2)
         # Act
         presenter.change_language(language="ru")
         # Assert
