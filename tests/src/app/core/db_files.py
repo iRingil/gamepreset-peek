@@ -28,8 +28,37 @@ class DbFiles:
         );
         CREATE TABLE games (
             game_id TEXT PRIMARY KEY,
-            name TEXT NOT NULL
+            name TEXT NOT NULL,
+            app_id TEXT,
+            is_game INTEGER NOT NULL DEFAULT 1,
+            box_art_url TEXT
         );
+        CREATE TABLE game_sources (
+            game_id TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            distributor TEXT,
+            package_family TEXT,
+            PRIMARY KEY (game_id, position)
+        ) WITHOUT ROWID;
+        CREATE TABLE game_source_files (
+            game_id TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            path TEXT NOT NULL,
+            role TEXT NOT NULL,
+            is_directory INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (game_id, position, path, role)
+        ) WITHOUT ROWID;
+        CREATE TABLE game_source_registry (
+            game_id TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            entry INTEGER NOT NULL,
+            value_path TEXT NOT NULL,
+            view INTEGER,
+            parent_levels INTEGER NOT NULL DEFAULT 0,
+            suffix TEXT,
+            value_regex TEXT,
+            PRIMARY KEY (game_id, position, entry)
+        ) WITHOUT ROWID;
     """
 
     @classmethod

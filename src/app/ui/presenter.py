@@ -1,8 +1,10 @@
 """UI logic of the main window: user actions -> service calls in the background -> what the window shows."""
 
 from dataclasses import replace
-from pathlib import Path
-from typing import Callable, Sequence
+from pathlib import Path, PureWindowsPath
+from typing import Callable
+
+from loguru import logger
 
 from app.config import LOCALE_DIR, REQUEST_DELAY_MS, SEARCH_DELAY_MS
 from app.core.models import (
@@ -16,6 +18,7 @@ from app.core.models import (
     HardwareChoice,
     HardwareSetup,
     HardwareState,
+    InstalledGame,
     ResolutionPreset,
     ThemeMode,
 )
@@ -23,7 +26,15 @@ from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.debouncer import Debouncer
-from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, MainView, SettingRow, SettingsView
+from app.ui.views import (
+    ChoiceGroup,
+    ChoiceView,
+    HardwareView,
+    InstalledGameView,
+    MainView,
+    SettingRow,
+    SettingsView,
+)
 from app.ui.worker import TaskRunner
 
 __all__: tuple[str, ...] = ("Presenter",)
@@ -39,8 +50,11 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     Why no presets can be requested stays in the status line until NVIDIA accepts the hardware.
 
+    Installed games are searched for in a runner of their own, so a long search never holds up the presets; a search
+    asked for while one runs starts again once it ends. Box art follows the chosen game like its presets.
+
     The database update runs once the first hardware check has answered, so a slow download never delays the start;
-    a new database refreshes the game names and the choice lists."""
+    a new database refreshes the games, the installed ones and the choice lists."""
 
     _COMPONENTS: dict[str, UiText] = {
         "cpu": UiText.COMPONENT_CPU,
@@ -54,6 +68,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
     # Debouncer keys.
     _PRESETS: str = "presets"
     _SEARCH: str = "search"
+    _COVER: str = "cover"
 
     def __init__(
         self,
@@ -61,6 +76,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         view: MainView,
         service: PresetService,
         runner: TaskRunner,
+        finder: TaskRunner,
         debouncer: Debouncer,
         translator: Translator,
         theme: ThemeMode,
@@ -73,6 +89,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param view: the window
         :param service: service the requests go to
         :param runner: runs service calls in the background
+        :param finder: runs the search for installed games in the background
         :param debouncer: delays the preset requests and the search while the user is still changing them
         :param translator: translator of the initial UI language
         :param theme: initial theme mode
@@ -82,6 +99,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._view: MainView = view
         self._service: PresetService = service
         self._runner: TaskRunner = runner
+        self._finder: TaskRunner = finder
         self._debouncer: Debouncer = debouncer
         self._translator: Translator = translator
         self._locale_dir: Path = locale_dir
@@ -96,12 +114,17 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._games: tuple[Game, ...] = ()
         self._search: str = ""
         self._shown_games: tuple[Game, ...] = ()
+        self._folders: tuple[str, ...] = ()
+        self._installed: tuple[InstalledGame, ...] = ()
+        self._finding: bool = False
+        self._find_again: bool = False
         self._game: Game | None = None
         self._presets: GamePresets | None = None
         self._resolution: ResolutionPreset | None = None
         self._settings: GameSettings | None = None
         self._preset_index: int = 0
         self._request: int = 0
+        self._cover_request: int = 0
         self._status: Callable[[], str] | None = None
 
     @property
@@ -115,7 +138,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def start(self) -> None:
         """
-        Theme and translate the window, then request the game list and detect the hardware.
+        Theme and translate the window, show the games, then detect the hardware and search for installed games.
 
         :return: None
         """
@@ -123,37 +146,77 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._view.apply_language(translator=self._translator)
         self._view.show_auto_update(enabled=self._auto_update)
         self._render_hardware()
-        self.load_games()
+        self._view.clear_cover(loading=False)
+        self._view.clear_settings(loading=False)
+        self._games = self._service.games()
+        self._render_games()
+        self._view.show_finding()
         self._runner.submit(task=self._service.hardware_setup, on_done=self._on_setup, on_error=self._on_setup_error)
-
-    def load_games(self) -> None:
-        """
-        Request the game list.
-
-        :return: None
-        """
-        self._view.show_load_games(visible=False)
-        self._set_status(text=self._text(item=UiText.LOADING))
-        self._runner.submit(task=self._service.games, on_done=self._on_games, on_error=self._on_games_error)
+        self._runner.submit(task=self._service.game_folders, on_done=self._on_folders, on_error=self._on_folders_error)
 
     def select_game(self, *, index: int) -> None:
         """
-        Show the settings of a game, requesting its presets once the selection rests.
+        Choose a game of the list of all games.
 
         :param index: position of the game in the list as shown, i.e. after the search
         :return: None
         """
-        game: Game = self._shown_games[index]
-        # The window reports its own selection of the chosen game too, e.g. after a search.
-        if game == self._game:
+        self._choose_game(game=self._shown_games[index])
+
+    def select_installed_game(self, *, index: int) -> None:
+        """
+        Choose a game of the list of installed games.
+
+        :param index: position of the game in the list
+        :return: None
+        """
+        self._choose_game(game=self._installed[index].game)
+
+    def find_games(self) -> None:
+        """
+        Search the game folders and the registry for installed games again.
+
+        :return: None
+        """
+        if self._finding:
+            self._find_again = True
             return
-        self._game = game
-        self._clear_game()
-        if self._hardware is None:
-            self._set_status(text=self._problem or self._text(item=UiText.LOADING))
-            return
-        self._set_status(text=self._text(item=UiText.LOADING))
-        self._debouncer.call(key=self._PRESETS, delay_ms=REQUEST_DELAY_MS, action=self._request_presets)
+        self._finding = True
+        self._view.show_finding()
+        folders: tuple[str, ...] = self._folders
+        self._finder.submit(
+            task=lambda: self._service.find_games(folders=folders), on_done=self._on_found, on_error=self._on_find_error
+        )
+
+    def add_folder(self, *, folder: str) -> None:
+        """
+        Add a folder to search for games, save the list and search again; a folder already listed changes nothing.
+
+        :param folder: folder the user picked
+        :return: None
+        """
+        self._put_folder(position=len(self._folders), folder=folder, replacing=False)
+
+    def change_folder(self, *, position: int, folder: str) -> None:
+        """
+        Put another folder in place of a listed one, save the list and search again.
+
+        :param position: position of the folder in the list
+        :param folder: folder the user picked
+        :return: None
+        """
+        if 0 <= position < len(self._folders):
+            self._put_folder(position=position, folder=folder, replacing=True)
+
+    def remove_folder(self, *, position: int) -> None:
+        """
+        Stop searching a folder for games, save the list and search again.
+
+        :param position: position of the folder in the list
+        :return: None
+        """
+        if 0 <= position < len(self._folders):
+            self._set_folders(folders=self._folders[:position] + self._folders[position + 1 :])
 
     def search_games(self, *, text: str) -> None:
         """
@@ -248,7 +311,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         if self._setup is None:
             return
-        options: tuple[str, ...] = self._cpu_options(setup=self._setup)
+        options: tuple[str, ...] = self._setup.cpu_options
         groups: tuple[ChoiceGroup, ...] = ()
         if self._setup.amd_cpus or self._setup.intel_cpus:
             groups = (
@@ -257,7 +320,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             )
         self._view.offer_cpus(
             choice=ChoiceView(
-                detected=self._detected_cpus(setup=self._setup),
+                detected=self._setup.detected_cpus,
                 groups=groups,
                 selected=options.index(self._choice.cpu_name) if self._choice.cpu_name in options else None,
             )
@@ -271,7 +334,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         if self._setup is None:
             return
-        options: tuple[Gpu, ...] = self._gpu_options(setup=self._setup)
+        options: tuple[Gpu, ...] = self._setup.gpu_options
         self._view.offer_gpus(
             choice=ChoiceView(
                 detected=tuple(gpu.name for gpu in self._setup.system.gpus),
@@ -288,10 +351,10 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         if self._setup is None:
             return
-        options: tuple[str, ...] = self._resolution_options(setup=self._setup)
+        options: tuple[str, ...] = self._setup.resolution_options
         self._view.offer_resolutions(
             choice=ChoiceView(
-                detected=self._detected_resolutions(setup=self._setup),
+                detected=self._setup.detected_resolutions,
                 groups=(ChoiceGroup(title="", items=self._setup.resolutions),),
                 selected=options.index(self._resolution_name) if self._resolution_name in options else None,
             )
@@ -305,7 +368,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         if self._setup is not None:
-            self._choose(choice=replace(self._choice, cpu_name=self._cpu_options(setup=self._setup)[position]))
+            self._choose(choice=replace(self._choice, cpu_name=self._setup.cpu_options[position]))
 
     def choose_gpu(self, *, position: int) -> None:
         """
@@ -315,7 +378,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         if self._setup is not None:
-            self._choose(choice=replace(self._choice, gpu=self._gpu_options(setup=self._setup)[position]))
+            self._choose(choice=replace(self._choice, gpu=self._setup.gpu_options[position]))
 
     def choose_resolution(self, *, position: int) -> None:
         """
@@ -326,7 +389,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         if self._setup is None:
             return
-        resolution: str = self._resolution_options(setup=self._setup)[position]
+        resolution: str = self._setup.resolution_options[position]
         if resolution == self._resolution_name:
             return
         self._resolution_name = resolution
@@ -339,26 +402,144 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         if self._presets is not None:
             self._apply_resolution()
 
-    def _on_games(self, games: tuple[Game, ...]) -> None:
+    def _choose_game(self, *, game: Game) -> None:
         """
-        Fill the game list.
+        Show the settings and the box art of a game, requesting them once the choice rests.
 
-        :param games: games sorted by name
+        :param game: the game chosen in one of the lists
         :return: None
         """
-        self._games = games
-        self._render_games()
-        self._set_status(text=self._problem)
+        # The window reports its own selection of the chosen game too, e.g. after a search.
+        if game == self._game:
+            return
+        self._game = game
+        self._render_selection()
+        self._request_cover()
+        self._clear_game(loading=self._hardware is not None)
+        if self._hardware is None:
+            self._set_status(text=self._problem or self._text(item=UiText.LOADING))
+            return
+        self._set_status(text=self._text(item=UiText.LOADING))
+        self._debouncer.call(key=self._PRESETS, delay_ms=REQUEST_DELAY_MS, action=self._request_presets)
 
-    def _on_games_error(self, error: Exception) -> None:
+    def _request_cover(self) -> None:
         """
-        Report a failed game list request and offer to repeat it.
+        Get the box art of the chosen game once the choice rests; an answer for a game chosen before is dropped.
+
+        :return: None
+        """
+        self._cover_request += 1
+        game: Game | None = self._game
+        if game is None:  # pragma: no cover
+            return
+        if game.cover_url is None:
+            self._view.show_cover(picture=None)
+            return
+        request: int = self._cover_request
+        chosen: Game = game
+        self._view.clear_cover(loading=True)
+        self._debouncer.call(
+            key=self._COVER,
+            delay_ms=REQUEST_DELAY_MS,
+            action=lambda: self._runner.submit(
+                task=lambda: self._service.cover(game=chosen),
+                on_done=lambda picture: self._on_cover(request=request, picture=picture),
+                on_error=lambda _: self._on_cover(request=request, picture=None),
+            ),
+        )
+
+    def _on_cover(self, *, request: int, picture: Path | None) -> None:
+        """
+        Show the box art of the chosen game, or the placeholder when it could not be had.
+
+        :param request: number of the request
+        :param picture: the picture file, None on failure
+        :return: None
+        """
+        if request == self._cover_request:
+            self._view.show_cover(picture=picture)
+
+    def _on_folders(self, folders: tuple[str, ...]) -> None:
+        """
+        Show the folders searched for games and search them.
+
+        :param folders: existing folders in the user's order
+        :return: None
+        """
+        self._folders = folders
+        self._view.show_folders(folders=folders)
+        self.find_games()
+
+    def _on_folders_error(self, error: Exception) -> None:
+        """
+        Search the registry alone when the saved folders can't be read.
 
         :param error: the failure
         :return: None
         """
-        self._set_status(text=self._text(item=UiText.GAMES_FAILED, error=str(error)))
-        self._view.show_load_games(visible=True)
+        logger.warning("Searching without game folders: {}", error)
+        self._on_folders(folders=())
+
+    def _put_folder(self, *, position: int, folder: str, replacing: bool) -> None:
+        """
+        Put a folder at a position of the list, unless another position lists it already.
+
+        :param position: position to put it at; the end of the list adds it
+        :param folder: folder the user picked
+        :param replacing: True to replace the folder at the position, False to insert it there
+        :return: None
+        """
+        if not folder:
+            return
+        normalized: str = str(PureWindowsPath(folder))
+        after: int = position + 1 if replacing else position
+        others: tuple[str, ...] = self._folders[:position] + self._folders[after:]
+        if normalized.casefold() in (item.casefold() for item in others):
+            return
+        self._set_folders(folders=self._folders[:position] + (normalized,) + self._folders[after:])
+
+    def _set_folders(self, *, folders: tuple[str, ...]) -> None:
+        """
+        Use, show and save a new folder list and search it.
+
+        :param folders: folders in the user's order
+        :return: None
+        """
+        if folders == self._folders:
+            return
+        self._folders = folders
+        self._view.show_folders(folders=folders)
+        self._runner.submit(
+            task=lambda: self._service.save_game_folders(folders=folders),
+            on_done=lambda _: None,
+            on_error=lambda _: None,
+        )
+        self.find_games()
+
+    def _on_found(self, games: tuple[InstalledGame, ...]) -> None:
+        """
+        Show the installed games, or search again when that was asked for during the search.
+
+        :param games: installed games sorted by name
+        :return: None
+        """
+        self._finding = False
+        if self._find_again:
+            self._find_again = False
+            self.find_games()
+            return
+        self._installed = games
+        self._render_installed()
+
+    def _on_find_error(self, error: Exception) -> None:
+        """
+        Report a failed search for installed games and show none.
+
+        :param error: the failure
+        :return: None
+        """
+        self._set_status(text=self._text(item=UiText.FIND_FAILED, error=str(error)))
+        self._on_found(games=())
 
     def _on_setup(self, setup: HardwareSetup) -> None:
         """
@@ -422,7 +603,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
                 self._set_status(text=None)
             self._problem = None
             if self._game is not None:
-                self._clear_game()
+                self._clear_game(loading=True)
                 self._request_presets()
         else:
             self._lose_hardware(text=self._problem_text(check=check))
@@ -479,7 +660,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._hardware = None
         self._problem = text
         self._set_status(text=text)
-        self._clear_game()
+        self._clear_game(loading=False)
 
     def _request_presets(self) -> None:
         """
@@ -521,8 +702,9 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         if self._game is None or self._presets is None or self._resolution_name is None:  # pragma: no cover
             return
         request: int = self._next_request()
-        self._clear_settings()
-        self._resolution = self._match(resolutions=self._presets.resolutions, wanted=self._resolution_name)
+        self._resolution = self._presets.preset_for(resolution=self._resolution_name)
+        self._settings = None
+        self._view.clear_settings(loading=self._resolution is not None)
         if self._resolution is None:
             self._set_status(text=self._text(item=UiText.NO_RECOMMENDATION))
             return
@@ -560,6 +742,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         if request != self._request:
             return
+        self._view.clear_settings(loading=False)
         self._set_status(text=self._text(item=UiText.REQUEST_FAILED, error=str(error)))
 
     def _resolution_note(self) -> Callable[[], str] | None:
@@ -580,15 +763,47 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def _render_games(self) -> None:
         """
-        Fill the game list with the games matching the search, keeping the chosen game selected when it is there.
+        Fill the list of all games with the ones matching the search, keeping the chosen game selected when it is there.
 
         :return: None
         """
         self._shown_games = tuple(game for game in self._games if self._search in game.name.casefold())
-        self._view.show_games(
-            names=[game.name for game in self._shown_games],
-            selected=self._shown_games.index(self._game) if self._game in self._shown_games else None,
+        self._view.show_games(names=[game.name for game in self._shown_games], selected=self._shown_position())
+
+    def _render_installed(self) -> None:
+        """
+        Fill the list of installed games, keeping the chosen game selected when it is there.
+
+        :return: None
+        """
+        self._view.show_installed_games(
+            games=[InstalledGameView(name=item.game.name, executable=item.executable) for item in self._installed],
+            selected=self._installed_position(),
         )
+
+    def _render_selection(self) -> None:
+        """
+        Select the chosen game in both lists, clearing the selection of a list without it.
+
+        :return: None
+        """
+        self._view.select_game(position=self._shown_position(), installed_position=self._installed_position())
+
+    def _shown_position(self) -> int | None:
+        """
+        Find the chosen game in the list of all games as shown.
+
+        :return: its position, None when it is not shown
+        """
+        return self._shown_games.index(self._game) if self._game in self._shown_games else None
+
+    def _installed_position(self) -> int | None:
+        """
+        Find the chosen game among the installed games.
+
+        :return: its position, None when it is not installed
+        """
+        return next((i for i, item in enumerate(self._installed) if item.game == self._game), None)
 
     def _update_database_once(self) -> None:
         """
@@ -612,7 +827,9 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def _on_database_update(self, result: DatabaseUpdate) -> None:
         """
-        Read the choice lists and the game names again when a new database is in use.
+        Read the choice lists and the games again and search for installed games when a new database is in use.
+
+        The chosen game is matched by its identifier and stays chosen when the new database still has it.
 
         :param result: outcome of the update
         :return: None
@@ -623,13 +840,12 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             self._runner.submit(
                 task=self._service.hardware_setup, on_done=self._on_setup_refresh, on_error=lambda _: None
             )
-        if self._games:
-            games: tuple[Game, ...] = self._games
-            self._runner.submit(
-                task=lambda: self._service.rename_games(games=games),
-                on_done=self._on_games_renamed,
-                on_error=lambda _: None,
-            )
+        self._games = self._service.games()
+        if self._game is not None:
+            game_id: str = self._game.game_id
+            self._game = next((game for game in self._games if game.game_id == game_id), self._game)
+        self._render_games()
+        self.find_games()
 
     def _on_setup_refresh(self, setup: HardwareSetup) -> None:
         """
@@ -639,19 +855,6 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self._setup = setup
-
-    def _on_games_renamed(self, games: tuple[Game, ...]) -> None:
-        """
-        Show the game names of a new database, keeping the chosen game.
-
-        :param games: games named again, sorted by name
-        :return: None
-        """
-        self._games = games
-        if self._game is not None:
-            game_id: str = self._game.game_id
-            self._game = next((game for game in games if game.game_id == game_id), self._game)
-        self._render_games()
 
     def _render_hardware(self) -> None:
         """
@@ -714,29 +917,23 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
                 ),
                 count=self._settings.count,
                 index=self._preset_index,
+                recommended=self._resolution.preset_index,
                 optimal=optimal,
             )
         )
 
-    def _clear_game(self) -> None:
+    def _clear_game(self, *, loading: bool) -> None:
         """
         Forget the presets and settings shown for a game, dropping requests still running.
 
+        :param loading: True when the settings of a game are about to be requested
         :return: None
         """
         self._next_request()
         self._presets = None
-        self._clear_settings()
-
-    def _clear_settings(self) -> None:
-        """
-        Hide the settings shown.
-
-        :return: None
-        """
         self._resolution = None
         self._settings = None
-        self._view.clear_settings()
+        self._view.clear_settings(loading=loading)
 
     def _next_request(self) -> int:
         """
@@ -766,85 +963,3 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :return: function giving the translated text
         """
         return lambda: self._translator.text(item=item, **values)
-
-    @staticmethod
-    def _detected_cpus(*, setup: HardwareSetup) -> tuple[str, ...]:
-        """
-        List the detected CPU.
-
-        :param setup: hardware setup
-        :return: the detected CPU name, nothing when none was detected
-        """
-        return () if setup.system.cpu_name is None else (setup.system.cpu_name,)
-
-    @classmethod
-    def _cpu_options(cls, *, setup: HardwareSetup) -> tuple[str, ...]:
-        """
-        List the CPUs in the order of the choice.
-
-        :param setup: hardware setup
-        :return: the detected CPU, then the AMD and the Intel ones
-        """
-        return cls._detected_cpus(setup=setup) + setup.amd_cpus + setup.intel_cpus
-
-    @staticmethod
-    def _gpu_options(*, setup: HardwareSetup) -> tuple[Gpu, ...]:
-        """
-        List the GPUs in the order of the choice.
-
-        :param setup: hardware setup
-        :return: the detected GPUs, then the bundled ones
-        """
-        return setup.system.gpus + setup.gpus
-
-    @staticmethod
-    def _detected_resolutions(*, setup: HardwareSetup) -> tuple[str, ...]:
-        """
-        List the detected screen resolution.
-
-        :param setup: hardware setup
-        :return: the detected resolution, nothing when none was detected
-        """
-        return () if setup.system.resolution is None else (setup.system.resolution,)
-
-    @classmethod
-    def _resolution_options(cls, *, setup: HardwareSetup) -> tuple[str, ...]:
-        """
-        List the resolutions in the order of the choice.
-
-        :param setup: hardware setup
-        :return: the detected resolution, then the bundled ones
-        """
-        return cls._detected_resolutions(setup=setup) + setup.resolutions
-
-    @classmethod
-    def _match(cls, *, resolutions: Sequence[ResolutionPreset], wanted: str) -> ResolutionPreset | None:
-        """
-        Find the preset of a resolution, or of the closest smaller one; the smallest when none is as small.
-
-        :param resolutions: resolutions NVIDIA gave presets for
-        :param wanted: resolution in use, e.g. "2560x1600"
-        :return: the preset, None when NVIDIA gave none
-        """
-        by_size: list[ResolutionPreset] = sorted(resolutions, key=lambda item: cls._pixels(resolution=item.resolution))
-        if not by_size:
-            return None
-        exact: ResolutionPreset | None = next((item for item in by_size if item.resolution == wanted), None)
-        if exact is not None:
-            return exact
-        limit: int = cls._pixels(resolution=wanted)
-        smaller: list[ResolutionPreset] = [item for item in by_size if cls._pixels(resolution=item.resolution) <= limit]
-        return smaller[-1] if smaller else by_size[0]
-
-    @staticmethod
-    def _pixels(*, resolution: str) -> int:
-        """
-        Count the pixels of a resolution for comparison.
-
-        :param resolution: resolution as NVIDIA writes it, e.g. "1920x1080"
-        :return: width times height, 0 for a malformed resolution
-        """
-        width: str
-        height: str
-        width, _, height = resolution.partition("x")
-        return int(width) * int(height) if width.isdigit() and height.isdigit() else 0

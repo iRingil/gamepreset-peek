@@ -84,19 +84,20 @@ class TestWorker:
 
     def test_tasks_off_the_calling_thread(self, qt_app: QApplication) -> None:
         """
-        Runs tasks in its own thread, never in the one that submitted them.
+        Runs tasks in its own thread of the given name, never in the one that submitted them.
 
         :param qt_app: Qt application
         :return: None
         """
         # Arrange
-        worker: Worker = Worker()
+        worker: Worker = Worker(name="finder")
         threads: list[threading.Thread] = []
         worker.submit(task=threading.current_thread, on_done=threads.append, on_error=self._unexpected)
         # Act
         self._finish(worker=worker, qt_app=qt_app)
         # Assert
         assert threads and threads[0] is not threading.current_thread()
+        assert threads[0].name == "finder"
 
     def test_callbacks_in_ui_thread(self, qt_app: QApplication) -> None:
         """

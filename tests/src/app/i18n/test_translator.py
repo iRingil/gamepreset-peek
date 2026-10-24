@@ -48,9 +48,9 @@ class TestText:
         # Arrange
         translator: Translator = Translator(language="ru", locale_dir=locale_dir)
         # Act
-        text: str = translator.text(item=UiText.GAME)
+        text: str = translator.text(item=UiText.MY_GAMES)
         # Assert
-        assert text == "Игра"
+        assert text == "Мои игры"
 
     def test_placeholders_filled(self, locale_dir: Path) -> None:
         """
@@ -62,9 +62,9 @@ class TestText:
         # Arrange
         translator: Translator = Translator(language="de", locale_dir=locale_dir)
         # Act
-        text: str = translator.text(item=UiText.GAMES_FAILED, error="timeout")
+        text: str = translator.text(item=UiText.FIND_FAILED, error="timeout")
         # Assert
-        assert text == "Die Spieleliste konnte nicht geladen werden: timeout"
+        assert text == "Spielesuche fehlgeschlagen: timeout"
 
     def test_missing_catalog(self, tmp_path: Path) -> None:
         """

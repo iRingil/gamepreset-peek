@@ -9,7 +9,9 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from app.config import APP_ICON_FILE, APP_USER_MODEL_ID
+from app.core.covers import CoverCache
 from app.core.database import AppDatabase
+from app.core.game_finder import GameFinder
 from app.core.hardware import HardwareDetector
 from app.core.ops_api import OpsApi
 from app.core.service import PresetService
@@ -50,6 +52,8 @@ class _Application:  # pylint: disable=too-few-public-methods
                 data=database.load(),
                 detector=HardwareDetector(),
                 store=UserSettingsStore(),
+                finder=GameFinder(),
+                covers=CoverCache(http=http),
             )
             translator: Translator = Translator(language=Translator.pick_language(saved=service.saved_language()))
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
@@ -58,10 +62,12 @@ class _Application:  # pylint: disable=too-few-public-methods
             sys.excepthook = self._log_unhandled
             window: MainWindow = MainWindow(log_lines=self._logging.lines)
             worker: Worker = Worker()
+            finder: Worker = Worker(name="finder")
             presenter: Presenter = Presenter(
                 view=window,
                 service=service,
                 runner=worker,
+                finder=finder,
                 debouncer=QtDebouncer(parent=window),
                 translator=translator,
                 theme=service.saved_theme(),
@@ -74,6 +80,7 @@ class _Application:  # pylint: disable=too-few-public-methods
                 application.exec()
             finally:
                 worker.close()
+                finder.close()
 
     @staticmethod
     def _log_unhandled(

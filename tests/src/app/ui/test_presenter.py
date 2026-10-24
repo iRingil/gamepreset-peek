@@ -20,6 +20,7 @@ from app.core.models import (
     HardwareChoice,
     HardwareSetup,
     HardwareState,
+    InstalledGame,
     PresetsFile,
     RemoteFile,
     ResolutionPreset,
@@ -33,7 +34,7 @@ from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.presenter import Presenter
-from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, SettingRow, SettingsView
+from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, InstalledGameView, SettingRow, SettingsView
 
 __all__: tuple = ()
 
@@ -58,9 +59,13 @@ _LAPTOP_VIEW: HardwareView = HardwareView(
     cpu=_CPU, gpu="NVIDIA GeForce RTX 4060 Laptop GPU", resolution=_SCREEN, memory="16 GB", video_memory="8 GB"
 )
 _GAMES: tuple[Game, ...] = (
-    Game(game_id="baldurs_gate_3", name="Baldur's Gate 3"),
+    Game(game_id="baldurs_gate_3", name="Baldur's Gate 3", cover_url="https://img.example.test/bg3.jpg"),
     Game(game_id="mordhau", name="MORDHAU"),
 )
+_FOLDERS: tuple[str, ...] = ("C:\\Program Files", "D:\\Games")
+_BG3_EXE: Path = Path("D:/Games/Baldurs Gate 3/bin/bg3.exe")
+_INSTALLED: tuple[InstalledGame, ...] = (InstalledGame(game=_GAMES[0], executable=_BG3_EXE),)
+_COVER: Path = Path("cover.jpg")
 _PRESETS_FILE: RemoteFile = RemoteFile(url="https://cdn.example.test/pops", sha256="00", size=1)
 # No preset for 2560x1600: the one of 2560x1440 stands in; 4K is too much for the hardware.
 _PRESETS: GamePresets = GamePresets(
@@ -100,6 +105,7 @@ _SHOWN: SettingsView = SettingsView(
     ),
     count=3,
     index=2,
+    recommended=2,
     optimal=True,
 )
 
@@ -148,10 +154,17 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.auto_update: bool | None = None
         self.hardware: HardwareView | None = None
         self.status: str = ""
-        self.load_games: bool = False
         self.games: list[str] = []
         self.game_selected: int | None = None
+        self.finding: bool = False
+        self.installed: list[InstalledGameView] = []
+        self.installed_selected: int | None = None
+        self.folders: list[str] = []
+        # "empty", "loading" or "picture"; the picture is None for the placeholder.
+        self.cover: str = "empty"
+        self.picture: Path | None = None
         self.settings: SettingsView | None = None
+        self.settings_loading: bool = False
         self.cpu_offers: list[ChoiceView] = []
         self.gpu_offers: list[ChoiceView] = []
         self.resolution_offers: list[ChoiceView] = []
@@ -238,15 +251,6 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.warnings.append(text)
 
-    def show_load_games(self, *, visible: bool) -> None:
-        """
-        Record the "Load games" button state.
-
-        :param visible: whether it is shown
-        :return: None
-        """
-        self.load_games = visible
-
     def show_games(self, *, names: Sequence[str], selected: int | None) -> None:
         """
         Record the game list.
@@ -258,6 +262,66 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.games = list(names)
         self.game_selected = selected
 
+    def show_finding(self) -> None:
+        """
+        Record that installed games are searched for.
+
+        :return: None
+        """
+        self.finding = True
+
+    def show_installed_games(self, *, games: Sequence[InstalledGameView], selected: int | None) -> None:
+        """
+        Record the installed games.
+
+        :param games: installed games
+        :param selected: position of the chosen game
+        :return: None
+        """
+        self.finding = False
+        self.installed = list(games)
+        self.installed_selected = selected
+
+    def select_game(self, *, position: int | None, installed_position: int | None) -> None:
+        """
+        Record the selection of both lists.
+
+        :param position: position in the list of all games
+        :param installed_position: position in the list of installed games
+        :return: None
+        """
+        self.game_selected = position
+        self.installed_selected = installed_position
+
+    def show_folders(self, *, folders: Sequence[str]) -> None:
+        """
+        Record the game folders.
+
+        :param folders: folders shown
+        :return: None
+        """
+        self.folders = list(folders)
+
+    def show_cover(self, *, picture: Path | None) -> None:
+        """
+        Record the box art shown.
+
+        :param picture: the picture, None for the placeholder
+        :return: None
+        """
+        self.cover = "picture"
+        self.picture = picture
+
+    def clear_cover(self, *, loading: bool) -> None:
+        """
+        Record the cover skeleton.
+
+        :param loading: whether the picture is on its way
+        :return: None
+        """
+        self.cover = "loading" if loading else "empty"
+        self.picture = None
+
     def show_settings(self, *, settings: SettingsView) -> None:
         """
         Record the settings shown.
@@ -266,14 +330,17 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self.settings = settings
+        self.settings_loading = False
 
-    def clear_settings(self) -> None:
+    def clear_settings(self, *, loading: bool) -> None:
         """
         Record that no settings are shown.
 
+        :param loading: whether settings are requested
         :return: None
         """
         self.settings = None
+        self.settings_loading = loading
 
 
 class _Runner:
@@ -384,6 +451,15 @@ class _PresenterTests:
         """
         return _Runner()
 
+    @pytest.fixture(name="finder")
+    def _finder(self) -> _Runner:
+        """
+        Create the runner of the search for installed games.
+
+        :return: runner running tasks at once
+        """
+        return _Runner()
+
     @pytest.fixture(name="debouncer")
     def _debouncer(self) -> _Debouncer:
         """
@@ -396,7 +472,7 @@ class _PresenterTests:
     @pytest.fixture(name="service")
     def _service(self) -> MagicMock:
         """
-        Mock the service: two games, the laptop accepted, presets and settings of any game.
+        Mock the service: two games, one installed, the laptop accepted, presets, settings and box art of any game.
 
         :return: mock with the interface of PresetService
         """
@@ -407,17 +483,27 @@ class _PresenterTests:
         service.game_presets.return_value = _PRESETS
         service.game_settings.return_value = _SETTINGS
         service.update_database_if_due.return_value = DatabaseUpdate.SKIPPED
+        service.game_folders.return_value = _FOLDERS
+        service.find_games.return_value = _INSTALLED
+        service.cover.return_value = _COVER
         return service
 
     @pytest.fixture(name="presenter")
-    def _presenter(
-        self, view: _FakeView, runner: _Runner, debouncer: _Debouncer, service: MagicMock, locale_dir: Path
+    def _presenter(  # pylint: disable=too-many-arguments
+        self,
+        view: _FakeView,
+        runner: _Runner,
+        finder: _Runner,
+        debouncer: _Debouncer,
+        service: MagicMock,
+        locale_dir: Path,
     ) -> Presenter:
         """
         Create the presenter in English with automatic database updates on; tests start it themselves.
 
         :param view: fake window
         :param runner: runner
+        :param finder: runner of the search for installed games
         :param debouncer: debouncer
         :param service: service mock
         :param locale_dir: compiled catalogs
@@ -427,6 +513,7 @@ class _PresenterTests:
             view=view,
             service=service,
             runner=runner,
+            finder=finder,
             debouncer=debouncer,
             translator=Translator(language="en", locale_dir=locale_dir),
             theme=ThemeMode.AUTO,
@@ -447,7 +534,7 @@ class _PresenterTests:
 
 
 class TestStart(_PresenterTests):
-    """Tests of Presenter.start, load_games and the hardware flow."""
+    """Tests of Presenter.start and the hardware flow."""
 
     def test_games_and_hardware(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
@@ -462,13 +549,13 @@ class TestStart(_PresenterTests):
         presenter.start()
         # Assert
         assert (view.theme, view.auto_update) == (ThemeMode.AUTO, True)
-        assert (view.language, view.games, view.hardware, view.status, view.load_games) == (
+        assert (view.language, view.games, view.hardware, view.status) == (
             "en",
             ["Baldur's Gate 3", "MORDHAU"],
             _LAPTOP_VIEW,
             "",
-            False,
         )
+        assert (view.cover, view.settings, view.settings_loading) == ("empty", None, False)
         service.check_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=_CPU, gpu=_LAPTOP_GPU))
         service.update_database_if_due.assert_called_once_with()
         assert not view.warnings
@@ -582,25 +669,6 @@ class TestStart(_PresenterTests):
         assert (view.status, view.hardware) == ("Could not get data from NVIDIA: timeout", _LAPTOP_VIEW)
         service.game_presets.assert_not_called()
 
-    def test_games_failed_then_reloaded(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
-        """
-        Reports a failed game list with the "Load games" button, which requests it again.
-
-        :param presenter: presenter under test
-        :param view: fake window
-        :param service: service mock
-        :return: None
-        """
-        # Arrange
-        service.games.side_effect = [ConnectionError("down"), _GAMES]
-        presenter.start()
-        failed: tuple[str, bool] = (view.status, view.load_games)
-        # Act
-        presenter.load_games()
-        # Assert
-        assert failed == ("Could not load the game list: down", True)
-        assert (view.games, view.status, view.load_games) == (["Baldur's Gate 3", "MORDHAU"], "", False)
-
     @pytest.mark.parametrize(
         argnames=("check", "expected"),
         argvalues=[
@@ -647,21 +715,24 @@ class TestStart(_PresenterTests):
         # Assert
         assert view.status == expected
 
-    def test_problem_outlives_game_list(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+    def test_problem_outlives_search(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, finder: _Runner
+    ) -> None:
         """
-        Keeps the hardware problem in the status line when the game list arrives after it.
+        Keeps the hardware problem in the status line when the installed games arrive after it.
 
         :param presenter: presenter under test
         :param view: fake window
         :param service: service mock
+        :param finder: runner of the search for installed games
         :return: None
         """
         # Arrange
         service.check_hardware.return_value = HardwareCheck(state=HardwareState.REJECTED, failed=("gpu",))
-        service.games.side_effect = [ConnectionError("down"), _GAMES]
+        finder.deferred = True
         presenter.start()
         # Act
-        presenter.load_games()
+        finder.run_all()
         # Assert
         assert view.status == "NVIDIA does not know your graphics card. Choose the closest one from the list."
 
@@ -872,6 +943,7 @@ class TestSettings(_PresenterTests):
             ),
             count=3,
             index=3,
+            recommended=2,
             optimal=False,
         )
         assert view.settings is not None and (view.settings.index, view.settings.optimal) == (2, True)
@@ -1340,6 +1412,7 @@ class TestDatabaseUpdate(_PresenterTests):
         Game(game_id="baldurs_gate_3", name="Baldur's Gate III"),
         Game(game_id="mordhau", name="Mordhau II"),
     )
+    _RENAMED_INSTALLED: tuple[InstalledGame, ...] = (InstalledGame(game=_RENAMED[0], executable=_BG3_EXE),)
 
     @pytest.mark.parametrize(
         argnames="result",
@@ -1350,7 +1423,7 @@ class TestDatabaseUpdate(_PresenterTests):
         self, presenter: Presenter, view: _FakeView, service: MagicMock, result: DatabaseUpdate
     ) -> None:
         """
-        Keeps the names and lists shown when the database didn't change.
+        Keeps the games and lists shown when the database didn't change.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1363,12 +1436,12 @@ class TestDatabaseUpdate(_PresenterTests):
         # Act
         presenter.start()
         # Assert
-        service.rename_games.assert_not_called()
+        assert (service.games.call_count, service.find_games.call_count) == (1, 1)
         assert (service.hardware_setup.call_count, view.games) == (1, ["Baldur's Gate 3", "MORDHAU"])
 
-    def test_names_and_lists_refreshed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+    def test_games_and_lists_refreshed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Shows the game names of a new database, keeping the chosen game, and offers its CPU list.
+        Shows the games of a new database and searches again, keeping the chosen game, and offers its CPU list.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1376,7 +1449,8 @@ class TestDatabaseUpdate(_PresenterTests):
         :return: None
         """
         # Arrange
-        service.rename_games.return_value = self._RENAMED
+        service.games.side_effect = [_GAMES, self._RENAMED]
+        service.find_games.side_effect = [_INSTALLED, self._RENAMED_INSTALLED]
         service.hardware_setup.side_effect = [_SETUP, replace(_SETUP, amd_cpus=(_AMD_CPU,))]
         self.show_settings(presenter=presenter)
         service.update_database_if_due.return_value = DatabaseUpdate.UPDATED
@@ -1385,8 +1459,8 @@ class TestDatabaseUpdate(_PresenterTests):
         presenter.change_auto_update(enabled=True)
         presenter.open_cpu_choice()
         # Assert
-        service.rename_games.assert_called_once_with(games=_GAMES)
         assert (view.games, view.game_selected) == (["Baldur's Gate III", "Mordhau II"], 1)
+        assert [game.name for game in view.installed] == ["Baldur's Gate III"]
         assert view.settings is not None
         assert view.cpu_offers[0].groups[0].items == (_AMD_CPU,)
         assert view.hardware == _LAPTOP_VIEW
@@ -1401,7 +1475,7 @@ class TestDatabaseUpdate(_PresenterTests):
         :return: None
         """
         # Arrange
-        service.rename_games.return_value = self._RENAMED[:1]
+        service.games.side_effect = [_GAMES, self._RENAMED[:1]]
         self.show_settings(presenter=presenter)
         service.update_database_if_due.return_value = DatabaseUpdate.UPDATED
         presenter.change_auto_update(enabled=False)
@@ -1464,7 +1538,7 @@ class TestDatabaseUpdate(_PresenterTests):
 
     def test_refresh_without_setup(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Renames the games but asks for no lists when the hardware detection failed.
+        Shows the new games but asks for no lists when the hardware detection failed.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1474,28 +1548,11 @@ class TestDatabaseUpdate(_PresenterTests):
         # Arrange
         service.hardware_setup.side_effect = OSError("no registry")
         service.update_database_if_due.return_value = DatabaseUpdate.UPDATED
-        service.rename_games.return_value = self._RENAMED
+        service.games.side_effect = [_GAMES, self._RENAMED]
         # Act
         presenter.start()
         # Assert
         assert (service.hardware_setup.call_count, view.games) == (1, ["Baldur's Gate III", "Mordhau II"])
-
-    def test_refresh_without_games(self, presenter: Presenter, service: MagicMock) -> None:
-        """
-        Renames nothing when the game list failed to load.
-
-        :param presenter: presenter under test
-        :param service: service mock
-        :return: None
-        """
-        # Arrange
-        service.games.side_effect = ConnectionError("offline")
-        service.update_database_if_due.return_value = DatabaseUpdate.UPDATED
-        # Act
-        presenter.start()
-        # Assert
-        service.rename_games.assert_not_called()
-        assert service.hardware_setup.call_count == 2
 
 
 class TestHardwareChoice(_PresenterTests):
@@ -1680,3 +1737,383 @@ class TestHardwareChoice(_PresenterTests):
         presenter.choose_gpu(position=1)
         # Assert
         assert (view.hardware, view.status) == (_LAPTOP_VIEW, "Could not get data from NVIDIA: timeout")
+
+
+class TestInstalledGames(_PresenterTests):
+    """Tests of the search for installed games, Presenter.find_games and select_installed_game."""
+
+    def test_found_at_start(self, presenter: Presenter, view: _FakeView, service: MagicMock, finder: _Runner) -> None:
+        """
+        Shows the skeleton, then the folders and the games found in them with their executables.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param finder: runner of the search for installed games
+        :return: None
+        """
+        # Arrange
+        finder.deferred = True
+        presenter.start()
+        searching: tuple[bool, list[str]] = (view.finding, view.folders)
+        # Act
+        finder.run_all()
+        # Assert
+        assert searching == (True, list(_FOLDERS))
+        assert (view.finding, view.installed, view.installed_selected) == (
+            False,
+            [InstalledGameView(name="Baldur's Gate 3", executable=_BG3_EXE)],
+            None,
+        )
+        service.find_games.assert_called_once_with(folders=_FOLDERS)
+
+    def test_folders_unreadable(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Searches without folders when the saved ones can't be read.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.game_folders.side_effect = OSError("locked")
+        # Act
+        presenter.start()
+        # Assert
+        assert view.folders == []
+        service.find_games.assert_called_once_with(folders=())
+
+    def test_search_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Reports a failed search and shows no installed games.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.find_games.side_effect = OSError("denied")
+        # Act
+        presenter.start()
+        # Assert
+        assert (view.status, view.installed, view.finding) == ("Could not search for games: denied", [], False)
+
+    def test_asked_again_while_searching(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, finder: _Runner
+    ) -> None:
+        """
+        Searches once more after the running search when asked during it, showing only the last result.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param finder: runner of the search for installed games
+        :return: None
+        """
+        # Arrange
+        service.find_games.side_effect = [(), _INSTALLED]
+        finder.deferred = True
+        presenter.start()
+        presenter.find_games()
+        presenter.find_games()
+        # Act
+        finder.run_all()
+        # Assert
+        assert service.find_games.call_count == 2
+        assert [game.name for game in view.installed] == ["Baldur's Gate 3"]
+
+    def test_installed_game_chosen(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Shows the settings of an installed game chosen and selects it in the list of all games too.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.select_installed_game(index=0)
+        # Assert
+        assert service.game_presets.call_args.kwargs["game_id"] == "baldurs_gate_3"
+        assert (view.game_selected, view.installed_selected) == (0, 0)
+        assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
+
+    def test_game_not_installed(self, presenter: Presenter, view: _FakeView) -> None:
+        """
+        Clears the selection of the installed games when a game they lack is chosen in the list of all games.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        presenter.select_installed_game(index=0)
+        # Act
+        presenter.select_game(index=1)
+        # Assert
+        assert (view.game_selected, view.installed_selected) == (1, None)
+
+    def test_choice_kept_after_search(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Keeps the chosen game selected among the installed games found by a new search.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        presenter.select_game(index=0)
+        # Act
+        presenter.find_games()
+        # Assert
+        assert (view.installed_selected, service.find_games.call_count) == (0, 2)
+
+
+class TestFolders(_PresenterTests):
+    """Tests of Presenter.add_folder, change_folder and remove_folder."""
+
+    def test_added(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Adds a picked folder in Windows form at the end, saves the list and searches again.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.add_folder(folder="E:/SteamLibrary")
+        # Assert
+        expected: tuple[str, ...] = (*_FOLDERS, "E:\\SteamLibrary")
+        assert view.folders == list(expected)
+        service.save_game_folders.assert_called_once_with(folders=expected)
+        assert service.find_games.call_args.kwargs == {"folders": expected}
+
+    @pytest.mark.parametrize(argnames="folder", argvalues=["d:/games", ""], ids=["listed already", "nothing picked"])
+    def test_not_added(self, presenter: Presenter, view: _FakeView, service: MagicMock, folder: str) -> None:
+        """
+        Changes nothing for a folder listed already, in any case, or for an empty pick.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param folder: folder picked
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.add_folder(folder=folder)
+        # Assert
+        assert view.folders == list(_FOLDERS)
+        service.save_game_folders.assert_not_called()
+        assert service.find_games.call_count == 1
+
+    @pytest.mark.parametrize(
+        argnames=("position", "folder", "expected"),
+        argvalues=[
+            (1, "E:/Games", ("C:\\Program Files", "E:\\Games")),
+            (1, "d:/games", ("C:\\Program Files", "d:\\games")),
+            (1, "D:/Games", _FOLDERS),
+            (0, "D:/Games", _FOLDERS),
+            (2, "E:/Games", _FOLDERS),
+            (-1, "E:/Games", _FOLDERS),
+        ],
+        ids=[
+            "replaced",
+            "same folder in other case",
+            "same folder",
+            "another listed folder",
+            "after the end",
+            "negative",
+        ],
+    )
+    def test_changed(  # pylint: disable=too-many-arguments
+        self,
+        presenter: Presenter,
+        view: _FakeView,
+        service: MagicMock,
+        position: int,
+        folder: str,
+        expected: tuple[str, ...],
+    ) -> None:
+        """
+        Puts a picked folder in place of a listed one unless another position lists it; a bad position does nothing.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param position: position of the folder replaced
+        :param folder: folder picked
+        :param expected: folders afterwards
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.change_folder(position=position, folder=folder)
+        # Assert
+        assert view.folders == list(expected)
+        assert service.save_game_folders.call_count == int(expected != _FOLDERS)
+
+    @pytest.mark.parametrize(
+        argnames=("position", "expected"),
+        argvalues=[(0, ("D:\\Games",)), (2, _FOLDERS), (-1, _FOLDERS)],
+        ids=["removed", "after the end", "negative"],
+    )
+    def test_removed(
+        self, presenter: Presenter, view: _FakeView, service: MagicMock, position: int, expected: tuple[str, ...]
+    ) -> None:
+        """
+        Removes a listed folder, saves the list and searches again; a bad position does nothing.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param position: position of the folder removed
+        :param expected: folders afterwards
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.remove_folder(position=position)
+        # Assert
+        assert view.folders == list(expected)
+        assert service.find_games.call_count == 1 + int(expected != _FOLDERS)
+
+
+class TestCover(_PresenterTests):
+    """Tests of the box art of the chosen game."""
+
+    def test_shown(self, presenter: Presenter, view: _FakeView, service: MagicMock, debouncer: _Debouncer) -> None:
+        """
+        Shows the cover skeleton while the choice rests, then the picture.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param debouncer: debouncer
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        debouncer.held = True
+        presenter.select_game(index=0)
+        waiting: str = view.cover
+        # Act
+        debouncer.fire()
+        # Assert
+        assert (waiting, view.cover, view.picture) == ("loading", "picture", _COVER)
+        service.cover.assert_called_once_with(game=_GAMES[0])
+
+    def test_no_box_art(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Shows the placeholder at once for a game without box art.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        # Act
+        presenter.select_game(index=1)
+        # Assert
+        assert (view.cover, view.picture) == ("picture", None)
+        service.cover.assert_not_called()
+
+    def test_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
+        """
+        Shows the placeholder when the picture can't be had.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :return: None
+        """
+        # Arrange
+        service.cover.side_effect = ConnectionError("offline")
+        presenter.start()
+        # Act
+        presenter.select_game(index=0)
+        # Assert
+        assert (view.cover, view.picture) == ("picture", None)
+
+    def test_stale_dropped(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
+        """
+        Drops the picture of a game the user left before it arrived.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param runner: runner
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        runner.deferred = True
+        presenter.select_game(index=0)
+        presenter.select_game(index=1)
+        # Act
+        runner.run_all()
+        # Assert
+        assert (view.cover, view.picture) == ("picture", None)
+
+
+class TestSettingsSkeleton(_PresenterTests):
+    """Tests of the settings skeleton: moving while settings are requested, still otherwise."""
+
+    def test_loading(self, presenter: Presenter, view: _FakeView, runner: _Runner) -> None:
+        """
+        Moves the skeleton while the settings of a chosen game are requested.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param runner: runner
+        :return: None
+        """
+        # Arrange
+        presenter.start()
+        runner.deferred = True
+        # Act
+        presenter.select_game(index=1)
+        # Assert
+        assert (view.settings, view.settings_loading) == (None, True)
+
+    @pytest.mark.parametrize(
+        argnames="case",
+        argvalues=["no hardware", "no recommendation", "failed"],
+        ids=["no hardware", "no recommendation", "failed"],
+    )
+    def test_still(self, presenter: Presenter, view: _FakeView, service: MagicMock, case: str) -> None:
+        """
+        Stops the skeleton when no settings are coming: no hardware, no recommendation or a failed request.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param service: service mock
+        :param case: why no settings come
+        :return: None
+        """
+        # Arrange
+        if case == "no hardware":
+            service.check_hardware.return_value = HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
+        elif case == "no recommendation":
+            service.game_presets.return_value = replace(_PRESETS, resolutions=())
+        else:
+            service.game_settings.side_effect = ConnectionError("timeout")
+        presenter.start()
+        # Act
+        presenter.select_game(index=1)
+        # Assert
+        assert (view.settings, view.settings_loading) == (None, False)

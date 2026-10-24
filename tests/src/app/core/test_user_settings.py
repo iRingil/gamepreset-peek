@@ -53,11 +53,13 @@ class TestUserSettingsStore:
                 theme=ThemeMode.DARK,
                 auto_update=False,
                 database_updated=date(2026, 10, 23),
+                game_folders=(r"D:\Games", r"E:\SteamLibrary"),
             ),
             UserSettings(language="de"),
+            UserSettings(game_folders=()),
             UserSettings(),
         ],
-        ids=["everything", "language only", "defaults"],
+        ids=["everything", "language only", "no game folders", "defaults"],
     )
     def test_round_trip(self, path: Path, settings: UserSettings) -> None:
         """
@@ -95,6 +97,8 @@ class TestUserSettingsStore:
             '{"auto_update": "yes"}',
             '{"database_updated": "yesterday"}',
             '{"database_updated": 20261023}',
+            '{"game_folders": "D:\\\\Games"}',
+            '{"game_folders": [1]}',
         ],
         ids=[
             "not json",
@@ -114,6 +118,8 @@ class TestUserSettingsStore:
             "auto update not a boolean",
             "update date not a date",
             "update date not a string",
+            "game folders not a list",
+            "game folder not a string",
         ],
     )
     def test_broken_file(self, path: Path, content: str) -> None:
@@ -134,7 +140,7 @@ class TestUserSettingsStore:
 
     def test_file_without_theme(self, path: Path) -> None:
         """
-        Reads a file saved before the theme and the database update existed with their defaults.
+        Reads a file saved before the theme, the database update and the game folders existed with their defaults.
 
         :param path: settings file path
         :return: None
@@ -145,4 +151,6 @@ class TestUserSettingsStore:
         # Act
         settings: UserSettings = UserSettingsStore(path=path).load()
         # Assert
-        assert settings == UserSettings(language="de", theme=ThemeMode.AUTO, auto_update=True, database_updated=None)
+        assert settings == UserSettings(
+            language="de", theme=ThemeMode.AUTO, auto_update=True, database_updated=None, game_folders=None
+        )

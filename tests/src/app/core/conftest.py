@@ -9,9 +9,11 @@ import pytest
 import responses
 
 from app.core.database import AppData, AppDatabase
-from app.core.game_names import GameNames
+from app.core.covers import CoverCache
+from app.core.game_catalog import GameCatalog
+from app.core.game_finder import GameFinder
 from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
-from app.core.models import Gpu
+from app.core.models import Game, Gpu
 from app.core.ops_api import OpsApi
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
@@ -83,12 +85,17 @@ def _store(tmp_path: Path) -> UserSettingsStore:
 @pytest.fixture(name="data")
 def _data() -> AppData:
     """
-    Make small CPU and GPU lists and two named games, as if read from the database.
+    Make small CPU and GPU lists and two games, one with box art, as if read from the database.
 
     :return: database contents
     """
     return AppData(
-        names=GameNames(names={"mordhau": "MORDHAU", "baldurs_gate_3": "Baldur's Gate 3"}),
+        catalog=GameCatalog(
+            games=(
+                Game(game_id="mordhau", name="MORDHAU"),
+                Game(game_id="baldurs_gate_3", name="Baldur's Gate 3", cover_url="https://img.example.test/bg3.jpg"),
+            )
+        ),
         cpu_list=CpuList(amd=("AMD Ryzen 7 7800X3D 8-Core Processor",), intel=("Intel(R) Core(TM) i7-14700K",)),
         gpu_list=GpuList(gpus=(Gpu(name="NVIDIA GeForce RTX 3050", device_id="2507"),)),
         ranks=GpuRanks(ranks={}),
@@ -119,19 +126,59 @@ def _clock() -> MagicMock:
     return MagicMock(return_value=date(2026, 10, 23))
 
 
+@pytest.fixture(name="finder")
+def _finder() -> MagicMock:
+    """
+    Stand in for the search for installed games.
+
+    :return: mock with the interface of GameFinder
+    """
+    finder: MagicMock = create_autospec(spec=GameFinder, instance=True)
+    return finder
+
+
+@pytest.fixture(name="covers")
+def _covers() -> MagicMock:
+    """
+    Stand in for the box art cache.
+
+    :return: mock with the interface of CoverCache
+    """
+    covers: MagicMock = create_autospec(spec=CoverCache, instance=True)
+    return covers
+
+
 @pytest.fixture(name="service")
 def _service(
-    ops: MagicMock, database: MagicMock, data: AppData, detector: MagicMock, store: UserSettingsStore, clock: MagicMock
+    ops: MagicMock,
+    database: MagicMock,
+    data: AppData,
+    detector: MagicMock,
+    store: UserSettingsStore,
+    finder: MagicMock,
+    covers: MagicMock,
+    clock: MagicMock,
 ) -> PresetService:
     """
-    Create the service over mocked NVIDIA, database and hardware, with small CPU and GPU lists and named games.
+    Create the service over mocked NVIDIA, database, hardware, game search and covers, with small lists and games.
 
     :param ops: NVIDIA endpoints mock
     :param database: database mock
     :param data: database contents
     :param detector: hardware detection mock
     :param store: settings store
+    :param finder: game search mock
+    :param covers: box art cache mock
     :param clock: gives the current date
     :return: service under test
     """
-    return PresetService(api=ops, database=database, data=data, detector=detector, store=store, today=clock)
+    return PresetService(
+        api=ops,
+        database=database,
+        data=data,
+        detector=detector,
+        store=store,
+        finder=finder,
+        covers=covers,
+        today=clock,
+    )

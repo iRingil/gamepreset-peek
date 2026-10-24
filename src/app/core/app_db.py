@@ -1,4 +1,4 @@
-"""The bundled database: CPUs and GPUs the user can choose from, chip ranks of NVIDIA devices and game names."""
+"""The bundled database: CPUs and GPUs the user can choose from, chip ranks of NVIDIA devices and the games."""
 
 import sqlite3
 from pathlib import Path

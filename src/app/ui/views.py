@@ -1,6 +1,7 @@
 """What the presenter shows: the view data of the window parts and the protocol of the window itself."""
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol, Sequence
 
 from app.core.models import ThemeMode
@@ -10,6 +11,7 @@ __all__: tuple[str, ...] = (
     "ChoiceGroup",
     "ChoiceView",
     "HardwareView",
+    "InstalledGameView",
     "MainView",
     "SettingRow",
     "SettingsView",
@@ -47,6 +49,14 @@ class ChoiceView:
 
 
 @dataclass(frozen=True, slots=True)
+class InstalledGameView:
+    """A row of the installed games: the game's name and the executable its icon is taken from."""
+
+    name: str
+    executable: Path
+
+
+@dataclass(frozen=True, slots=True)
 class SettingRow:
     """A row of the settings table; changed means the value differs from the one of the recommended preset."""
 
@@ -59,7 +69,8 @@ class SettingRow:
 class SettingsView:
     """What the settings panel shows for one preset, translated.
 
-    The title is the game; position ("16 / 19") and caption name the preset the slider is on."""
+    The title is the game; position ("16 / 19") and caption name the preset the slider is on; recommended is the
+    1-based index of the recommended preset."""
 
     title: str
     position: str
@@ -67,6 +78,7 @@ class SettingsView:
     rows: tuple[SettingRow, ...]
     count: int
     index: int
+    recommended: int
     optimal: bool
 
 
@@ -145,20 +157,61 @@ class MainView(Protocol):
         :return: None
         """
 
-    def show_load_games(self, *, visible: bool) -> None:
-        """
-        Show or hide the button that requests the game list again.
-
-        :param visible: True to show the button
-        :return: None
-        """
-
     def show_games(self, *, names: Sequence[str], selected: int | None) -> None:
         """
-        Fill the game list.
+        Fill the list of all games.
 
         :param names: display names in list order
         :param selected: position of the chosen game, None when it is not in the list
+        :return: None
+        """
+
+    def show_finding(self) -> None:
+        """
+        Show that the installed games are being searched for, until show_installed_games().
+
+        :return: None
+        """
+
+    def show_installed_games(self, *, games: Sequence[InstalledGameView], selected: int | None) -> None:
+        """
+        Fill the list of installed games; an empty list invites the user to add a folder.
+
+        :param games: installed games in list order
+        :param selected: position of the chosen game, None when it is not in the list
+        :return: None
+        """
+
+    def select_game(self, *, position: int | None, installed_position: int | None) -> None:
+        """
+        Select the chosen game in both lists without refilling them; None clears the selection of a list.
+
+        :param position: position in the list of all games as shown
+        :param installed_position: position in the list of installed games
+        :return: None
+        """
+
+    def show_folders(self, *, folders: Sequence[str]) -> None:
+        """
+        Show the folders searched for games.
+
+        :param folders: folders in the user's order
+        :return: None
+        """
+
+    def show_cover(self, *, picture: Path | None) -> None:
+        """
+        Show the box art of the chosen game.
+
+        :param picture: the picture file, None for a placeholder when the game has none
+        :return: None
+        """
+
+    def clear_cover(self, *, loading: bool) -> None:
+        """
+        Show a placeholder shape instead of the box art.
+
+        :param loading: True while the picture is on its way, False when no game is chosen
         :return: None
         """
 
@@ -170,9 +223,10 @@ class MainView(Protocol):
         :return: None
         """
 
-    def clear_settings(self) -> None:
+    def clear_settings(self, *, loading: bool) -> None:
         """
-        Hide the settings table and the slider.
+        Show placeholder shapes instead of the settings.
 
+        :param loading: True while the settings are requested, False when there are none to wait for
         :return: None
         """

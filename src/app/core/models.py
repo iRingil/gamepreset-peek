@@ -3,11 +3,14 @@
 from dataclasses import dataclass, field
 from datetime import date
 from enum import StrEnum
+from pathlib import Path
 
 __all__: tuple[str, ...] = (
     "Compatibility",
     "DatabaseUpdate",
+    "FileRole",
     "Game",
+    "GameSource",
     "GamePresets",
     "GameSettings",
     "Gpu",
@@ -16,11 +19,14 @@ __all__: tuple[str, ...] = (
     "HardwareChoice",
     "HardwareSetup",
     "HardwareState",
+    "InstalledGame",
     "PresetsFile",
+    "RegistryValue",
     "RemoteFile",
     "ResolutionPreset",
     "Setting",
     "SettingTranslation",
+    "SourceFile",
     "SystemHardware",
     "ThemeMode",
     "Translations",
@@ -74,6 +80,51 @@ class HardwareSetup:
     resolutions: tuple[str, ...]
     choice: HardwareChoice
     resolution: str
+
+    @property
+    def detected_cpus(self) -> tuple[str, ...]:
+        """
+        List the detected CPU.
+
+        :return: the detected CPU name, nothing when none was detected
+        """
+        return () if self.system.cpu_name is None else (self.system.cpu_name,)
+
+    @property
+    def cpu_options(self) -> tuple[str, ...]:
+        """
+        List the CPUs in the order of the choice.
+
+        :return: the detected CPU, then the AMD and the Intel ones
+        """
+        return self.detected_cpus + self.amd_cpus + self.intel_cpus
+
+    @property
+    def gpu_options(self) -> tuple[Gpu, ...]:
+        """
+        List the GPUs in the order of the choice.
+
+        :return: the detected GPUs, then the bundled ones
+        """
+        return self.system.gpus + self.gpus
+
+    @property
+    def detected_resolutions(self) -> tuple[str, ...]:
+        """
+        List the detected screen resolution.
+
+        :return: the detected resolution, nothing when none was detected
+        """
+        return () if self.system.resolution is None else (self.system.resolution,)
+
+    @property
+    def resolution_options(self) -> tuple[str, ...]:
+        """
+        List the resolutions in the order of the choice.
+
+        :return: the detected resolution, then the bundled ones
+        """
+        return self.detected_resolutions + self.resolutions
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,10 +193,72 @@ class RemoteFile:
 
 @dataclass(frozen=True, slots=True)
 class Game:
-    """A game of NVIDIA's catalog with its display name."""
+    """A game NVIDIA has presets for, with its display name and the URL of its vertical box art, if it has one."""
 
     game_id: str
     name: str
+    cover_url: str | None = field(default=None, compare=False)
+
+
+class FileRole(StrEnum):
+    """What a file of a game copy tells: the game's executable, a file that must be there, or one that must not."""
+
+    EXECUTABLE = "executable"
+    PRESENT = "present"
+    ABSENT = "absent"
+
+
+@dataclass(frozen=True, slots=True)
+class SourceFile:
+    """A file or folder of a game copy, its path relative to the installation folder, e.g. "bin\bg3.exe"."""
+
+    path: str
+    role: FileRole
+    is_directory: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RegistryValue:
+    """A registry value holding the installation folder of a game copy, and how to get the folder from it.
+
+    The path is the key path with the value name as its last part (empty for the default value); view is the 32- or
+    64-bit registry view, None for either. The regex's first group cuts the path out of the value; then the folder
+    goes up parent_levels times and the suffix is appended."""
+
+    value_path: str
+    view: int | None = None
+    parent_levels: int = 0
+    suffix: str | None = None
+    value_regex: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GameSource:
+    """One copy of a game (a store or distribution), recognized by its files and found through the registry.
+
+    A Microsoft Store copy has its package family name: it lives in a folder the app can't search."""
+
+    game_id: str
+    files: tuple[SourceFile, ...]
+    registry: tuple[RegistryValue, ...] = ()
+    package_family: str | None = None
+
+    @property
+    def executables(self) -> tuple[str, ...]:
+        """
+        Get the executables of the copy, any of which starts the game.
+
+        :return: paths relative to the installation folder, in the catalog's order
+        """
+        return tuple(file.path for file in self.files if file.role is FileRole.EXECUTABLE)
+
+
+@dataclass(frozen=True, slots=True)
+class InstalledGame:
+    """A game found on this computer and the executable it was recognized by."""
+
+    game: Game
+    executable: Path
 
 
 @dataclass(frozen=True, slots=True)
@@ -166,6 +279,40 @@ class GamePresets:
     version: str
     presets_file: RemoteFile
     resolutions: tuple[ResolutionPreset, ...]
+
+    def preset_for(self, *, resolution: str) -> ResolutionPreset | None:
+        """
+        Find the preset of a resolution, or of the closest smaller one; the smallest when none is as small.
+
+        :param resolution: resolution in use, e.g. "2560x1600"
+        :return: the preset, None when NVIDIA gave none
+        """
+        by_size: list[ResolutionPreset] = sorted(
+            self.resolutions, key=lambda item: self._pixels(resolution=item.resolution)
+        )
+        if not by_size:
+            return None
+        exact: ResolutionPreset | None = next((item for item in by_size if item.resolution == resolution), None)
+        if exact is not None:
+            return exact
+        limit: int = self._pixels(resolution=resolution)
+        smaller: list[ResolutionPreset] = [
+            item for item in by_size if self._pixels(resolution=item.resolution) <= limit
+        ]
+        return smaller[-1] if smaller else by_size[0]
+
+    @staticmethod
+    def _pixels(*, resolution: str) -> int:
+        """
+        Count the pixels of a resolution for comparison.
+
+        :param resolution: resolution as NVIDIA writes it, e.g. "1920x1080"
+        :return: width times height, 0 for a malformed resolution
+        """
+        width: str
+        height: str
+        width, _, height = resolution.partition("x")
+        return int(width) * int(height) if width.isdigit() and height.isdigit() else 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -272,7 +419,9 @@ class UserSettings:
 
     The detected CPU, NVIDIA GPUs (the most powerful first) and screen resolution are written at every start. The
     chosen CPU, GPU and resolution are the ones the user picked in the lists, None when not picked: the detected ones
-    are used then. The database update date is the day of the last download, None before the first one."""
+    are used then. The database update date is the day of the last download, None before the first one.
+
+    The game folders are where installed games are searched for; None until the list is first saved."""
 
     language: str | None = None
     detected_cpu: str | None = None
@@ -284,3 +433,4 @@ class UserSettings:
     theme: ThemeMode = ThemeMode.AUTO
     auto_update: bool = True
     database_updated: date | None = None
+    game_folders: tuple[str, ...] | None = None

@@ -11,7 +11,6 @@ from typing import Any, Iterator
 from loguru import logger
 
 from app.config import (
-    OPS_CATALOG_URL,
     OPS_COMMON_FILES_URL,
     OPS_COMPATIBILITY_URL,
     OPS_PRESETS_URL,
@@ -38,7 +37,7 @@ class OpsFormatError(Exception):
 
 
 class OpsApi:
-    """Requests the game catalog, compatibility check, presets and translations from NVIDIA and parses them.
+    """Requests the compatibility check, presets and translations from NVIDIA and parses them.
 
     HTTP failures propagate from HttpClient as they are; an answer of unexpected structure raises OpsFormatError."""
 
@@ -49,18 +48,6 @@ class OpsApi:
         :param http: HTTP client
         """
         self._http: HttpClient = http
-
-    def games(self) -> tuple[str, ...]:
-        """
-        Request the catalog of games NVIDIA has presets for.
-
-        :return: game identifiers (slugs), sorted
-        """
-        with self._parsing(what="game catalog"):
-            catalog: Any = self._http.get_json(url=OPS_CATALOG_URL)
-            games: tuple[str, ...] = tuple(sorted(self._typed(value=catalog["applications"], kind=dict)))
-        logger.info("Catalog: {} games", len(games))
-        return games
 
     def check_compatibility(self, *, hardware: Hardware) -> Compatibility:
         """

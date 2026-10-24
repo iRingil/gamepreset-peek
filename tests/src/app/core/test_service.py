@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.core.database import AppData
-from app.core.game_names import GameNames
+from app.core.game_catalog import GameCatalog
 from app.core.hardware import CpuList, GpuList, GpuRanks
 from app.core.models import (
     Compatibility,
@@ -22,6 +22,7 @@ from app.core.models import (
     HardwareChoice,
     HardwareSetup,
     HardwareState,
+    InstalledGame,
     PresetsFile,
     RemoteFile,
     ResolutionPreset,
@@ -32,7 +33,7 @@ from app.core.models import (
     Translations,
     UserSettings,
 )
-from app.config import SCREEN_RESOLUTIONS
+from app.config import DEFAULT_GAME_FOLDERS, SCREEN_RESOLUTIONS
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
 
@@ -70,45 +71,155 @@ class _Hardware:
 class TestGames:
     """Tests of PresetService.games."""
 
-    def test_named_and_sorted(self, ops: MagicMock, service: PresetService) -> None:
+    def test_from_database(self, ops: MagicMock, service: PresetService) -> None:
         """
-        Names the catalog games, a missing one after its slug, and sorts them by name ignoring case.
+        Gives the games of the database sorted by name, asking NVIDIA nothing.
 
         :param ops: NVIDIA endpoints mock
         :param service: service under test
         :return: None
         """
-        # Arrange
-        ops.games.return_value = ("baldurs_gate_3", "mordhau", "nba_2k27")
-        # Act
+        # Arrange & Act
         games: tuple[Game, ...] = service.games()
         # Assert
         assert games == (
             Game(game_id="baldurs_gate_3", name="Baldur's Gate 3"),
             Game(game_id="mordhau", name="MORDHAU"),
-            Game(game_id="nba_2k27", name="Nba 2k27"),
         )
+        assert not ops.mock_calls
 
 
-class TestRenameGames:
-    """Tests of PresetService.rename_games."""
+class TestGameFolders:
+    """Tests of PresetService.game_folders and save_game_folders."""
 
-    def test_renamed_and_sorted(self, service: PresetService) -> None:
+    def test_defaults_first(self, store: UserSettingsStore, service: PresetService) -> None:
         """
-        Names the games again with the database in use and sorts them by the new names.
+        Starts from the default folders, keeps the existing ones and saves the list.
 
+        :param store: settings store
         :param service: service under test
         :return: None
         """
         # Arrange
-        games: tuple[Game, ...] = (Game(game_id="mordhau", name="Zz"), Game(game_id="baldurs_gate_3", name="Aa"))
+        existing: tuple[str, ...] = tuple(folder for folder in DEFAULT_GAME_FOLDERS if Path(folder).is_dir())
         # Act
-        renamed: tuple[Game, ...] = service.rename_games(games=games)
+        folders: tuple[str, ...] = service.game_folders()
         # Assert
-        assert renamed == (
-            Game(game_id="baldurs_gate_3", name="Baldur's Gate 3"),
-            Game(game_id="mordhau", name="MORDHAU"),
+        assert folders == existing
+        assert store.load().game_folders == existing
+
+    def test_missing_dropped(self, tmp_path: Path, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Drops a saved folder missing on the computer and saves the shorter list, keeping the order.
+
+        :param tmp_path: temporary directory
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        first: Path = tmp_path / "Games"
+        second: Path = tmp_path / "More"
+        first.mkdir()
+        second.mkdir()
+        store.save(settings=UserSettings(language="ru", game_folders=(str(second), str(tmp_path / "gone"), str(first))))
+        # Act
+        folders: tuple[str, ...] = service.game_folders()
+        # Assert
+        assert folders == (str(second), str(first))
+        assert store.load() == UserSettings(language="ru", game_folders=folders)
+
+    def test_unchanged_not_saved(self, tmp_path: Path, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Leaves the settings file alone when every saved folder exists, an empty list included.
+
+        :param tmp_path: temporary directory
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(game_folders=()))
+        written: int = (tmp_path / "settings.json").stat().st_mtime_ns
+        # Act
+        folders: tuple[str, ...] = service.game_folders()
+        # Assert
+        assert folders == ()
+        assert (tmp_path / "settings.json").stat().st_mtime_ns == written
+
+    def test_save(self, store: UserSettingsStore, service: PresetService) -> None:
+        """
+        Saves the folders in the user's order, keeping the other settings.
+
+        :param store: settings store
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        store.save(settings=UserSettings(language="de"))
+        # Act
+        service.save_game_folders(folders=[r"D:\Games", r"C:\Games"])
+        # Assert
+        assert store.load() == UserSettings(language="de", game_folders=(r"D:\Games", r"C:\Games"))
+
+
+class TestFindGames:
+    """Tests of PresetService.find_games."""
+
+    def test_catalog_and_folders(self, finder: MagicMock, data: AppData, service: PresetService) -> None:
+        """
+        Searches the folders with the catalog in use.
+
+        :param finder: game search mock
+        :param data: database contents
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        found: tuple[InstalledGame, ...] = (
+            InstalledGame(game=Game(game_id="mordhau", name="MORDHAU"), executable=Path("D:/Games/Mordhau.exe")),
         )
+        finder.find.return_value = found
+        # Act
+        games: tuple[InstalledGame, ...] = service.find_games(folders=[r"D:\Games"])
+        # Assert
+        assert games == found
+        finder.find.assert_called_once_with(catalog=data.catalog, folders=[Path("D:/Games")])
+
+
+class TestCover:
+    """Tests of PresetService.cover."""
+
+    def test_cached_picture(self, covers: MagicMock, service: PresetService) -> None:
+        """
+        Gets the picture of a game's box art URL from the cache.
+
+        :param covers: box art cache mock
+        :param service: service under test
+        :return: None
+        """
+        # Arrange
+        covers.get.return_value = Path("cover.jpg")
+        game: Game = Game(game_id="baldurs_gate_3", name="Baldur's Gate 3", cover_url="https://img.example.test/a.jpg")
+        # Act
+        picture: Path | None = service.cover(game=game)
+        # Assert
+        assert picture == Path("cover.jpg")
+        covers.get.assert_called_once_with(url="https://img.example.test/a.jpg")
+
+    def test_no_box_art(self, covers: MagicMock, service: PresetService) -> None:
+        """
+        Gives no picture for a game without box art.
+
+        :param covers: box art cache mock
+        :param service: service under test
+        :return: None
+        """
+        # Arrange & Act
+        picture: Path | None = service.cover(game=Game(game_id="mordhau", name="MORDHAU"))
+        # Assert
+        assert picture is None
+        covers.get.assert_not_called()
 
 
 class TestDatabaseUpdate:
@@ -172,12 +283,11 @@ class TestDatabaseUpdate:
         store.save(settings=UserSettings(language="ru", chosen_gpu=_LISTED_GPU))
         database.download.return_value = True
         database.load.return_value = AppData(
-            names=GameNames(names={"mordhau": "Mordhau II"}),
+            catalog=GameCatalog(games=(Game(game_id="mordhau", name="Mordhau II"),)),
             cpu_list=CpuList(amd=(), intel=()),
             gpu_list=GpuList(gpus=()),
             ranks=GpuRanks(ranks={}),
         )
-        ops.games.return_value = ("mordhau",)
         # Act
         outcome: DatabaseUpdate = service.update_database_if_due()
         saved: UserSettings = store.load()

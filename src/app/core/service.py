@@ -1,14 +1,17 @@
-"""Orchestration of the NVIDIA data for the UI: games, the hardware to request presets with, settings of a preset."""
+"""Orchestration for the UI: games, installed games, the hardware to request presets with, settings of a preset."""
 
 from dataclasses import dataclass, replace
 from datetime import date
 from functools import cached_property
-from typing import Callable, Iterable
+from pathlib import Path
+from typing import Callable, Sequence
 
 from loguru import logger
 
-from app.config import DB_UPDATE_DAYS, DEFAULT_RESOLUTION, SCREEN_RESOLUTIONS
+from app.config import DB_UPDATE_DAYS, DEFAULT_GAME_FOLDERS, DEFAULT_RESOLUTION, SCREEN_RESOLUTIONS
+from app.core.covers import CoverCache
 from app.core.database import AppData, AppDatabase
+from app.core.game_finder import GameFinder
 from app.core.hardware import HardwareDetector
 from app.core.models import (
     Compatibility,
@@ -22,6 +25,7 @@ from app.core.models import (
     HardwareChoice,
     HardwareSetup,
     HardwareState,
+    InstalledGame,
     RemoteFile,
     SystemHardware,
     ThemeMode,
@@ -44,8 +48,9 @@ class _GameFiles:
 class PresetService:
     """Answers the UI by chaining NVIDIA requests, the bundled data, hardware detection and the saved settings.
 
-    Every method may block on the network or the registry: the UI calls them from a worker thread, one at a time,
-    so the files of the last game shown are cached without a lock."""
+    Every method may block on the network, the disk or the registry: the UI calls them from a worker thread, one at a
+    time, so the files of the last game shown are cached without a lock. find_games() alone runs in a thread of its
+    own: it only reads the catalog in use, which an update replaces as a whole."""
 
     _CPU: str = "cpu"
     _GPU: str = "gpu"
@@ -58,6 +63,8 @@ class PresetService:
         data: AppData,
         detector: HardwareDetector,
         store: UserSettingsStore,
+        finder: GameFinder,
+        covers: CoverCache,
         today: Callable[[], date] = date.today,
     ) -> None:
         """
@@ -65,9 +72,11 @@ class PresetService:
 
         :param api: NVIDIA endpoints client
         :param database: the database file and its updates
-        :param data: game names, CPU and GPU lists and GPU ranks read from the database
+        :param data: game catalog, CPU and GPU lists and GPU ranks read from the database
         :param detector: hardware detection
         :param store: saved user settings
+        :param finder: search for installed games
+        :param covers: box art cache
         :param today: gives the current date, for the database update schedule
         """
         self._api: OpsApi = api
@@ -75,25 +84,63 @@ class PresetService:
         self._data: AppData = data
         self._detector: HardwareDetector = detector
         self._store: UserSettingsStore = store
+        self._finder: GameFinder = finder
+        self._covers: CoverCache = covers
         self._today: Callable[[], date] = today
         self._files: _GameFiles | None = None
 
     def games(self) -> tuple[Game, ...]:
         """
-        Request the catalog and name its games.
+        Get the games of the database in use.
 
         :return: games sorted by display name, case-insensitive
         """
-        return self._named(game_ids=self._api.games())
+        return self._data.catalog.games
 
-    def rename_games(self, *, games: Iterable[Game]) -> tuple[Game, ...]:
+    def game_folders(self) -> tuple[str, ...]:
         """
-        Name games again with the database in use, e.g. after an update.
+        Get the folders to search for games: the saved ones, or the default ones before the list is first saved.
 
-        :param games: games named before
-        :return: the games sorted by display name, case-insensitive
+        Folders missing on the computer are dropped from the list, which is saved when that changes it.
+
+        :return: existing folders in the user's order
         """
-        return self._named(game_ids=(game.game_id for game in games))
+        saved: UserSettings = self._store.load()
+        folders: tuple[str, ...] = DEFAULT_GAME_FOLDERS if saved.game_folders is None else saved.game_folders
+        existing: tuple[str, ...] = tuple(folder for folder in folders if Path(folder).is_dir())
+        if existing != saved.game_folders:
+            dropped: list[str] = [folder for folder in folders if folder not in existing]
+            if dropped:
+                logger.info("Dropped missing game folders: {}", ", ".join(dropped))
+            self._store.save(settings=replace(saved, game_folders=existing))
+        return existing
+
+    def save_game_folders(self, *, folders: Sequence[str]) -> None:
+        """
+        Save the folders to search for games, keeping the other settings.
+
+        :param folders: folders in the user's order
+        :return: None
+        """
+        self._store.save(settings=replace(self._store.load(), game_folders=tuple(folders)))
+
+    def find_games(self, *, folders: Sequence[str]) -> tuple[InstalledGame, ...]:
+        """
+        Find the games of the database in use installed on this computer.
+
+        :param folders: folders to search
+        :return: installed games sorted by display name, case-insensitive
+        """
+        return self._finder.find(catalog=self._data.catalog, folders=[Path(folder) for folder in folders])
+
+    def cover(self, *, game: Game) -> Path | None:
+        """
+        Get the box art of a game, downloading it unless it is cached.
+
+        :param game: the game
+        :return: the picture file, None when the game has no box art
+        """
+        return None if game.cover_url is None else self._covers.get(url=game.cover_url)
 
     def update_database_if_due(self) -> DatabaseUpdate:
         """
@@ -302,20 +349,6 @@ class PresetService:
             memory_gb=self._detector.memory_gb(),
             os_version=self._detector.os_version(),
             resolution=self._detector.screen_resolution(),
-        )
-
-    def _named(self, *, game_ids: Iterable[str]) -> tuple[Game, ...]:
-        """
-        Name games with the database in use.
-
-        :param game_ids: game identifiers
-        :return: the games sorted by display name, case-insensitive
-        """
-        return tuple(
-            sorted(
-                (Game(game_id=game_id, name=self._data.names.name(game_id=game_id)) for game_id in game_ids),
-                key=lambda game: game.name.casefold(),
-            )
         )
 
     @property

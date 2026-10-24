@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QFileDialog,
     QLabel,
     QLineEdit,
     QListView,
@@ -30,12 +31,16 @@ from app.config import LANGUAGE_NAMES
 from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.ui.choice_popup import ChoicePopup
+from app.ui.cover_view import CoverView
+from app.ui.games_panel import GamesPanel
 from app.ui.icons import IconButton
 from app.ui.main_window import MainWindow
+from app.ui.preset_slider import PresetSlider
 from app.ui.presenter import Presenter
 from app.ui.settings_menu import SettingsMenu
+from app.ui.skeleton import SettingsSkeleton
 from app.ui.theme import Theme
-from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, SettingRow, SettingsView
+from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, InstalledGameView, SettingRow, SettingsView
 
 __all__: tuple = ()
 
@@ -49,6 +54,7 @@ _SETTINGS: SettingsView = SettingsView(
     ),
     count=3,
     index=2,
+    recommended=2,
     optimal=True,
 )
 
@@ -80,13 +86,21 @@ class _Window:
         self.monkeypatch.setattr(target=Presenter, name=action, value=method)
         return method
 
+    def panel(self) -> GamesPanel:
+        """
+        Get the game tabs.
+
+        :return: the tabs
+        """
+        return self.child(parent=self.widget, kind=GamesPanel)
+
     def games(self) -> QListView:
         """
-        Get the game list.
+        Get the list of all games.
 
         :return: game list
         """
-        return next(view for view in self.widget.findChildren(QListView) if type(view).__name__ == "_ChoiceList")
+        return self.panel().all.list
 
     def button(self, *, text: str) -> QPushButton:
         """
@@ -341,22 +355,73 @@ class TestMainWindow:
         window.presenter.select_game.assert_called_once_with(index=1)
         window.presenter.search_games.assert_called_once_with(text="mord")
 
-    def test_load_games(self, window: _Window) -> None:
+    def test_installed_games(self, window: _Window, tmp_path: Path) -> None:
         """
-        Shows the "Load games" button on request, which asks the presenter for the list again.
+        Shows the skeleton while searching, then the installed games; a choice and a new search go to the presenter.
+
+        :param window: the window
+        :param tmp_path: temporary directory
+        :return: None
+        """
+        # Arrange
+        method: MagicMock = window.spy(action="find_games")
+        panel: GamesPanel = window.panel()
+        window.widget.show_finding()
+        searching: bool = panel.installed.pages.currentWidget() is panel.installed.skeleton
+        # Act
+        window.widget.show_installed_games(
+            games=[InstalledGameView(name="Mordhau", executable=tmp_path / "Mordhau.exe")], selected=None
+        )
+        panel.installed.list.setCurrentIndex(panel.installed.list.model().index(0, 0))
+        panel.installed.find_again.click()
+        # Assert
+        assert (searching, panel.installed.pages.currentWidget() is panel.installed.list) == (True, True)
+        assert [panel.tabText(0), panel.tabText(1)] == ["My games", "All games"]
+        window.presenter.select_installed_game.assert_called_once_with(index=0)
+        method.assert_called_once_with(window.presenter)
+
+    def test_selection_and_folders(self, window: _Window, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        Selects the chosen game in both lists, shows the folders and passes folder changes to the presenter.
+
+        :param window: the window
+        :param monkeypatch: pytest monkeypatch
+        :return: None
+        """
+        # Arrange
+        monkeypatch.setattr(target=QFileDialog, name="getExistingDirectory", value=MagicMock(return_value="E:/Games"))
+        panel: GamesPanel = window.panel()
+        window.widget.show_games(names=["Baldur's Gate 3", "MORDHAU"], selected=None)
+        window.widget.show_folders(folders=["C:\\Games", "D:\\Games"])
+        window.presenter.reset_mock()
+        # Act
+        window.widget.select_game(position=1, installed_position=None)
+        panel.installed.folder_list.setCurrentRow(1)
+        panel.installed.add.click()
+        panel.installed.change.click()
+        panel.installed.remove.click()
+        # Assert
+        assert panel.all.list.currentIndex().row() == 1
+        assert panel.installed.folder_list.count() == 2
+        window.presenter.add_folder.assert_called_once_with(folder="E:/Games")
+        window.presenter.change_folder.assert_called_once_with(position=1, folder="E:/Games")
+        window.presenter.remove_folder.assert_called_once_with(position=1)
+
+    def test_cover(self, window: _Window) -> None:
+        """
+        Shows the cover skeleton, moving while the picture loads, then the placeholder for a game without one.
 
         :param window: the window
         :return: None
         """
         # Arrange
-        method: MagicMock = window.spy(action="load_games")
-        window.widget.show_load_games(visible=True)
-        button: QPushButton = window.button(text="Load games")
+        cover: CoverView = window.child(parent=window.widget, kind=CoverView)
+        window.widget.clear_cover(loading=True)
+        loading: bool = cover.active
         # Act
-        button.click()
+        window.widget.show_cover(picture=None)
         # Assert
-        assert button.isVisible()
-        method.assert_called_once_with(window.presenter)
+        assert (loading, cover.active, cover.placeholder) == (True, False, True)
 
     def test_settings(self, window: _Window) -> None:
         """
@@ -367,7 +432,7 @@ class TestMainWindow:
         """
         # Arrange
         window.widget.show_settings(settings=_SETTINGS)
-        slider: QSlider = window.child(parent=window.widget, kind=QSlider)
+        slider: PresetSlider = window.child(parent=window.widget, kind=PresetSlider)
         table: QTreeWidget = window.table()
         option: QStyleOptionViewItem = QStyleOptionViewItem()
         changed: QModelIndex = table.model().index(1, 1)
@@ -375,7 +440,7 @@ class TestMainWindow:
         window.delegate(view=table).initStyleOption(option, changed)
         slider.setValue(3)
         # Assert
-        assert (slider.minimum(), slider.maximum(), table.topLevelItemCount()) == (1, 3, 2)
+        assert (slider.minimum(), slider.maximum(), slider.recommended, table.topLevelItemCount()) == (1, 3, 2, 2)
         assert (window.label(text="2 / 3").isVisible(), window.button(text="Back to optimal").isEnabled()) == (
             True,
             False,
@@ -402,22 +467,26 @@ class TestMainWindow:
         # Assert
         assert not option.font.bold()
 
-    def test_settings_cleared(self, window: _Window) -> None:
+    @pytest.mark.parametrize(argnames="loading", argvalues=[True, False], ids=["loading", "nothing to wait for"])
+    def test_settings_cleared(self, window: _Window, loading: bool) -> None:
         """
-        Hides the table, the slider and the title.
+        Shows the skeleton in place of the table, the slider and the title, moving only while settings load.
 
         :param window: the window
+        :param loading: whether settings are requested
         :return: None
         """
         # Arrange
         window.widget.show_settings(settings=_SETTINGS)
+        skeleton: SettingsSkeleton = window.child(parent=window.widget, kind=SettingsSkeleton)
         # Act
-        window.widget.clear_settings()
+        window.widget.clear_settings(loading=loading)
         # Assert
         assert (window.table().isVisible(), window.child(parent=window.widget, kind=QSlider).isVisible()) == (
             False,
             False,
         )
+        assert (skeleton.isVisible(), skeleton.active) == (True, loading)
         assert all(label.text() != "Baldur's Gate 3" for label in window.widget.findChildren(QLabel))
 
     def test_back_to_optimal(self, window: _Window) -> None:

@@ -1,4 +1,4 @@
-"""Settings kept between runs: language, theme, hardware, resolution and database updates; JSON in app data."""
+"""Settings kept between runs: language, theme, hardware, resolution, updates, game folders; JSON in app data."""
 
 import json
 from datetime import date
@@ -59,6 +59,7 @@ class UserSettingsStore:
             "chosen_resolution": settings.chosen_resolution,
             "auto_update": settings.auto_update,
             "database_updated": None if settings.database_updated is None else settings.database_updated.isoformat(),
+            "game_folders": None if settings.game_folders is None else list(settings.game_folders),
         }
         self._path.parent.mkdir(parents=True, exist_ok=True)
         self._path.write_text(data=json.dumps(obj=document, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -78,6 +79,9 @@ class UserSettingsStore:
         if not isinstance(detected_gpus, list):
             raise TypeError(f"expected a list, got {detected_gpus!r}")
         chosen_gpu: Any = document.get("chosen_gpu")
+        game_folders: Any = document.get("game_folders")
+        if game_folders is not None and not isinstance(game_folders, list):
+            raise TypeError(f"expected a list, got {game_folders!r}")
         return UserSettings(
             language=cls._optional_str(value=document.get("language")),
             theme=ThemeMode(cls._required_str(value=document.get("theme", ThemeMode.AUTO.value))),
@@ -89,6 +93,9 @@ class UserSettingsStore:
             chosen_resolution=cls._optional_str(value=document.get("chosen_resolution")),
             auto_update=cls._bool(value=document.get("auto_update", True)),
             database_updated=cls._optional_date(value=document.get("database_updated")),
+            game_folders=(
+                None if game_folders is None else tuple(cls._required_str(value=folder) for folder in game_folders)
+            ),
         )
 
     @staticmethod

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-23 15:50+0300\n"
+"POT-Creation-Date: 2026-10-24 09:06+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -18,9 +18,46 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#. GAME
-msgid "Game"
-msgstr "Game"
+#. MY_GAMES
+msgid "My games"
+msgstr "My games"
+
+#. ALL_GAMES
+msgid "All games"
+msgstr "All games"
+
+#. GAME_FOLDERS
+msgid "Where to look for games"
+msgstr "Where to look for games"
+
+#. ADD_FOLDER
+msgid "Add a folder"
+msgstr "Add a folder"
+
+#. CHANGE_FOLDER
+msgid "Change the folder"
+msgstr "Change the folder"
+
+#. REMOVE_FOLDER
+msgid "Remove the folder"
+msgstr "Remove the folder"
+
+#. FIND_AGAIN
+msgid "Search again"
+msgstr "Search again"
+
+#. CHOOSE_FOLDER
+msgid "Choose a folder with games"
+msgstr "Choose a folder with games"
+
+#. NO_GAMES_FOUND
+msgid "No games found. Add the folder your games are installed in."
+msgstr "No games found. Add the folder your games are installed in."
+
+#. FIND_FAILED
+#, python-brace-format
+msgid "Could not search for games: {error}"
+msgstr "Could not search for games: {error}"
 
 #. RESOLUTION
 msgid "Resolution:"
@@ -70,10 +107,6 @@ msgstr "Setting"
 msgid "Value"
 msgstr "Value"
 
-#. LOAD_GAMES
-msgid "Load games"
-msgstr "Load games"
-
 #. SHOW_LOGS
 msgid "Show logs"
 msgstr "Show logs"
@@ -118,11 +151,6 @@ msgstr "Choose a processor"
 #. CHOOSE_GPU
 msgid "Choose a graphics card"
 msgstr "Choose a graphics card"
-
-#. GAMES_FAILED
-#, python-brace-format
-msgid "Could not load the game list: {error}"
-msgstr "Could not load the game list: {error}"
 
 #. REQUEST_FAILED
 #, python-brace-format

@@ -9,7 +9,7 @@ from pathlib import Path
 from loguru import logger
 
 from app.config import APP_DB, DB_UPDATE_URL
-from app.core.game_names import GameNames
+from app.core.game_catalog import GameCatalog
 from app.core.hardware import CpuList, GpuList, GpuRanks
 from app.infra.http_client import HttpClient
 
@@ -18,9 +18,9 @@ __all__: tuple[str, ...] = ("AppData", "AppDatabase")
 
 @dataclass(frozen=True, slots=True)
 class AppData:
-    """What the app reads from its database: game names, the CPU and GPU lists and the GPU ranks."""
+    """What the app reads from its database: the game catalog, the CPU and GPU lists and the GPU ranks."""
 
-    names: GameNames
+    catalog: GameCatalog
     cpu_list: CpuList
     gpu_list: GpuList
     ranks: GpuRanks
@@ -57,7 +57,7 @@ class AppDatabase:
         """
         Read the lists from the database file.
 
-        :return: game names, CPU and GPU lists and GPU ranks
+        :return: game catalog, CPU and GPU lists and GPU ranks
         """
         return self._load(path=self._path)
 
@@ -89,10 +89,10 @@ class AppDatabase:
         Read the lists from a database file.
 
         :param path: database file
-        :return: game names, CPU and GPU lists and GPU ranks
+        :return: game catalog, CPU and GPU lists and GPU ranks
         """
         return AppData(
-            names=GameNames.load(path=path),
+            catalog=GameCatalog.load(path=path),
             cpu_list=CpuList.load(path=path),
             gpu_list=GpuList.load(path=path),
             ranks=GpuRanks.load(path=path),

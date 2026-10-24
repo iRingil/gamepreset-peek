@@ -45,15 +45,17 @@ class Worker(QObject):
 
     _finished: Signal = Signal(object)
 
-    def __init__(self) -> None:
+    def __init__(self, *, name: str = "worker") -> None:
         """
         Start the worker thread; create it in the UI thread.
+
+        :param name: name of the thread, seen in the logs
         """
         super().__init__()
         self._jobs: Queue[_Job | None] = Queue()
         self._closed: bool = False
         self._finished.connect(self._deliver)
-        self._thread: threading.Thread = threading.Thread(target=self._run, name="worker", daemon=True)
+        self._thread: threading.Thread = threading.Thread(target=self._run, name=name, daemon=True)
         self._thread.start()
 
     def submit[T](

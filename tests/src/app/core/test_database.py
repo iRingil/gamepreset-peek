@@ -73,7 +73,7 @@ class TestAppDatabase:
         # Arrange & Act
         data: AppData = database.load()
         # Assert
-        assert (database.path, data.names.name(game_id="mordhau")) == (path, "MORDHAU")
+        assert (database.path, data.catalog.games[0].name) == (path, "MORDHAU")
 
     def test_same_download_dropped(self, mock: responses.RequestsMock, database: AppDatabase, path: Path) -> None:
         """
@@ -111,7 +111,7 @@ class TestAppDatabase:
         changed: bool = database.download()
         # Assert
         assert (changed, path.read_bytes() == newer.read_bytes(), list(path.parent.iterdir())) == (True, True, [path])
-        assert database.load().names.name(game_id="mordhau") == "Mordhau II"
+        assert database.load().catalog.games[0].name == "Mordhau II"
 
     def test_bad_download_dropped(self, mock: responses.RequestsMock, database: AppDatabase, path: Path) -> None:
         """
@@ -128,7 +128,7 @@ class TestAppDatabase:
         with pytest.raises(ValueError, match="not a usable database"):
             database.download()
         assert list(path.parent.iterdir()) == [path]
-        assert database.load().names.name(game_id="mordhau") == "MORDHAU"
+        assert database.load().catalog.games[0].name == "MORDHAU"
 
     def test_failed_download(self, mock: responses.RequestsMock, database: AppDatabase, path: Path) -> None:
         """

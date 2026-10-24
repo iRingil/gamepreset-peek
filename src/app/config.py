@@ -9,12 +9,16 @@ __all__: tuple[str, ...] = (
     "APP_DB",
     "APP_ICON_FILE",
     "APP_TITLE",
+    "COVER_WIDTH",
+    "COVERS_DIR",
     "APP_USER_MODEL_ID",
     "DB_UPDATE_DAYS",
     "DB_UPDATE_URL",
+    "DEFAULT_GAME_FOLDERS",
     "DEFAULT_LANGUAGE",
     "DEFAULT_RESOLUTION",
     "FLAGS_DIR",
+    "GAME_SEARCH_DEPTH",
     "GETTEXT_DOMAIN",
     "HTTP_CONNECT_TIMEOUT",
     "HTTP_MAX_RETRIES",
@@ -27,7 +31,6 @@ __all__: tuple[str, ...] = (
     "LOG_PANEL_HEIGHT",
     "LOG_PANEL_MAX_LINES",
     "LOG_POLL_MS",
-    "OPS_CATALOG_URL",
     "OPS_COMMON_FILES_URL",
     "OPS_COMPATIBILITY_URL",
     "OPS_PRESETS_URL",
@@ -49,6 +52,9 @@ APP_USER_MODEL_ID: str = "GamePresetPeek.App"
 APP_DATA_DIR: Path = Path(os.environ["LOCALAPPDATA"]) / APP_NAME
 LOG_FILE: Path = APP_DATA_DIR / "logs" / "gamepreset-peek.log"
 SETTINGS_FILE: Path = APP_DATA_DIR / "settings.json"
+COVERS_DIR: Path = APP_DATA_DIR / "cache" / "covers"
+# Width of a downloaded box art picture in pixels: twice the cover column, sharp at 200 % scale.
+COVER_WIDTH: int = 440
 # Bundled data files live next to the package code.
 _DATA_DIR: Path = Path(__file__).parent / "data"
 APP_DB: Path = _DATA_DIR / "app.db"
@@ -110,6 +116,16 @@ SCREEN_RESOLUTIONS: tuple[str, ...] = (
 # Used when the screen resolution is neither detected nor chosen.
 DEFAULT_RESOLUTION: str = "1920x1080"
 
+# Folders searched for installed games until the user changes the list; the ones missing on a computer are dropped.
+DEFAULT_GAME_FOLDERS: tuple[str, ...] = (
+    r"C:\Program Files",
+    r"C:\Program Files (x86)",
+    r"D:\Games",
+    r"C:\Games",
+)
+# Folder levels searched below a game folder: Steam\steamapps\common\<game> plus the deepest executable path.
+GAME_SEARCH_DEPTH: int = 10
+
 # Operating systems a fake browser User-Agent is picked for, one per HTTP client.
 USER_AGENT_OS: tuple[str, ...] = ("Windows",)
 HTTP_CONNECT_TIMEOUT: float = 5.0
@@ -120,7 +136,6 @@ HTTP_MAX_RETRIES: int = 2
 HTTP_RETRY_BACKOFF: float = 0.5
 
 _OPS_HOST: str = "https://ops-gx.nvidia.com"
-OPS_CATALOG_URL: str = f"{_OPS_HOST}/v3/applications/applications-regular_rtx.json"
 OPS_COMPATIBILITY_URL: str = f"{_OPS_HOST}/v4/ops-compatibility/"
 # Templates filled with str.format.
 OPS_PRESETS_URL: str = _OPS_HOST + "/v3/ops/{game_id}/"

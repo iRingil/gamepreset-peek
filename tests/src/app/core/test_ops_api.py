@@ -9,7 +9,7 @@ import pytest
 import responses
 from responses import matchers
 
-from app.config import OPS_CATALOG_URL, OPS_COMMON_FILES_URL, OPS_COMPATIBILITY_URL, OPS_PRESETS_URL
+from app.config import OPS_COMMON_FILES_URL, OPS_COMPATIBILITY_URL, OPS_PRESETS_URL
 from app.core.models import (
     Compatibility,
     GamePresets,
@@ -66,45 +66,6 @@ class _Data:
         :return: file reference with the matching sha256
         """
         return RemoteFile(url=_FILE_URL, sha256=hashlib.sha256(body).hexdigest(), size=len(body))
-
-
-class TestGames:
-    """Tests of OpsApi.games."""
-
-    def test_sorted_slugs(self, mock: responses.RequestsMock, api: OpsApi) -> None:
-        """
-        Returns the catalog's game identifiers sorted.
-
-        :param mock: requests mock
-        :param api: API client
-        :return: None
-        """
-        # Arrange
-        mock.add(method=responses.GET, url=OPS_CATALOG_URL, body=_Data.read(name="catalog.json"))
-        # Act
-        games: tuple[str, ...] = api.games()
-        # Assert
-        assert games == ("2xko", "baldurs_gate_3", "mordhau")
-
-    @pytest.mark.parametrize(
-        argnames="body",
-        argvalues=(b"<html>", b'{"version": "1"}', b'{"applications": []}'),
-        ids=("not-json", "no-applications", "applications-not-object"),
-    )
-    def test_unexpected_answer(self, mock: responses.RequestsMock, api: OpsApi, body: bytes) -> None:
-        """
-        Raises OpsFormatError for an answer that is not a catalog.
-
-        :param mock: requests mock
-        :param api: API client
-        :param body: answer body
-        :return: None
-        """
-        # Arrange
-        mock.add(method=responses.GET, url=OPS_CATALOG_URL, body=body)
-        # Act & Assert
-        with pytest.raises(OpsFormatError):
-            api.games()
 
 
 class TestCheckCompatibility:

@@ -1,10 +1,11 @@
 """Widgets and layout of the main window and of the CPU, GPU and resolution choice drop-downs."""
 
 import html
+from pathlib import Path
 from queue import Queue
 from typing import Callable, Sequence
 
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QPoint, QStringListModel, Qt
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QPoint, Qt
 from PySide6.QtGui import QFont, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -12,11 +13,9 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QLineEdit,
-    QListView,
     QMessageBox,
     QPushButton,
-    QSlider,
+    QStackedWidget,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTreeWidget,
@@ -30,19 +29,20 @@ from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.choice_popup import ChoicePopup
+from app.ui.cover_view import CoverView
+from app.ui.games_panel import GamesPanel
 from app.ui.icons import IconButton
 from app.ui.log_panel import LogPanel
+from app.ui.preset_slider import PresetSlider
 from app.ui.presenter import Presenter
-from app.ui.views import ChoiceView, HardwareView, SettingsView
 from app.ui.settings_menu import SettingsMenu
+from app.ui.skeleton import SettingsSkeleton
 from app.ui.theme import Theme
+from app.ui.views import ChoiceView, HardwareView, InstalledGameView, SettingsView
 
 __all__: tuple[str, ...] = ("MainWindow",)
 
 _PAD: int = 8
-_GAMES_WIDTH: int = 300
-# Free column between the game list and the settings; nothing goes there yet.
-_SPARE_WIDTH: int = 230
 _VALUE_WIDTH: int = 220
 # Point size steps above the base font: the hardware block, the settings title and the preset position.
 _HEADLINE_STEP: float = 2
@@ -69,43 +69,6 @@ class _Fonts:
         font.setPointSizeF(base.pointSizeF() + step)
         font.setBold(bold)
         return font
-
-
-class _ChoiceList(QListView):
-    """A single-choice list."""
-
-    def __init__(self, *, on_select: Callable[[int], None], parent: QWidget | None = None) -> None:
-        """
-        Build an empty list.
-
-        :param on_select: called with the position of the item the user (or fill) selects
-        :param parent: widget the list belongs to
-        """
-        super().__init__(parent)
-        self._model: QStringListModel = QStringListModel(parent=self)
-        self.setModel(self._model)
-        self.setUniformItemSizes(True)
-        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
-        self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.selectionModel().currentChanged.connect(
-            # A refill resets the current item to none, which is no choice.
-            lambda current, _: on_select(current.row()) if current.isValid() else None
-        )
-
-    def fill(self, *, items: Sequence[str], selected: int | None = None) -> None:
-        """
-        Replace the items and select one of them.
-
-        :param items: new items
-        :param selected: position to select and scroll to, None for none
-        :return: None
-        """
-        self._model.setStringList(list(items))
-        if selected is not None:
-            index: QModelIndex = self._model.index(selected)
-            self.setCurrentIndex(index)
-            self.scrollTo(index, hint=QAbstractItemView.ScrollHint.EnsureVisible)
 
 
 class _ChangedDelegate(QStyledItemDelegate):
@@ -149,6 +112,8 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         self._index: int = 0
         self._title: QLabel = QLabel(parent=self)
         self._title.setFont(_Fonts.derived(base=self.font(), step=_TITLE_STEP, bold=True))
+        # A long name wraps instead of running under the preset number.
+        self._title.setWordWrap(True)
         self._position: QLabel = QLabel(parent=self)
         self._position.setFont(_Fonts.derived(base=self.font(), step=_BIG_STEP, bold=True))
         self._position.setForegroundRole(QPalette.ColorRole.Accent)
@@ -156,10 +121,8 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         self._slider_row: QWidget = QWidget(parent=self)
         self._slider_row.hide()
         self._performance: QLabel = self._muted(parent=self._slider_row)
-        self._slider: QSlider = QSlider(Qt.Orientation.Horizontal, parent=self._slider_row)
-        self._slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self._slider.setPageStep(1)
-        self._slider.valueChanged.connect(self._moved)
+        self.slider: PresetSlider = PresetSlider(parent=self._slider_row)
+        self.slider.valueChanged.connect(self._moved)
         self._quality: QLabel = self._muted(parent=self._slider_row)
         self._optimal: QPushButton = QPushButton(parent=self._slider_row)
         self._optimal.clicked.connect(on_optimal)
@@ -189,12 +152,7 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         self._title.setText(settings.title)
         self._position.setText(settings.position)
         self._caption.setText(settings.caption)
-        # Set by the program, not by the user: no slider callback.
-        self._slider.blockSignals(True)
-        self._slider.setRange(1, max(settings.count, 2))
-        self._slider.setValue(settings.index)
-        self._slider.blockSignals(False)
-        self._slider.setEnabled(settings.count > 1)
+        self.slider.set_presets(count=settings.count, index=settings.index, recommended=settings.recommended)
         self._optimal.setEnabled(not settings.optimal)
         self._table.clear()
         items: list[QTreeWidgetItem] = []
@@ -270,7 +228,7 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         slider: QHBoxLayout = QHBoxLayout(self._slider_row)
         slider.setContentsMargins(0, _PAD, 0, _PAD)
         slider.addWidget(self._performance)
-        slider.addWidget(self._slider, stretch=1)
+        slider.addWidget(self.slider, stretch=1)
         slider.addWidget(self._quality)
         slider.addSpacing(_PAD * 2)
         slider.addWidget(self._optimal)
@@ -443,63 +401,6 @@ class _TopBar(QWidget):
         self.settings.setToolTip(translator.text(item=UiText.SETTINGS))
 
 
-class _GamesColumn(QWidget):
-    """The game list with its search field and the button that requests the list again after a failure."""
-
-    def __init__(
-        self,
-        *,
-        on_search: Callable[[str], None],
-        on_load: Callable[[], None],
-        on_select: Callable[[int], None],
-        parent: QWidget | None = None,
-    ) -> None:
-        """
-        Build the column with the "Load games" button hidden.
-
-        :param on_search: called with the search text on every change
-        :param on_load: called when the user asks for the game list again
-        :param on_select: called with the position of the selected game
-        :param parent: widget the column belongs to
-        """
-        super().__init__(parent)
-        layout: QVBoxLayout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self._title: QLabel = QLabel(parent=self)
-        self._title.setFont(_Fonts.derived(base=self.font(), bold=True))
-        self._search: QLineEdit = QLineEdit(parent=self)
-        self._search.setClearButtonEnabled(True)
-        self._search.textChanged.connect(on_search)
-        self._load: QPushButton = QPushButton(parent=self)
-        self._load.clicked.connect(on_load)
-        self._load.hide()
-        self.list: _ChoiceList = _ChoiceList(on_select=on_select, parent=self)
-        layout.addWidget(self._title)
-        layout.addWidget(self._search)
-        layout.addWidget(self._load)
-        layout.addWidget(self.list, stretch=1)
-
-    def apply_language(self, *, translator: Translator) -> None:
-        """
-        Translate the fixed texts of the column.
-
-        :param translator: translator of the UI language
-        :return: None
-        """
-        self._title.setText(translator.text(item=UiText.GAME))
-        self._search.setPlaceholderText(translator.text(item=UiText.SEARCH))
-        self._load.setText(translator.text(item=UiText.LOAD_GAMES))
-
-    def show_load(self, *, visible: bool) -> None:
-        """
-        Show or hide the "Load games" button.
-
-        :param visible: True to show the button
-        :return: None
-        """
-        self._load.setVisible(visible)
-
-
 class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
     """The main window; user actions go to the presenter set with attach(), which fills the widgets in turn."""
 
@@ -528,24 +429,33 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         )
         layout.addWidget(self._top)
 
-        body: QHBoxLayout = QHBoxLayout()
-        self._games: _GamesColumn = _GamesColumn(
-            on_search=lambda text: self._call(action=lambda presenter: presenter.search_games(text=text)),
-            on_load=lambda: self._call(action=Presenter.load_games),
+        self._games: GamesPanel = GamesPanel(
+            on_select_installed=lambda index: self._call(
+                action=lambda presenter: presenter.select_installed_game(index=index)
+            ),
             on_select=lambda index: self._call(action=lambda presenter: presenter.select_game(index=index)),
+            on_search=lambda text: self._call(action=lambda presenter: presenter.search_games(text=text)),
+            on_find=lambda: self._call(action=Presenter.find_games),
+            on_add_folder=lambda folder: self._call(action=lambda presenter: presenter.add_folder(folder=folder)),
+            on_change_folder=lambda position, folder: self._call(
+                action=lambda presenter: presenter.change_folder(position=position, folder=folder)
+            ),
+            on_remove_folder=lambda position: self._call(
+                action=lambda presenter: presenter.remove_folder(position=position)
+            ),
             parent=self,
         )
-        self._games.setFixedWidth(_GAMES_WIDTH)
-        body.addWidget(self._games)
-        body.addSpacing(_PAD + _SPARE_WIDTH + _PAD * 2)
-
+        self._cover: CoverView = CoverView(parent=self)
         self._settings: _SettingsPanel = _SettingsPanel(
             on_slider=lambda index: self._call(action=lambda presenter: presenter.move_slider(index=index)),
             on_optimal=lambda: self._call(action=Presenter.back_to_optimal),
             parent=self,
         )
-        body.addWidget(self._settings, stretch=1)
-        layout.addLayout(body, stretch=1)
+        self._settings_skeleton: SettingsSkeleton = SettingsSkeleton(parent=self)
+        self._settings_area: QStackedWidget = QStackedWidget(parent=self)
+        self._settings_area.addWidget(self._settings_skeleton)
+        self._settings_area.addWidget(self._settings)
+        layout.addLayout(self._body(), stretch=1)
 
         bottom: QHBoxLayout = QHBoxLayout()
         self._status: QLabel = QLabel(parent=self)
@@ -558,6 +468,27 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._log_panel: LogPanel = LogPanel(lines=log_lines, parent=self)
         self._log_panel.hide()
         layout.addWidget(self._log_panel)
+
+    def _body(self) -> QHBoxLayout:
+        """
+        Lay out the middle of the window: the game tabs and the cover take one half, the settings the other.
+
+        :return: the layout
+        """
+        cover: QVBoxLayout = QVBoxLayout()
+        # Level with the top of the tab pages, below the tab bar.
+        cover.addSpacing(self._games.tabBar().sizeHint().height())
+        cover.addWidget(self._cover)
+        cover.addStretch(1)
+        games: QHBoxLayout = QHBoxLayout()
+        games.addWidget(self._games, stretch=1)
+        games.addSpacing(_PAD * 2)
+        games.addLayout(cover)
+        body: QHBoxLayout = QHBoxLayout()
+        body.addLayout(games, stretch=1)
+        body.addSpacing(_PAD * 3)
+        body.addWidget(self._settings_area, stretch=1)
+        return body
 
     def attach(self, *, presenter: Presenter) -> None:
         """
@@ -670,24 +601,70 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         """
         QMessageBox.warning(self, APP_TITLE, text)
 
-    def show_load_games(self, *, visible: bool) -> None:
-        """
-        Show or hide the button that requests the game list again.
-
-        :param visible: True to show the button
-        :return: None
-        """
-        self._games.show_load(visible=visible)
-
     def show_games(self, *, names: Sequence[str], selected: int | None) -> None:
         """
-        Fill the game list.
+        Fill the list of all games.
 
         :param names: display names in list order
         :param selected: position of the chosen game, None when it is not in the list
         :return: None
         """
-        self._games.list.fill(items=names, selected=selected)
+        self._games.all.list.fill(items=names, selected=selected)
+
+    def show_finding(self) -> None:
+        """
+        Show the moving skeleton in place of the installed games.
+
+        :return: None
+        """
+        self._games.installed.show_finding()
+
+    def show_installed_games(self, *, games: Sequence[InstalledGameView], selected: int | None) -> None:
+        """
+        Fill the list of installed games; an empty list invites the user to add a folder.
+
+        :param games: installed games in list order
+        :param selected: position of the chosen game, None when it is not in the list
+        :return: None
+        """
+        self._games.installed.show_games(games=games, selected=selected)
+
+    def select_game(self, *, position: int | None, installed_position: int | None) -> None:
+        """
+        Select the chosen game in both lists without refilling them; None clears the selection of a list.
+
+        :param position: position in the list of all games as shown
+        :param installed_position: position in the list of installed games
+        :return: None
+        """
+        self._games.select(position=position, installed_position=installed_position)
+
+    def show_folders(self, *, folders: Sequence[str]) -> None:
+        """
+        Show the folders searched for games.
+
+        :param folders: folders in the user's order
+        :return: None
+        """
+        self._games.installed.show_folders(folders=folders)
+
+    def show_cover(self, *, picture: Path | None) -> None:
+        """
+        Show the box art of the chosen game.
+
+        :param picture: the picture file, None for a placeholder when the game has none
+        :return: None
+        """
+        self._cover.show_picture(path=picture)
+
+    def clear_cover(self, *, loading: bool) -> None:
+        """
+        Show a skeleton instead of the box art.
+
+        :param loading: True while the picture is on its way, False when no game is chosen
+        :return: None
+        """
+        self._cover.clear(loading=loading)
 
     def show_settings(self, *, settings: SettingsView) -> None:
         """
@@ -696,15 +673,20 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         :param settings: what to show
         :return: None
         """
+        self._settings_skeleton.set_active(active=False)
         self._settings.show_settings(settings=settings)
+        self._settings_area.setCurrentWidget(self._settings)
 
-    def clear_settings(self) -> None:
+    def clear_settings(self, *, loading: bool) -> None:
         """
-        Hide the settings table and the slider.
+        Show the skeleton instead of the settings.
 
+        :param loading: True while the settings are requested, False when there are none to wait for
         :return: None
         """
         self._settings.clear()
+        self._settings_area.setCurrentWidget(self._settings_skeleton)
+        self._settings_skeleton.set_active(active=loading)
 
     def _offer(self, *, anchor: QWidget, choice: ChoiceView, on_choose: Callable[[int], None]) -> None:
         """
