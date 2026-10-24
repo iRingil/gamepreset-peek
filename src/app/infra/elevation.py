@@ -10,12 +10,23 @@ from loguru import logger
 __all__: tuple[str, ...] = ("Elevation",)
 
 
-class Elevation:  # pylint: disable=too-few-public-methods
+class Elevation:
     """Starts the program again as administrator, with the command line it was started with."""
 
     # ShellExecute answers a value above 32 on success; the program is shown as usual.
     _SUCCESS_ABOVE: int = 32
     _SHOW_NORMAL: int = 1
+
+    @staticmethod
+    def is_admin() -> bool:
+        """
+        Tell whether the program runs with administrator rights.
+
+        :return: True when it does
+        """
+        # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
+        is_user_an_admin: Any = ctypes.WinDLL(name="shell32")["IsUserAnAdmin"]
+        return bool(is_user_an_admin())
 
     @classmethod
     def relaunch(cls) -> bool:

@@ -72,8 +72,9 @@ class _Application:  # pylint: disable=too-few-public-methods
             sys.excepthook = self._log_unhandled
             # Checked before the copy claims its name: a copy started as administrator must not find this one.
             if not database.writable():
-                if ReadOnlyFolder.ask(translator=translator, folder=database.path.parent):
-                    Elevation.relaunch()
+                # A copy that is administrator already and still can't write would ask for the rights forever.
+                if Elevation.is_admin() or not Elevation.relaunch():
+                    ReadOnlyFolder.warn(translator=translator, folder=database.path.parent)
                 return
             instance: SingleInstance = SingleInstance()
             if not instance.claim():

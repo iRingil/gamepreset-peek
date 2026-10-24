@@ -76,10 +76,8 @@ class UiText(StrEnum):
     HARDWARE_FAILED = "Could not detect the hardware: {error}"
     READ_ONLY_FOLDER = (
         "GamePreset Peek can't write to its folder:\n{folder}\n\nIt needs to, to keep its lists of games and hardware"
-        " up to date. Run it as administrator, or install it in your user folder."
+        " up to date. Reinstall it outside Program Files, or run it as administrator."
     )
-    RUN_AS_ADMIN = "Run as administrator"
-    CLOSE = "Close"
     HARDWARE_REJECTED = "NVIDIA does not support this computer: {components}."
     COMPONENT_CPU = "processor"
     COMPONENT_GPU = "graphics card"

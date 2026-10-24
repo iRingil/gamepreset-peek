@@ -44,3 +44,20 @@ class TestElevation:
         # Assert
         assert relaunched == started
         assert calls == [(None, "runas", sys.executable, '-m app "--flag x"', None, 1)]
+
+    @pytest.mark.parametrize(argnames=("answer", "admin"), argvalues=[(1, True), (0, False)], ids=["admin", "user"])
+    def test_is_admin(self, monkeypatch: pytest.MonkeyPatch, answer: int, admin: bool) -> None:
+        """
+        Tells whether the program runs as administrator, as Windows answers.
+
+        :param monkeypatch: pytest monkeypatch
+        :param answer: what IsUserAnAdmin answers
+        :param admin: the expected result
+        :return: None
+        """
+        # Arrange
+        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda name: {"IsUserAnAdmin": lambda: answer})
+        # Act
+        result: bool = Elevation.is_admin()
+        # Assert
+        assert result == admin

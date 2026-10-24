@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 16:28+0300\n"
+"POT-Creation-Date: 2026-10-24 16:40+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -291,22 +291,14 @@ msgid ""
 "GamePreset Peek can't write to its folder:\n"
 "{folder}\n"
 "\n"
-"It needs to, to keep its lists of games and hardware up to date. Run it as administrator, or install it in your user "
-"folder."
+"It needs to, to keep its lists of games and hardware up to date. Reinstall it outside Program Files, or run it as "
+"administrator."
 msgstr ""
 "GamePreset Peek ne peut pas écrire dans son dossier :\n"
 "{folder}\n"
 "\n"
-"C’est nécessaire pour tenir à jour ses listes de jeux et de matériel. Lancez-le en tant qu’administrateur ou "
-"installez-le dans votre dossier utilisateur."
-
-#. RUN_AS_ADMIN
-msgid "Run as administrator"
-msgstr "Exécuter en tant qu’administrateur"
-
-#. CLOSE
-msgid "Close"
-msgstr "Fermer"
+"C’est nécessaire pour tenir à jour ses listes de jeux et de matériel. Réinstallez-le hors de Program Files ou lancez-"
+"le en tant qu’administrateur."
 
 #. HARDWARE_REJECTED
 #, python-brace-format
