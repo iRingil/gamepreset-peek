@@ -13,6 +13,7 @@ __all__: tuple[str, ...] = ("Theme",)
 # Table rows get a little air, still fitting a long settings list in the smallest window.
 # A checkbox gets no underline on hover: it looked like a link.
 # Tabs are folder tabs: the selected one is framed on top and at the sides and opens into the pane below it.
+# The first tab starts a little in from the pane edge, so the pane keeps its rounded top-left corner.
 # The detected item of a choice, mostly the one in use, still answers the mouse with a stronger selection color.
 # The {{name|color}} placeholders take the colors of the theme in use.
 _QSS: str = """
@@ -20,8 +21,7 @@ QListView, QTreeView {padding:0}
 QTreeView::item {padding:0.1em 0}
 QTabWidget > QStackedWidget > QAbstractItemView[frameShape=NoFrame] {margin:0;border:none}
 QCheckBox:hover {border-bottom:2px solid transparent}
-QTabWidget::tab-bar {left:0}
-QTabWidget::pane {border-top-left-radius:0}
+QTabWidget::tab-bar {left:0.6em}
 QTabBar::tab:top {margin:0 0.15em 0 0;padding:0.45em 1.1em;border:1px solid transparent;border-bottom:none;
 border-top-left-radius:4px;border-top-right-radius:4px}
 QTabBar::tab:top:first, QTabBar::tab:top:only-one {margin-left:0}
