@@ -224,6 +224,55 @@ class TestChoicePopup:
         assert (bundled.item(0).toolTip(), bundled.item(1).toolTip()) == ("", "Same shape as your screen")
         popup.widget.close()
 
+    def test_warning_sign(self, qt_app: QApplication) -> None:
+        """
+        Draws the amber warning sign on warned items, beside the fit mark, and puts both hints in the tooltip.
+
+        :param qt_app: Qt application
+        :return: None
+        """
+        # Arrange
+        choice: ChoiceView = ChoiceView(
+            detected=("2560x1600",),
+            groups=(ChoiceGroup(title="", items=("3840x2400", "3840x2160", "1920x1200")),),
+            selected=0,
+            fitting=frozenset({1, 3}),
+            fit_mark="16:10",
+            fit_hint="Same shape",
+            warned=frozenset({0, 1, 2}),
+            warn_hint="Too demanding",
+        )
+        popup: _Popup = _Popup(qt_app=qt_app, choice=choice)
+        detected, bundled = popup.lists()
+        # Act
+        image: QImage = bundled.viewport().grab().toImage()
+        rows: list[QRect] = [bundled.visualItemRect(bundled.item(row)) for row in range(3)]
+        # Assert
+        assert [self._amber_pixels(image=image, row=row) > 0 for row in rows] == [True, True, False]
+        assert [self._link_pixels(image=image, row=row) > 0 for row in rows] == [True, False, True]
+        assert [bundled.item(row).toolTip() for row in range(3)] == [
+            "Too demanding\nSame shape",
+            "Too demanding",
+            "Same shape",
+        ]
+        assert detected.item(0).toolTip() == "Too demanding"
+        popup.widget.close()
+
+    @staticmethod
+    def _amber_pixels(*, image: QImage, row: QRect) -> int:
+        """
+        Count the pixels of the warning sign's amber in the right half of a row.
+
+        :param image: the picture of a list's viewport
+        :param row: the row in the picture
+        :return: number of pixels
+        """
+        return sum(
+            (color := image.pixelColor(x, y)).red() > 220 and 170 < color.green() < 215 and color.blue() < 120
+            for x in range(image.width() // 2, image.width())
+            for y in range(row.top(), row.bottom() + 1)
+        )
+
     @staticmethod
     def _link_pixels(*, image: QImage, row: QRect) -> int:
         """

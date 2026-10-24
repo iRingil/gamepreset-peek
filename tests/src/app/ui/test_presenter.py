@@ -178,6 +178,7 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.picture: Path | None = None
         self.settings: SettingsView | None = None
         self.settings_loading: bool = False
+        self.no_recommendation: bool = False
         self.cpu_offers: list[ChoiceView] = []
         self.gpu_offers: list[ChoiceView] = []
         self.resolution_offers: list[ChoiceView] = []
@@ -344,6 +345,7 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.settings = settings
         self.settings_loading = False
+        self.no_recommendation = False
 
     def clear_settings(self, *, loading: bool) -> None:
         """
@@ -354,6 +356,17 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.settings = None
         self.settings_loading = loading
+        self.no_recommendation = False
+
+    def show_no_recommendation(self) -> None:
+        """
+        Record the notice that there is no recommendation.
+
+        :return: None
+        """
+        self.settings = None
+        self.settings_loading = False
+        self.no_recommendation = True
 
 
 class _Runner:
@@ -858,7 +871,7 @@ class TestGame(_PresenterTests):
 
     def test_no_recommendations(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
-        Says so when NVIDIA has no recommendation for the game.
+        Shows the big notice and says why in the status line when NVIDIA has no recommendation for the game.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -873,8 +886,9 @@ class TestGame(_PresenterTests):
         # Act
         presenter.select_game(index=0)
         # Assert
-        assert (view.settings, view.status) == (
+        assert (view.settings, view.no_recommendation, view.status) == (
             None,
+            True,
             "No recommendations (there are none, or your hardware is too weak for this resolution and game)",
         )
         assert view.status_level is StatusLevel.WARNING
@@ -1073,7 +1087,7 @@ class TestResolution(_PresenterTests):
 
     def test_game_resolutions_offered(self, presenter: Presenter, view: _FakeView) -> None:
         """
-        Offers the detected screen above the game's own resolutions, the largest first, without repeating it.
+        Offers the detected screen above the game's resolutions, the largest first, marking shape and demanding ones.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1092,6 +1106,8 @@ class TestResolution(_PresenterTests):
                 fitting=frozenset({1, 2}),
                 fit_mark="16:9",
                 fit_hint=_FIT_HINT,
+                warned=frozenset({1}),
+                warn_hint="Too demanding for this PC: even the lowest settings may stutter at this resolution.",
             )
         ]
 

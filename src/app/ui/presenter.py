@@ -23,12 +23,12 @@ from app.core.models import (
     ResolutionPreset,
     ThemeMode,
 )
-from app.core.screen_shape import ScreenShape
 from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.debouncer import Debouncer
 from app.ui.game_lists import GameLists
+from app.ui.resolution_choice import ResolutionChoice
 from app.ui.status import Status, StatusTexts
 from app.ui.views import (
     ChoiceGroup,
@@ -363,39 +363,16 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         Offer the detected screen resolution, then the game's resolutions, the one in use selected.
 
-        Before a game's presets arrive, the bundled resolutions stand in for the game's. Resolutions of the screen's
-        shape are marked with its ratio.
-
         :return: None
         """
         if self._setup is None:
             return
-        detected: tuple[str, ...] = self._setup.detected_resolutions
-        others: tuple[str, ...] = self._setup.resolutions
-        if self._presets is not None:
-            others = tuple(item for item in self._presets.resolution_names if item not in detected)
-        # A pick maps to this list even if the game's presets arrive while the choice is open.
-        self._offered_resolutions = detected + others
-        screen: str | None = self._setup.system.resolution
-        ratio: str = "" if screen is None else ScreenShape.name(resolution=screen)
-        self._view.offer_resolutions(
-            choice=ChoiceView(
-                detected=detected,
-                groups=(ChoiceGroup(title="", items=others),),
-                selected=(
-                    self._offered_resolutions.index(self._resolution_name)
-                    if self._resolution_name in self._offered_resolutions
-                    else None
-                ),
-                fitting=frozenset(
-                    len(detected) + row
-                    for row, item in enumerate(others)
-                    if screen is not None and ScreenShape.fits(resolution=item, screen=screen)
-                ),
-                fit_mark=ratio,
-                fit_hint=self._translator.text(item=UiText.FITS_SCREEN, ratio=ratio) if ratio else "",
-            )
+        choice: ChoiceView = ResolutionChoice.build(
+            setup=self._setup, presets=self._presets, in_use=self._resolution_name, translator=self._translator
         )
+        # A pick maps to this list even if the game's presets arrive while the choice is open.
+        self._offered_resolutions = choice.detected + choice.groups[0].items
+        self._view.offer_resolutions(choice=choice)
 
     def choose_cpu(self, *, position: int) -> None:
         """
@@ -737,10 +714,11 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         request: int = self._next_request()
         self._resolution = self._presets.preset_for(resolution=self._resolution_name)
         self._settings = None
-        self._view.clear_settings(loading=self._resolution is not None)
         if self._resolution is None:
+            self._view.show_no_recommendation()
             self._set_status(status=self._texts.warning(item=UiText.NO_RECOMMENDATION))
             return
+        self._view.clear_settings(loading=True)
         game_id: str = self._game.game_id
         presets: GamePresets = self._presets
         self._set_status(status=self._texts.info(item=UiText.LOADING))

@@ -36,6 +36,23 @@ class Icons:
         return cls._icon(svg=source.replace("currentColor", color.name()), ratio=ratio)
 
     @classmethod
+    def paint(cls, *, painter: QPainter, name: str, color: QColor, rect: QRectF) -> None:
+        """
+        Draw a symbol in a color straight onto a painter, sharp at any size.
+
+        :param painter: painter to draw with
+        :param name: file name of the symbol without the extension, e.g. "circle-alert"
+        :param color: line color
+        :param rect: where to draw it
+        :return: None
+        """
+        source: str = cls._source(path=ICONS_DIR / f"{name}.svg")
+        renderer: QSvgRenderer = QSvgRenderer(
+            QByteArray(source.replace("currentColor", color.name()).encode(encoding="utf-8"))
+        )
+        renderer.render(painter, rect)
+
+    @classmethod
     def flag(cls, *, language: str, ratio: float) -> QIcon:
         """
         Draw the flag of a UI language.

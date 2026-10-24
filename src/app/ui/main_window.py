@@ -33,6 +33,7 @@ from app.ui.cover_view import CoverView
 from app.ui.games_panel import GamesPanel
 from app.ui.icons import IconButton
 from app.ui.log_panel import LogPanel
+from app.ui.notice import Notice
 from app.ui.preset_slider import PresetSlider
 from app.ui.presenter import Presenter
 from app.ui.settings_menu import SettingsMenu
@@ -486,6 +487,8 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._settings_area: QStackedWidget = QStackedWidget(parent=self)
         self._settings_area.addWidget(self._settings_skeleton)
         self._settings_area.addWidget(self._settings)
+        self._no_recommendation: Notice = Notice(parent=self)
+        self._settings_area.addWidget(self._no_recommendation)
         layout.addLayout(self._body(), stretch=1)
 
         bottom: QHBoxLayout = QHBoxLayout()
@@ -584,6 +587,7 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._top.apply_language(translator=translator)
         self._games.apply_language(translator=translator)
         self._settings.apply_language(translator=translator)
+        self._no_recommendation.set_text(text=translator.text(item=UiText.NO_RECOMMENDATION_TITLE))
         self._logs_button.setText(
             translator.text(item=UiText.HIDE_LOGS if self._log_panel.isVisible() else UiText.SHOW_LOGS)
         )
@@ -742,6 +746,16 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._settings.clear()
         self._settings_area.setCurrentWidget(self._settings_skeleton)
         self._settings_skeleton.set_active(active=loading)
+
+    def show_no_recommendation(self) -> None:
+        """
+        Show the big notice that NVIDIA has no recommendation, instead of the settings.
+
+        :return: None
+        """
+        self._settings.clear()
+        self._settings_skeleton.set_active(active=False)
+        self._settings_area.setCurrentWidget(self._no_recommendation)
 
     def _offer(self, *, anchor: QWidget, choice: ChoiceView, on_choose: Callable[[int], None]) -> None:
         """

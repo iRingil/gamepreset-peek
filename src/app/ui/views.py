@@ -51,8 +51,10 @@ class ChoiceGroup:
 class ChoiceView:
     """A CPU, GPU or resolution choice: detected items above a line, bundled groups below it.
 
-    Positions run through the detected items, then through the groups in order; selected is the one in use. Fitting
-    bundled items, e.g. resolutions of the screen's shape, carry the fit mark with the fit hint on hover."""
+    Positions run through the detected items, then through the groups in order; selected is the one in use.
+
+    Fitting bundled items, e.g. resolutions of the screen's shape, carry the fit mark with the fit hint on hover;
+    warned items, e.g. resolutions too demanding for the hardware, carry the warning sign with the warn hint."""
 
     detected: tuple[str, ...]
     groups: tuple[ChoiceGroup, ...]
@@ -60,6 +62,8 @@ class ChoiceView:
     fitting: frozenset[int] = frozenset()
     fit_mark: str = ""
     fit_hint: str = ""
+    warned: frozenset[int] = frozenset()
+    warn_hint: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -245,5 +249,12 @@ class MainView(Protocol):
         Show placeholder shapes instead of the settings.
 
         :param loading: True while the settings are requested, False when there are none to wait for
+        :return: None
+        """
+
+    def show_no_recommendation(self) -> None:
+        """
+        Show a big notice that NVIDIA has no recommendation, instead of the settings.
+
         :return: None
         """

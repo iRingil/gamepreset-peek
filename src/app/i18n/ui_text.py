@@ -50,6 +50,7 @@ class UiText(StrEnum):
     GPU_HINT = "Choose another graphics card"
     RESOLUTION_HINT = "Choose another screen resolution"
     REQUEST_FAILED = "Could not get data from NVIDIA: {error}"
+    NO_RECOMMENDATION_TITLE = "No recommendations"
     NO_RECOMMENDATION = "No recommendations (there are none, or your hardware is too weak for this resolution and game)"
     RESOLUTION_FALLBACK = "No preset for {chosen}: showing the one for {shown}."
     RESOLUTION_BELOW_MIN_SPEC = "Too demanding for this PC: even the lowest settings may stutter at this resolution."

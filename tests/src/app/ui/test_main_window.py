@@ -36,6 +36,7 @@ from app.ui.cover_view import CoverView
 from app.ui.games_panel import GamesPanel
 from app.ui.icons import IconButton
 from app.ui.main_window import MainWindow
+from app.ui.notice import Notice
 from app.ui.preset_slider import PresetSlider
 from app.ui.presenter import Presenter
 from app.ui.settings_menu import SettingsMenu
@@ -528,6 +529,29 @@ class TestMainWindow:
         )
         assert (skeleton.isVisible(), skeleton.active) == (True, loading)
         assert all(label.text() != "Baldur's Gate 3" for label in window.widget.findChildren(QLabel))
+
+    def test_no_recommendation(self, window: _Window) -> None:
+        """
+        Shows the big notice, translated, in place of the settings and stops the skeleton.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        window.widget.show_settings(settings=_SETTINGS)
+        window.widget.clear_settings(loading=True)
+        skeleton: SettingsSkeleton = window.child(parent=window.widget, kind=SettingsSkeleton)
+        notice: Notice = window.child(parent=window.widget, kind=Notice)
+        # Act
+        window.widget.show_no_recommendation()
+        # Assert
+        assert (notice.isVisible(), notice.text, skeleton.isVisible(), skeleton.active) == (
+            True,
+            "No recommendations",
+            False,
+            False,
+        )
+        assert window.table().topLevelItemCount() == 0
 
     def test_back_to_optimal(self, window: _Window) -> None:
         """
