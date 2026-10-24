@@ -17,11 +17,15 @@ from app.core.ops_api import OpsApi
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
 from app.i18n.translator import Translator
+from app.infra.elevation import Elevation
 from app.infra.http_client import HttpClient
 from app.infra.logger import LoggingManager
 from app.ui.debouncer import QtDebouncer
+from app.ui.exe_icons import ExeIcons
 from app.ui.main_window import MainWindow
 from app.ui.presenter import Presenter
+from app.ui.read_only_folder import ReadOnlyFolder
+from app.ui.single_instance import SingleInstance
 from app.ui.theme import Theme
 from app.ui.typography import Typography
 from app.ui.worker import Runners, Worker
@@ -66,7 +70,16 @@ class _Application:  # pylint: disable=too-few-public-methods
             Theme.apply(mode=service.saved_theme())
             Typography.install()
             sys.excepthook = self._log_unhandled
+            # Checked before the copy claims its name: a copy started as administrator must not find this one.
+            if not database.writable():
+                if ReadOnlyFolder.ask(translator=translator, folder=database.path.parent):
+                    Elevation.relaunch()
+                return
+            instance: SingleInstance = SingleInstance()
+            if not instance.claim():
+                return
             window: MainWindow = MainWindow(log_lines=self._logging.lines)
+            instance.activated.connect(window.bring_to_front)
             requests: Worker = Worker(name="requests")
             finder: Worker = Worker(name="finder")
             updater: Worker = Worker(name="updater")
@@ -76,6 +89,7 @@ class _Application:  # pylint: disable=too-few-public-methods
                 service=service,
                 runners=Runners(requests=requests, finder=finder, updater=updater, saver=saver),
                 debouncer=QtDebouncer(parent=window),
+                icons=ExeIcons(),
                 translator=translator,
                 theme=service.saved_theme(),
                 auto_update=service.saved_auto_update(),

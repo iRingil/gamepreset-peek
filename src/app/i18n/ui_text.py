@@ -68,15 +68,18 @@ class UiText(StrEnum):
     OPTIMAL_HINT = "Go back to the preset NVIDIA recommends"
     SLIDER_HINT = "Other presets NVIDIA has for this game; the dot marks the recommended one"
     CHANGED_HINT = "Differs from the recommended preset ({value})"
-    NO_NVIDIA_GPU = "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only."
-    UNSUPPORTED_HARDWARE = (
-        "GamePreset Peek works only with NVIDIA graphics cards and AMD or Intel processors."
-        " Choose your processor and graphics card in the links at the top."
-    )
+    NO_NVIDIA_GPU = "No NVIDIA graphics card found. Choose yours from the list: the app works with NVIDIA cards only."
+    NOTHING_DETECTED = "Could not detect the processor or an NVIDIA graphics card. Choose both from the lists."
     CPU_NOT_DETECTED = "Could not detect the processor. Choose yours from the list."
     CPU_REJECTED = "NVIDIA does not know your processor. Choose it from the list."
     GPU_REJECTED = "NVIDIA does not know your graphics card. Choose the closest one from the list."
     HARDWARE_FAILED = "Could not detect the hardware: {error}"
+    READ_ONLY_FOLDER = (
+        "GamePreset Peek can't write to its folder:\n{folder}\n\nIt needs to, to keep its lists of games and hardware"
+        " up to date. Run it as administrator, or install it in your user folder."
+    )
+    RUN_AS_ADMIN = "Run as administrator"
+    CLOSE = "Close"
     HARDWARE_REJECTED = "NVIDIA does not support this computer: {components}."
     COMPONENT_CPU = "processor"
     COMPONENT_GPU = "graphics card"

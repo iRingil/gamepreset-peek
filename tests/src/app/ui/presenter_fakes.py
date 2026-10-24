@@ -31,6 +31,7 @@ from app.core.models import (
 )
 from app.core.service import PresetService
 from app.i18n.translator import Translator
+from app.ui.exe_icons import ExeIcons
 from app.ui.presenter import Presenter
 from app.ui.views import ChoiceView, HardwareView, InstalledGameView, SettingRow, SettingsView, StatusLevel
 from app.ui.worker import Runners
@@ -196,7 +197,6 @@ class FakeView:  # pylint: disable=too-many-instance-attributes
         self.cpu_offers: list[ChoiceView] = []
         self.gpu_offers: list[ChoiceView] = []
         self.resolution_offers: list[ChoiceView] = []
-        self.warnings: list[str] = []
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -271,15 +271,6 @@ class FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.status = text
         self.status_level = level
-
-    def warn(self, *, text: str) -> None:
-        """
-        Record a warning dialog.
-
-        :param text: the warning
-        :return: None
-        """
-        self.warnings.append(text)
 
     def show_games(self, *, names: Sequence[str], selected: int | None) -> None:
         """
@@ -549,6 +540,17 @@ class PresenterTests:
         """
         return runner
 
+    @pytest.fixture(name="icons")
+    def _icons(self) -> MagicMock:
+        """
+        Mock the icons of the executables: none has an icon file.
+
+        :return: mock with the interface of ExeIcons
+        """
+        icons: MagicMock = create_autospec(spec=ExeIcons, instance=True)
+        icons.get.return_value = None
+        return icons
+
     @pytest.fixture(name="presenter")
     def _presenter(  # pylint: disable=too-many-arguments
         self,
@@ -557,6 +559,7 @@ class PresenterTests:
         debouncer: FakeDebouncer,
         locale_dir: Path,
         runners: Runners,
+        icons: MagicMock,
     ) -> Presenter:
         """
         Create the presenter in English with automatic database updates on; tests start it themselves.
@@ -566,6 +569,7 @@ class PresenterTests:
         :param debouncer: debouncer
         :param locale_dir: compiled catalogs
         :param runners: the runners
+        :param icons: icons of the executables
         :return: presenter under test
         """
         return Presenter(
@@ -573,6 +577,7 @@ class PresenterTests:
             service=service,
             runners=runners,
             debouncer=debouncer,
+            icons=icons,
             translator=Translator(language="en", locale_dir=locale_dir),
             theme=ThemeMode.AUTO,
             auto_update=True,

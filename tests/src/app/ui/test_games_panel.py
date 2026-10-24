@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QColor, QIcon, QImage
 from PySide6.QtWidgets import QApplication, QFileDialog, QLabel, QWidget
 
 from app.core.models import GamesTab
@@ -121,6 +121,26 @@ class TestGamesPanel:
         # Assert
         assert not first.isNull()
         assert first.cacheKey() == second.cacheKey()
+
+    def test_icon_file(self, tmp_path: Path, panel: GamesPanel) -> None:
+        """
+        Shows an installed game with its icon file when it has one.
+
+        :param tmp_path: temporary directory
+        :param panel: the panel
+        :return: None
+        """
+        # Arrange
+        image: QImage = QImage(48, 48, QImage.Format.Format_ARGB32)
+        image.fill(QColor("#ff0000"))
+        icon: Path = tmp_path / "icon.png"
+        assert image.save(str(icon))
+        games: list[InstalledGameView] = [InstalledGameView(name="Game", executable=tmp_path / "game.exe", icon=icon)]
+        # Act
+        panel.installed.show_games(games=games, selected=0)
+        shown: QIcon = panel.installed.list.model().index(0, 0).data(Qt.ItemDataRole.DecorationRole)
+        # Assert
+        assert shown.pixmap(16, 16).toImage().pixelColor(8, 8).red() > 240
 
     def test_none_found(self, panel: GamesPanel) -> None:
         """

@@ -1,5 +1,6 @@
 """Tests of the game tabs logic, driven through the presenter that owns it, on the fakes."""
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -128,6 +129,27 @@ class TestInstalledGames(PresenterTests):
             0,
         )
         service.find_games.assert_called_once_with(folders=FOLDERS)
+
+    def test_icons_with_games(self, presenter: Presenter, view: FakeView, finder: FakeRunner, icons: MagicMock) -> None:
+        """
+        Gets the icon files of the executables in the search and shows them with the games at once.
+
+        :param presenter: presenter under test
+        :param view: fake window
+        :param finder: runner of the search for installed games
+        :param icons: icons of the executables
+        :return: None
+        """
+        # Arrange
+        icon: Path = Path("bg3.png")
+        icons.get.return_value = icon
+        finder.deferred = True
+        presenter.start()
+        # Act
+        finder.run_all()
+        # Assert
+        assert view.installed == [InstalledGameView(name="Baldur's Gate 3", executable=BG3_EXE, icon=icon)]
+        icons.get.assert_called_once_with(executable=BG3_EXE)
 
     def test_folders_unreadable(self, presenter: Presenter, view: FakeView, service: MagicMock) -> None:
         """

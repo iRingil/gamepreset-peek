@@ -79,7 +79,6 @@ class TestStart(PresenterTests):
         assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
         service.check_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=CPU, gpu=LAPTOP_GPU))
         service.update_database_if_due.assert_called_once_with()
-        assert not view.warnings
 
     def test_hardware_loading(self, presenter: Presenter, view: FakeView, runner: FakeRunner) -> None:
         """
@@ -101,7 +100,7 @@ class TestStart(PresenterTests):
 
     def test_nothing_detected(self, presenter: Presenter, view: FakeView, service: MagicMock) -> None:
         """
-        Warns that only NVIDIA GPUs and AMD or Intel CPUs are supported and invites a choice in place of both.
+        Invites a choice in place of both the CPU and the GPU, explaining in one status line.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -118,7 +117,7 @@ class TestStart(PresenterTests):
             choice=HardwareChoice(cpu_name=None, gpu=None),
             resolution="1920x1080",
         )
-        service.check_hardware.return_value = HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
+        service.check_hardware.return_value = HardwareCheck(state=HardwareState.MISSING, failed=("cpu", "gpu"))
         # Act
         presenter.start()
         # Assert
@@ -129,31 +128,10 @@ class TestStart(PresenterTests):
             memory="8 GB",
             video_memory="unknown",
         )
-        assert view.warnings == [UiText.UNSUPPORTED_HARDWARE.value]
-
-    @pytest.mark.parametrize(
-        argnames="choice",
-        argvalues=[HardwareChoice(cpu_name=None, gpu=LAPTOP_GPU), HardwareChoice(cpu_name=CPU, gpu=None)],
-        ids=["no cpu", "no gpu"],
-    )
-    def test_one_missing_warned(
-        self, presenter: Presenter, view: FakeView, service: MagicMock, choice: HardwareChoice
-    ) -> None:
-        """
-        Warns once when only the CPU or only the GPU is neither chosen nor detected.
-
-        :param presenter: presenter under test
-        :param view: fake window
-        :param service: service mock
-        :param choice: CPU and GPU in use at the start
-        :return: None
-        """
-        # Arrange
-        service.hardware_setup.return_value = replace(SETUP, choice=choice)
-        # Act
-        presenter.start()
-        # Assert
-        assert view.warnings == [UiText.UNSUPPORTED_HARDWARE.value]
+        assert (view.status, view.status_level) == (
+            "Could not detect the processor or an NVIDIA graphics card. Choose both from the lists.",
+            StatusLevel.ERROR,
+        )
 
     def test_setup_failed(self, presenter: Presenter, view: FakeView, service: MagicMock) -> None:
         """
@@ -198,11 +176,11 @@ class TestStart(PresenterTests):
         argnames=("check", "expected"),
         argvalues=[
             (
-                HardwareCheck(state=HardwareState.NO_NVIDIA_GPU),
-                "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only.",
+                HardwareCheck(state=HardwareState.MISSING, failed=("gpu",)),
+                "No NVIDIA graphics card found. Choose yours from the list: the app works with NVIDIA cards only.",
             ),
             (
-                HardwareCheck(state=HardwareState.NO_CPU),
+                HardwareCheck(state=HardwareState.MISSING, failed=("cpu",)),
                 "Could not detect the processor. Choose yours from the list.",
             ),
             (
@@ -275,14 +253,15 @@ class TestGame(PresenterTests):
         :return: None
         """
         # Arrange
-        service.check_hardware.return_value = HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
+        service.check_hardware.return_value = HardwareCheck(state=HardwareState.MISSING, failed=("gpu",))
         presenter.start()
         view.status = ""
         # Act
         presenter.games.select_game(index=1)
         # Assert
-        assert view.status == (
-            "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only."
+        assert (
+            view.status
+            == "No NVIDIA graphics card found. Choose yours from the list: the app works with NVIDIA cards only."
         )
         service.game_presets.assert_not_called()
 
@@ -1452,7 +1431,7 @@ class TestSettingsSkeleton(PresenterTests):
         """
         # Arrange
         if case == "no hardware":
-            service.check_hardware.return_value = HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
+            service.check_hardware.return_value = HardwareCheck(state=HardwareState.MISSING, failed=("gpu",))
         elif case == "no recommendation":
             service.game_presets.return_value = replace(PRESETS, resolutions=())
         else:

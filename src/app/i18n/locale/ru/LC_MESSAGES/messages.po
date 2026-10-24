@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 15:31+0300\n"
+"POT-Creation-Date: 2026-10-24 16:28+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -259,16 +259,12 @@ msgid "Differs from the recommended preset ({value})"
 msgstr "Отличается от рекомендованного пресета ({value})"
 
 #. NO_NVIDIA_GPU
-msgid "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only."
-msgstr "Видеокарта NVIDIA не найдена. Эта программа рекомендует настройки только для видеокарт NVIDIA."
+msgid "No NVIDIA graphics card found. Choose yours from the list: the app works with NVIDIA cards only."
+msgstr "Видеокарта NVIDIA не найдена. Выберите свою из списка: программа работает только с видеокартами NVIDIA."
 
-#. UNSUPPORTED_HARDWARE
-msgid ""
-"GamePreset Peek works only with NVIDIA graphics cards and AMD or Intel processors. Choose your processor and graphics"
-" card in the links at the top."
-msgstr ""
-"GamePreset Peek работает только с видеокартами NVIDIA и процессорами AMD или Intel. Выберите свой процессор и "
-"видеокарту по ссылкам вверху."
+#. NOTHING_DETECTED
+msgid "Could not detect the processor or an NVIDIA graphics card. Choose both from the lists."
+msgstr "Не удалось определить процессор и видеокарту NVIDIA. Выберите их из списков."
 
 #. CPU_NOT_DETECTED
 msgid "Could not detect the processor. Choose yours from the list."
@@ -286,6 +282,29 @@ msgstr "NVIDIA не знает вашу видеокарту. Выберите �
 #, python-brace-format
 msgid "Could not detect the hardware: {error}"
 msgstr "Не удалось определить оборудование: {error}"
+
+#. READ_ONLY_FOLDER
+#, python-brace-format
+msgid ""
+"GamePreset Peek can't write to its folder:\n"
+"{folder}\n"
+"\n"
+"It needs to, to keep its lists of games and hardware up to date. Run it as administrator, or install it in your user "
+"folder."
+msgstr ""
+"GamePreset Peek не может записывать в свою папку:\n"
+"{folder}\n"
+"\n"
+"Это нужно, чтобы обновлять списки игр и оборудования. Запустите программу от имени администратора или установите её в"
+" папку пользователя."
+
+#. RUN_AS_ADMIN
+msgid "Run as administrator"
+msgstr "Запустить от имени администратора"
+
+#. CLOSE
+msgid "Close"
+msgstr "Закрыть"
 
 #. HARDWARE_REJECTED
 #, python-brace-format

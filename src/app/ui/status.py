@@ -33,6 +33,12 @@ class StatusTexts:
         "os": UiText.COMPONENT_OS,
     }
 
+    # A missing CPU and GPU together get one line of their own.
+    _MISSING: dict[tuple[str, ...], UiText] = {
+        ("cpu",): UiText.CPU_NOT_DETECTED,
+        ("gpu",): UiText.NO_NVIDIA_GPU,
+    }
+
     def __init__(self, *, translator: Callable[[], Translator]) -> None:
         """
         Translate with the translator of the UI language.
@@ -84,10 +90,9 @@ class StatusTexts:
         :param check: a result other than READY
         :return: the line, an error
         """
-        if check.state is HardwareState.NO_NVIDIA_GPU:
-            return self._status(item=UiText.NO_NVIDIA_GPU, level=StatusLevel.ERROR, values={})
-        if check.state is HardwareState.NO_CPU:
-            return self._status(item=UiText.CPU_NOT_DETECTED, level=StatusLevel.ERROR, values={})
+        if check.state is HardwareState.MISSING:
+            item: UiText = self._MISSING.get(check.failed, UiText.NOTHING_DETECTED)
+            return self._status(item=item, level=StatusLevel.ERROR, values={})
         if check.failed == ("cpu",):
             return self._status(item=UiText.CPU_REJECTED, level=StatusLevel.ERROR, values={})
         if check.failed == ("gpu",):

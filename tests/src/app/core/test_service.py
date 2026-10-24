@@ -35,7 +35,7 @@ from app.core.models import (
     Translations,
     UserSettings,
 )
-from app.config import DEFAULT_GAME_FOLDERS, SCREEN_RESOLUTIONS
+from app.config import DEFAULT_GAME_FOLDERS, GAME_FILES_CACHED, SCREEN_RESOLUTIONS
 from app.core.ops_api import OpsFormatError
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
@@ -534,30 +534,30 @@ class TestCheckHardware:
         assert store.load() == UserSettings()
 
     @pytest.mark.parametrize(
-        argnames=("choice", "state"),
+        argnames=("choice", "missing"),
         argvalues=[
-            (HardwareChoice(cpu_name=_DETECTED_CPU, gpu=None), HardwareState.NO_NVIDIA_GPU),
-            (HardwareChoice(cpu_name=None, gpu=None), HardwareState.NO_NVIDIA_GPU),
-            (HardwareChoice(cpu_name=None, gpu=_LAPTOP_GPU), HardwareState.NO_CPU),
+            (HardwareChoice(cpu_name=_DETECTED_CPU, gpu=None), ("gpu",)),
+            (HardwareChoice(cpu_name=None, gpu=None), ("cpu", "gpu")),
+            (HardwareChoice(cpu_name=None, gpu=_LAPTOP_GPU), ("cpu",)),
         ],
         ids=["no gpu", "nothing", "no cpu"],
     )
     def test_missing(
-        self, ops: MagicMock, service: PresetService, choice: HardwareChoice, state: HardwareState
+        self, ops: MagicMock, service: PresetService, choice: HardwareChoice, missing: tuple[str, ...]
     ) -> None:
         """
-        Reports a missing component, the GPU first, and asks NVIDIA nothing.
+        Reports every missing component and asks NVIDIA nothing.
 
         :param ops: NVIDIA endpoints mock
         :param service: service under test
         :param choice: CPU and GPU to check
-        :param state: expected state
+        :param missing: the components expected missing
         :return: None
         """
         # Arrange & Act
         check: HardwareCheck = service.check_hardware(choice=choice)
         # Assert
-        assert check == HardwareCheck(state=state)
+        assert check == HardwareCheck(state=HardwareState.MISSING, failed=missing)
         ops.check_compatibility.assert_not_called()
 
     def test_rejected(self, ops: MagicMock, service: PresetService) -> None:
@@ -802,6 +802,63 @@ class TestGameSettings:
         service.game_settings(game_id="baldurs_gate_3", presets=presets)
         # Assert
         assert (game_ops.presets_file.call_count, game_ops.translations.call_count) == (2, 2)
+
+    def test_files_kept_for_recent_games(
+        self, game_ops: MagicMock, service: PresetService, presets: GamePresets
+    ) -> None:
+        """
+        Downloads nothing when the user goes back to a game shown shortly before.
+
+        :param game_ops: NVIDIA endpoints mock with game answers
+        :param service: service under test
+        :param presets: presets of the game
+        :return: None
+        """
+        # Arrange
+        first: GameSettings = service.game_settings(game_id="mordhau", presets=presets)
+        service.game_settings(game_id="baldurs_gate_3", presets=presets)
+        # Act
+        again: GameSettings = service.game_settings(game_id="mordhau", presets=presets)
+        # Assert
+        assert (again is first, game_ops.presets_file.call_count) == (True, 2)
+
+    def test_oldest_files_dropped(self, game_ops: MagicMock, service: PresetService, presets: GamePresets) -> None:
+        """
+        Downloads a game's files again once more games than the cache holds were shown after it.
+
+        :param game_ops: NVIDIA endpoints mock with game answers
+        :param service: service under test
+        :param presets: presets of the game
+        :return: None
+        """
+        # Arrange
+        for number in range(GAME_FILES_CACHED + 1):
+            service.game_settings(game_id=f"game_{number}", presets=presets)
+        # Act
+        service.game_settings(game_id="game_0", presets=presets)
+        # Assert
+        assert game_ops.presets_file.call_count == GAME_FILES_CACHED + 2
+
+    def test_new_presets_file_downloaded(
+        self, game_ops: MagicMock, service: PresetService, presets: GamePresets
+    ) -> None:
+        """
+        Downloads the presets again when NVIDIA's answer names a new presets file of the game.
+
+        :param game_ops: NVIDIA endpoints mock with game answers
+        :param service: service under test
+        :param presets: presets of the game
+        :return: None
+        """
+        # Arrange
+        service.game_settings(game_id="mordhau", presets=presets)
+        newer: GamePresets = replace(
+            presets, presets_file=RemoteFile(url="https://cdn.example.test/pops2", sha256="22", size=1)
+        )
+        # Act
+        service.game_settings(game_id="mordhau", presets=newer)
+        # Assert
+        assert game_ops.presets_file.call_args_list[-1].kwargs == {"file": newer.presets_file}
 
     @pytest.mark.parametrize(argnames="index", argvalues=[0, 3], ids=["zero", "past_last"])
     def test_index_out_of_presets(

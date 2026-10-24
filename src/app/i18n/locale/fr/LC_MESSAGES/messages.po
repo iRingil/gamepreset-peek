@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 15:31+0300\n"
+"POT-Creation-Date: 2026-10-24 16:28+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -259,18 +259,14 @@ msgid "Differs from the recommended preset ({value})"
 msgstr "Diffère du préréglage recommandé ({value})"
 
 #. NO_NVIDIA_GPU
-msgid "No NVIDIA graphics card found. This app recommends settings for NVIDIA graphics cards only."
+msgid "No NVIDIA graphics card found. Choose yours from the list: the app works with NVIDIA cards only."
 msgstr ""
-"Aucune carte graphique NVIDIA trouvée. Cette application ne recommande des paramètres que pour les cartes graphiques "
-"NVIDIA."
+"Aucune carte graphique NVIDIA trouvée. Choisissez la vôtre dans la liste : l’application ne fonctionne qu’avec les "
+"cartes NVIDIA."
 
-#. UNSUPPORTED_HARDWARE
-msgid ""
-"GamePreset Peek works only with NVIDIA graphics cards and AMD or Intel processors. Choose your processor and graphics"
-" card in the links at the top."
-msgstr ""
-"GamePreset Peek fonctionne uniquement avec les cartes graphiques NVIDIA et les processeurs AMD ou Intel. Choisissez "
-"votre processeur et votre carte graphique avec les liens en haut."
+#. NOTHING_DETECTED
+msgid "Could not detect the processor or an NVIDIA graphics card. Choose both from the lists."
+msgstr "Impossible de détecter le processeur et une carte graphique NVIDIA. Choisissez-les dans les listes."
 
 #. CPU_NOT_DETECTED
 msgid "Could not detect the processor. Choose yours from the list."
@@ -288,6 +284,29 @@ msgstr "NVIDIA ne connaît pas votre carte graphique. Choisissez la plus proche 
 #, python-brace-format
 msgid "Could not detect the hardware: {error}"
 msgstr "Impossible de détecter le matériel : {error}"
+
+#. READ_ONLY_FOLDER
+#, python-brace-format
+msgid ""
+"GamePreset Peek can't write to its folder:\n"
+"{folder}\n"
+"\n"
+"It needs to, to keep its lists of games and hardware up to date. Run it as administrator, or install it in your user "
+"folder."
+msgstr ""
+"GamePreset Peek ne peut pas écrire dans son dossier :\n"
+"{folder}\n"
+"\n"
+"C’est nécessaire pour tenir à jour ses listes de jeux et de matériel. Lancez-le en tant qu’administrateur ou "
+"installez-le dans votre dossier utilisateur."
+
+#. RUN_AS_ADMIN
+msgid "Run as administrator"
+msgstr "Exécuter en tant qu’administrateur"
+
+#. CLOSE
+msgid "Close"
+msgstr "Fermer"
 
 #. HARDWARE_REJECTED
 #, python-brace-format

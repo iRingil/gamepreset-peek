@@ -167,8 +167,7 @@ class HardwareState(StrEnum):
     """Outcome of finding the hardware to request presets with."""
 
     READY = "ready"
-    NO_CPU = "no_cpu"
-    NO_NVIDIA_GPU = "no_nvidia_gpu"
+    MISSING = "missing"
     REJECTED = "rejected"
 
 
@@ -176,7 +175,8 @@ class HardwareState(StrEnum):
 class HardwareCheck:
     """Hardware ready for preset requests, or why presets can't be requested with the CPU and GPU in use.
 
-    READY carries the hardware; REJECTED the components NVIDIA rejected, empty when NVIDIA named none."""
+    READY carries the hardware; MISSING the components neither chosen nor detected ("cpu", "gpu" for an NVIDIA one);
+    REJECTED the components NVIDIA rejected, empty when NVIDIA named none."""
 
     state: HardwareState
     hardware: Hardware | None = None

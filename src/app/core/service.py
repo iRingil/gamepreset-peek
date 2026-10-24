@@ -1,6 +1,7 @@
 """Orchestration for the UI: games, installed games, the hardware to request presets with, settings of a preset."""
 
-from dataclasses import dataclass, replace
+from collections import OrderedDict
+from dataclasses import replace
 from datetime import date
 from functools import cached_property
 from pathlib import Path
@@ -8,7 +9,7 @@ from typing import Callable, Sequence
 
 from loguru import logger
 
-from app.config import DB_UPDATE_DAYS, DEFAULT_GAME_FOLDERS, DEFAULT_RESOLUTION, SCREEN_RESOLUTIONS
+from app.config import DB_UPDATE_DAYS, DEFAULT_GAME_FOLDERS, DEFAULT_RESOLUTION, GAME_FILES_CACHED, SCREEN_RESOLUTIONS
 from app.core.covers import CoverCache
 from app.core.database import AppData, AppDatabase
 from app.core.game_finder import GameFinder
@@ -39,19 +40,11 @@ from app.core.user_settings import UserSettingsStore
 __all__: tuple[str, ...] = ("PresetService",)
 
 
-@dataclass(frozen=True, slots=True)
-class _GameFiles:
-    """Downloaded presets and translations of a game, with the key they were requested by."""
-
-    key: tuple[str, str, RemoteFile]
-    settings: GameSettings
-
-
 class PresetService:
     """Answers the UI by chaining NVIDIA requests, the bundled data, hardware detection and the saved settings.
 
     Every method may block on the network, the disk or the registry, so the UI calls them from worker threads. The
-    NVIDIA requests run in one thread, so the files of the last game shown are cached without a lock. The search for
+    NVIDIA requests run in one thread, so the files of the last games shown are cached without a lock. The search for
     games, the database update and the settings saves run in threads of their own: the data in use is replaced as a
     whole, and the settings store serializes its changes."""
 
@@ -90,7 +83,7 @@ class PresetService:
         self._finder: GameFinder = finder
         self._covers: CoverCache = covers
         self._today: Callable[[], date] = today
-        self._files: _GameFiles | None = None
+        self._files: OrderedDict[tuple[str, str, RemoteFile], GameSettings] = OrderedDict()
 
     def games(self) -> tuple[Game, ...]:
         """
@@ -220,10 +213,11 @@ class PresetService:
         :param choice: CPU and GPU to check
         :return: READY with the hardware, or why presets can't be requested
         """
-        if choice.gpu is None:
-            return HardwareCheck(state=HardwareState.NO_NVIDIA_GPU)
-        if choice.cpu_name is None:
-            return HardwareCheck(state=HardwareState.NO_CPU)
+        if choice.cpu_name is None or choice.gpu is None:
+            missing: tuple[str, ...] = tuple(
+                name for name, item in ((self._CPU, choice.cpu_name), (self._GPU, choice.gpu)) if item is None
+            )
+            return HardwareCheck(state=HardwareState.MISSING, failed=missing)
         hardware: Hardware = Hardware(
             cpu_name=choice.cpu_name,
             gpu_name=choice.gpu.name,
@@ -338,16 +332,20 @@ class PresetService:
 
     def game_settings(self, *, game_id: str, presets: GamePresets) -> GameSettings:
         """
-        Get all presets of a game with its translations, downloading them unless they are the cached ones.
+        Get all presets of a game with its translations, downloading them unless they are cached.
+
+        The files of the last games shown are kept. A file never changes: a new version comes at another address, so
+        the presets answer of the game names it and the cache misses.
 
         :param game_id: game identifier, e.g. "baldurs_gate_3"
         :param presets: presets of the game from game_presets()
         :return: presets and translations
         """
         key: tuple[str, str, RemoteFile] = (game_id, presets.profile, presets.presets_file)
-        cached: _GameFiles | None = self._files
-        if cached is not None and cached.key == key:
-            return cached.settings
+        cached: GameSettings | None = self._files.get(key)
+        if cached is not None:
+            self._files.move_to_end(key)
+            return cached
         presets_file: PresetsFile = self._api.presets_file(file=presets.presets_file)
         self._check_indexes(presets=presets, count=len(presets_file.presets))
         settings: GameSettings = GameSettings(
@@ -356,7 +354,9 @@ class PresetService:
                 file=self._api.translation_file(game_id=game_id, profile=presets.profile)
             ),
         )
-        self._files = _GameFiles(key=key, settings=settings)
+        self._files[key] = settings
+        if len(self._files) > GAME_FILES_CACHED:
+            self._files.popitem(last=False)
         return settings
 
     @cached_property

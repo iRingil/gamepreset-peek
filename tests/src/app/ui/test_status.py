@@ -94,11 +94,13 @@ class TestStatusTexts:
     @pytest.mark.parametrize(
         argnames=("check", "expected"),
         argvalues=[
-            (HardwareCheck(state=HardwareState.NO_CPU), "CPU_NOT_DETECTED"),
+            (HardwareCheck(state=HardwareState.MISSING, failed=("cpu",)), "CPU_NOT_DETECTED"),
+            (HardwareCheck(state=HardwareState.MISSING, failed=("gpu",)), "NO_NVIDIA_GPU"),
+            (HardwareCheck(state=HardwareState.MISSING, failed=("cpu", "gpu")), "NOTHING_DETECTED"),
             (HardwareCheck(state=HardwareState.REJECTED, failed=("cpu",)), "CPU_REJECTED"),
             (HardwareCheck(state=HardwareState.REJECTED, failed=("memory", "bus")), "HARDWARE_REJECTED"),
         ],
-        ids=["no cpu", "cpu rejected", "several rejected"],
+        ids=["no cpu", "no gpu", "nothing", "cpu rejected", "several rejected"],
     )
     def test_problem(self, locale_dir: Path, check: HardwareCheck, expected: str) -> None:
         """
@@ -114,6 +116,8 @@ class TestStatusTexts:
         memory: str = translator.text(item=UiText.COMPONENT_MEMORY)
         known: dict[str, str] = {
             "CPU_NOT_DETECTED": translator.text(item=UiText.CPU_NOT_DETECTED),
+            "NO_NVIDIA_GPU": translator.text(item=UiText.NO_NVIDIA_GPU),
+            "NOTHING_DETECTED": translator.text(item=UiText.NOTHING_DETECTED),
             "CPU_REJECTED": translator.text(item=UiText.CPU_REJECTED),
             "HARDWARE_REJECTED": translator.text(item=UiText.HARDWARE_REJECTED, components=f"{memory}, bus"),
         }

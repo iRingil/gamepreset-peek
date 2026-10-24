@@ -10,6 +10,7 @@ from app.core.models import Game, GameChoice, GamesTab, InstalledGame
 from app.core.service import PresetService
 from app.i18n.ui_text import UiText
 from app.ui.debouncer import Debouncer
+from app.ui.exe_icons import ExeIcons
 from app.ui.game_lists import GameLists
 from app.ui.status import Status, StatusTexts
 from app.ui.views import InstalledGameView, MainView
@@ -22,7 +23,8 @@ class GamesPresenter:
     """Drives the game tabs and tells the owner which game is chosen; box art follows the chosen game.
 
     Installed games are searched for in a runner of their own, so a long search never holds up the presets; a search
-    asked for while one runs starts again once it ends.
+    asked for while one runs starts again once it ends. The icons of the executables come with the search, so the
+    list shows them at once.
 
     Each game tab has a game of its own: the game of the tab in use is the chosen one. The tab and both games are saved
     whenever they change, the first game of a list being chosen when the saved one is not there."""
@@ -38,6 +40,7 @@ class GamesPresenter:
         service: PresetService,
         runners: Runners,
         debouncer: Debouncer,
+        icons: ExeIcons,
         texts: StatusTexts,
         on_game: Callable[[Game | None], None],
         on_status: Callable[[Status], None],
@@ -50,6 +53,7 @@ class GamesPresenter:
         :param service: service the requests go to
         :param runners: runners of the background tasks
         :param debouncer: delays the search and box art while the user is still changing them
+        :param icons: icons of the games' executables
         :param texts: makes the status lines
         :param on_game: called with the chosen game whenever another one is chosen, None when there is none
         :param on_status: shows a status line
@@ -59,6 +63,7 @@ class GamesPresenter:
         self._service: PresetService = service
         self._runners: Runners = runners
         self._debouncer: Debouncer = debouncer
+        self._icons: ExeIcons = icons
         self._texts: StatusTexts = texts
         self._on_game: Callable[[Game | None], None] = on_game
         self._on_status: Callable[[Status], None] = on_status
@@ -70,6 +75,7 @@ class GamesPresenter:
         self._find_again: bool = False
         self._game: Game | None = None
         self._cover_request: int = 0
+        self._icon_files: dict[Path, Path | None] = {}
 
     @property
     def game(self) -> Game | None:
@@ -159,7 +165,7 @@ class GamesPresenter:
         self._view.show_finding()
         folders: tuple[str, ...] = self._folders
         self._runners.finder.submit(
-            task=lambda: self._service.find_games(folders=folders), on_done=self._on_found, on_error=self._on_find_error
+            task=lambda: self._search(folders=folders), on_done=self._on_found, on_error=self._on_find_error
         )
 
     def add_folder(self, *, folder: str) -> None:
@@ -319,11 +325,21 @@ class GamesPresenter:
         self._save(lambda: self._service.save_game_folders(folders=folders))
         self.find_games()
 
-    def _on_found(self, games: tuple[InstalledGame, ...]) -> None:
+    def _search(self, *, folders: tuple[str, ...]) -> tuple[tuple[InstalledGame, ...], dict[Path, Path | None]]:
         """
-        Show the installed games, or search again when that was asked for during the search.
+        Find the installed games and get the icon files of their executables; runs in the runner of the search.
 
-        :param games: installed games sorted by name
+        :param folders: folders to search
+        :return: installed games sorted by name, and the icon file of each executable
+        """
+        games: tuple[InstalledGame, ...] = self._service.find_games(folders=folders)
+        return games, {item.executable: self._icons.get(executable=item.executable) for item in games}
+
+    def _on_found(self, found: tuple[tuple[InstalledGame, ...], dict[Path, Path | None]]) -> None:
+        """
+        Show the installed games with their icons, or search again when that was asked for during the search.
+
+        :param found: installed games sorted by name, and the icon file of each executable
         :return: None
         """
         self._finding = False
@@ -331,6 +347,8 @@ class GamesPresenter:
             self._find_again = False
             self.find_games()
             return
+        games: tuple[InstalledGame, ...]
+        games, self._icon_files = found
         self._lists.set_installed(installed=games)
         self._render_installed()
         self._show_game()
@@ -342,7 +360,7 @@ class GamesPresenter:
         :param error: the failure
         :return: None
         """
-        self._on_found(games=())
+        self._on_found(found=((), {}))
         self._on_status(self._texts.error(item=UiText.FIND_FAILED, error=error))
 
     def _set_games(self, *, games: tuple[Game, ...]) -> None:
@@ -373,7 +391,10 @@ class GamesPresenter:
         """
         self._view.show_installed_games(
             games=[
-                InstalledGameView(name=item.game.name, executable=item.executable) for item in self._lists.installed
+                InstalledGameView(
+                    name=item.game.name, executable=item.executable, icon=self._icon_files.get(item.executable)
+                )
+                for item in self._lists.installed
             ],
             selected=self._lists.installed_position,
         )

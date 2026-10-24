@@ -640,6 +640,23 @@ class TestMainWindow:
         # Assert
         assert widget.findChild(SettingsMenu) is None
 
+    def test_brought_to_front(self, window: _Window, qt_app: QApplication) -> None:
+        """
+        Restores the minimized window when another copy asks for it.
+
+        :param window: the window
+        :param qt_app: Qt application
+        :return: None
+        """
+        # Arrange
+        window.widget.showMinimized()
+        qt_app.processEvents()
+        # Act
+        window.widget.bring_to_front()
+        qt_app.processEvents()
+        # Assert
+        assert (window.widget.isMinimized(), window.widget.isVisible()) == (False, True)
+
     def test_size(self, window: _Window) -> None:
         """
         Can be made as small as a 1600x900 screen at 150 % allows, and opens no larger than the screen.
@@ -704,22 +721,6 @@ class TestMainWindow:
         window.widget.setPalette(dark)
         # Assert
         assert (light, label.styleSheet()) == ("color:#d93025", "color:#f28b82")
-
-    def test_warn(self, window: _Window, monkeypatch: pytest.MonkeyPatch) -> None:
-        """
-        Shows a warning dialog over the window.
-
-        :param window: the window
-        :param monkeypatch: pytest monkeypatch
-        :return: None
-        """
-        # Arrange
-        warning: MagicMock = MagicMock()
-        monkeypatch.setattr(target=QMessageBox, name="warning", value=warning)
-        # Act
-        window.widget.warn(text="Only NVIDIA graphics cards")
-        # Assert
-        warning.assert_called_once_with(window.widget, "GamePreset Peek", "Only NVIDIA graphics cards")
 
     def test_logs_toggled(self, window: _Window) -> None:
         """

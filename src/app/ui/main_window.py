@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
-    QMessageBox,
     QPushButton,
     QSizePolicy,
     QStackedWidget,
@@ -597,6 +596,17 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         """
         self._presenter = presenter
 
+    def bring_to_front(self) -> None:
+        """
+        Show the window over the others, restored when it was minimized.
+
+        :return: None
+        """
+        if self.isMinimized():
+            self.showNormal()
+        self.raise_()
+        self.activateWindow()
+
     def apply_theme(self, *, mode: ThemeMode) -> None:
         """
         Switch the color scheme; AUTO follows the Windows app mode, also when it changes later.
@@ -691,15 +701,6 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self._status.show_status(text=text, level=level)
-
-    def warn(self, *, text: str) -> None:
-        """
-        Show a warning in a dialog the user closes with OK.
-
-        :param text: the warning
-        :return: None
-        """
-        QMessageBox.warning(self, APP_TITLE, text)
 
     def show_games(self, *, names: Sequence[str], selected: int | None) -> None:
         """

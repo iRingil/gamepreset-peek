@@ -1,6 +1,7 @@
 """Application constants: names, paths, HTTP settings and NVIDIA endpoints."""
 
 import os
+import tempfile
 from pathlib import Path
 
 __all__: tuple[str, ...] = (
@@ -12,6 +13,7 @@ __all__: tuple[str, ...] = (
     "COVER_WIDTH",
     "COVERS_DIR",
     "APP_USER_MODEL_ID",
+    "CACHE_DIR",
     "ASPECT_TOLERANCE",
     "DB_UPDATE_DAYS",
     "DB_UPDATE_URL",
@@ -19,8 +21,11 @@ __all__: tuple[str, ...] = (
     "DEFAULT_LANGUAGE",
     "DEFAULT_MEMORY_GB",
     "DEFAULT_RESOLUTION",
+    "EXE_ICON_SIZE",
+    "EXE_ICONS_DIR",
     "FLAGS_DIR",
     "FONT_FILE",
+    "GAME_FILES_CACHED",
     "GAME_SEARCH_DEPTH",
     "GETTEXT_DOMAIN",
     "HTTP_CONNECT_TIMEOUT",
@@ -28,6 +33,7 @@ __all__: tuple[str, ...] = (
     "HTTP_READ_TIMEOUT",
     "HTTP_RETRY_BACKOFF",
     "ICONS_DIR",
+    "INSTANCE_NAME",
     "LANGUAGE_NAMES",
     "LOCALE_DIR",
     "LOG_FILE",
@@ -56,7 +62,14 @@ APP_USER_MODEL_ID: str = "GamePresetPeek.App"
 APP_DATA_DIR: Path = Path(os.environ["LOCALAPPDATA"]) / APP_NAME
 LOG_FILE: Path = APP_DATA_DIR / "logs" / "gamepreset-peek.log"
 SETTINGS_FILE: Path = APP_DATA_DIR / "settings.json"
-COVERS_DIR: Path = APP_DATA_DIR / "cache" / "covers"
+# Pictures downloaded or extracted again when a cleanup tool deletes them.
+CACHE_DIR: Path = Path(tempfile.gettempdir()) / APP_NAME
+COVERS_DIR: Path = CACHE_DIR / "covers"
+EXE_ICONS_DIR: Path = CACHE_DIR / "icons"
+# Side of an extracted executable icon in pixels: more than the list's icons need at 200 % scale.
+EXE_ICON_SIZE: int = 48
+# Name of the local socket a running copy listens on; a second copy started by the same user brings it to the front.
+INSTANCE_NAME: str = f"{APP_NAME}-{os.environ.get('USERNAME', '')}"
 # Width of a downloaded box art picture in pixels: twice the cover column, sharp at 200 % scale.
 COVER_WIDTH: int = 440
 # Bundled data files live next to the package code.
@@ -72,6 +85,9 @@ GETTEXT_DOMAIN: str = "messages"
 DB_UPDATE_URL: str = "https://raw.githubusercontent.com/iRingil/gamepreset-peek/master/src/app/data/app.db"
 # Days after a database update before the next one is downloaded.
 DB_UPDATE_DAYS: int = 7
+# Games whose presets and translations stay in memory, the last shown ones; their files never change, a new
+# version of a file has another address.
+GAME_FILES_CACHED: int = 4
 
 # UI languages and the NVIDIA translation language of each.
 UI_LANGUAGES: dict[str, str] = {"en": "en_US", "ru": "ru_RU", "de": "de_DE", "fr": "fr_FR", "es": "es_ES"}

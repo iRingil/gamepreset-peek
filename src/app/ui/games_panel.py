@@ -186,7 +186,7 @@ class _InstalledTab(QWidget):  # pylint: disable=too-many-instance-attributes
         self.list.fill(
             items=[game.name for game in games],
             selected=selected,
-            icons=[self._icon(executable=game.executable) for game in games],
+            icons=[self._icon(game=game) for game in games],
         )
         self.pages.setCurrentWidget(self.list if games else self._empty)
 
@@ -204,16 +204,20 @@ class _InstalledTab(QWidget):  # pylint: disable=too-many-instance-attributes
             self.folder_list.setCurrentRow(min(max(row, 0), len(folders) - 1))
         self._update_buttons()
 
-    def _icon(self, *, executable: Path) -> QIcon:
+    def _icon(self, *, game: InstalledGameView) -> QIcon:
         """
-        Get the icon of an executable once.
+        Get the icon of a game once: its icon file, or the icon Windows gives a file without one.
 
-        :param executable: the file
-        :return: its icon as Windows shows it
+        :param game: the row of the game
+        :return: the icon
         """
-        if executable not in self._icons:
-            self._icons[executable] = self._icon_provider.icon(QFileInfo(str(executable)))
-        return self._icons[executable]
+        if game.executable not in self._icons:
+            self._icons[game.executable] = (
+                self._icon_provider.icon(QFileInfo(str(game.executable)))
+                if game.icon is None
+                else QIcon(str(game.icon))
+            )
+        return self._icons[game.executable]
 
     def _add(self) -> None:
         """

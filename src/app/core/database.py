@@ -3,6 +3,7 @@
 import hashlib
 import os
 import sqlite3
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -52,6 +53,25 @@ class AppDatabase:
         :return: the file
         """
         return self._path
+
+    def writable(self) -> bool:
+        """
+        Tell whether an update can replace the file: its folder takes a new file and the file itself can be written.
+
+        :return: True when it can
+        """
+        try:
+            handle: int
+            name: str
+            handle, name = tempfile.mkstemp(dir=self._path.parent)
+            os.close(handle)
+            os.unlink(path=name)
+            with self._path.open(mode="r+b"):
+                pass
+        except OSError as error:
+            logger.warning("Database {} can't be updated: {!r}", self._path, error)
+            return False
+        return True
 
     def load(self) -> AppData:
         """

@@ -1,5 +1,6 @@
 """Tests of the database file and its download."""
 
+import stat
 from pathlib import Path
 from typing import Iterator, Sequence
 
@@ -81,6 +82,50 @@ class TestAppDatabase:
         data: AppData = database.load()
         # Assert
         assert (database.path, data.catalog.games[0].name) == (path, "MORDHAU")
+
+    def test_writable(self, database: AppDatabase, path: Path) -> None:
+        """
+        Tells that an update can replace the file in a folder the user can write to, leaving nothing behind.
+
+        :param database: database under test
+        :param path: database file
+        :return: None
+        """
+        # Arrange & Act
+        writable: bool = database.writable()
+        # Assert
+        assert (writable, list(path.parent.iterdir())) == (True, [path])
+
+    def test_read_only_file(self, database: AppDatabase, path: Path) -> None:
+        """
+        Tells that an update can't replace a read-only file.
+
+        :param database: database under test
+        :param path: database file
+        :return: None
+        """
+        # Arrange
+        path.chmod(mode=stat.S_IREAD)
+        # Act
+        writable: bool = database.writable()
+        # Assert
+        path.chmod(mode=stat.S_IREAD | stat.S_IWRITE)
+        assert not writable
+
+    def test_missing_folder(self, http: HttpClient, tmp_path: Path) -> None:
+        """
+        Tells that an update can't be put in a folder that doesn't exist.
+
+        :param http: HTTP client
+        :param tmp_path: temporary directory
+        :return: None
+        """
+        # Arrange
+        database: AppDatabase = AppDatabase(http=http, path=tmp_path / "gone" / "app.db", url=_URL)
+        # Act
+        writable: bool = database.writable()
+        # Assert
+        assert not writable
 
     def test_same_download_dropped(self, mock: responses.RequestsMock, database: AppDatabase, path: Path) -> None:
         """

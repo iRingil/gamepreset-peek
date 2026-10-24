@@ -23,6 +23,7 @@ from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.debouncer import Debouncer
+from app.ui.exe_icons import ExeIcons
 from app.ui.games_presenter import GamesPresenter
 from app.ui.resolution_choice import ResolutionChoice
 from app.ui.status import Status, StatusTexts
@@ -67,6 +68,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         service: PresetService,
         runners: Runners,
         debouncer: Debouncer,
+        icons: ExeIcons,
         translator: Translator,
         theme: ThemeMode,
         auto_update: bool,
@@ -79,6 +81,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param service: service the requests go to
         :param runners: run the service calls in the background
         :param debouncer: delays the requests and the search while the user is still changing them
+        :param icons: icons of the installed games' executables
         :param translator: translator of the initial UI language
         :param theme: initial theme mode
         :param auto_update: whether the database is updated automatically
@@ -113,6 +116,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             service=service,
             runners=runners,
             debouncer=debouncer,
+            icons=icons,
             texts=self._texts,
             on_game=self._on_game,
             on_status=lambda status: self._set_status(status=status),
@@ -339,8 +343,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def _on_setup(self, setup: HardwareSetup) -> None:
         """
-        Show the hardware and resolution in use and check the hardware; warn when a CPU or GPU is neither chosen nor
-        detected.
+        Show the hardware and resolution in use and check the hardware.
 
         :param setup: detected hardware, bundled lists and what is in use
         :return: None
@@ -355,8 +358,6 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             on_done=self._on_hardware,
             on_error=lambda error: self._on_check_error(previous=choice, error=error),
         )
-        if setup.choice.cpu_name is None or setup.choice.gpu is None:
-            self._view.warn(text=self._translator.text(item=UiText.UNSUPPORTED_HARDWARE))
 
     def _on_setup_error(self, error: Exception) -> None:
         """
@@ -370,7 +371,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
 
     def _choose(self, *, choice: HardwareChoice) -> None:
         """
-        Show a new CPU and GPU pair at once and have NVIDIA check it; the hardware in use stays until it is accepted.
+        Show a new CPU and GPU pair at once and have NVIDIA check it; a check that fails to answer keeps the old pair.
 
         :param choice: the pair the user made
         :return: None

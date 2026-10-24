@@ -68,10 +68,11 @@ class ChoiceView:
 
 @dataclass(frozen=True, slots=True)
 class InstalledGameView:
-    """A row of the installed games: the game's name and the executable its icon is taken from."""
+    """A row of the installed games: the game's name, its executable and the icon file of it, None when it has none."""
 
     name: str
     executable: Path
+    icon: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,14 +169,6 @@ class MainView(Protocol):
 
         :param text: the line to show
         :param level: how serious the line is
-        :return: None
-        """
-
-    def warn(self, *, text: str) -> None:
-        """
-        Show a warning in a dialog the user closes with OK.
-
-        :param text: the warning
         :return: None
         """
 
