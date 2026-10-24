@@ -79,7 +79,7 @@ class _Application:  # pylint: disable=too-few-public-methods
             instance: SingleInstance = SingleInstance()
             if not instance.claim():
                 return
-            window: MainWindow = MainWindow(log_lines=self._logging.lines)
+            window: MainWindow = MainWindow(log_lines=self._logging.lines if self._logging.debug else None)
             instance.activated.connect(window.bring_to_front)
             requests: Worker = Worker(name="requests")
             finder: Worker = Worker(name="finder")
@@ -127,7 +127,7 @@ class _Application:  # pylint: disable=too-few-public-methods
 
 
 if __name__ == "__main__":  # pragma: no cover
-    _logging: LoggingManager = LoggingManager(debug=True)
+    _logging: LoggingManager = LoggingManager(debug=False)
     logger.info("Starting")
     try:
         _Application(logging_manager=_logging).run()

@@ -474,11 +474,11 @@ class _StatusLine(QLabel):
 class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
     """The main window; user actions go to the presenter set with attach(), which fills the widgets in turn."""
 
-    def __init__(self, *, log_lines: Queue[str]) -> None:
+    def __init__(self, *, log_lines: Queue[str] | None) -> None:
         """
         Build every widget; texts are set by apply_language(), the color scheme by apply_theme().
 
-        :param log_lines: formatted log lines for the log panel
+        :param log_lines: formatted log lines for the log panel, None for a window without the panel and its button
         """
         super().__init__()
         self._presenter: Presenter | None = None
@@ -533,14 +533,18 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
 
         bottom: QHBoxLayout = QHBoxLayout()
         self._status: _StatusLine = _StatusLine(parent=self)
-        self._logs_button: QPushButton = QPushButton(parent=self)
-        self._logs_button.clicked.connect(self._toggle_logs)
         bottom.addWidget(self._status, stretch=1)
-        bottom.addWidget(self._logs_button)
         layout.addLayout(bottom)
-        self._log_panel: LogPanel = LogPanel(lines=log_lines, parent=self)
-        self._log_panel.hide()
-        layout.addWidget(self._log_panel)
+        self._logs_button: QPushButton | None = None
+        self._log_panel: LogPanel | None = None
+        if log_lines is not None:
+            logs_button: QPushButton = QPushButton(parent=self)
+            logs_button.clicked.connect(self._toggle_logs)
+            bottom.addWidget(logs_button)
+            log_panel: LogPanel = LogPanel(lines=log_lines, parent=self)
+            log_panel.hide()
+            layout.addWidget(log_panel)
+            self._logs_button, self._log_panel = logs_button, log_panel
 
     def _body(self) -> QHBoxLayout:
         """
@@ -639,9 +643,10 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._games.apply_language(translator=translator)
         self._settings.apply_language(translator=translator)
         self._no_recommendation.set_text(text=translator.text(item=UiText.NO_RECOMMENDATION_TITLE))
-        self._logs_button.setText(
-            translator.text(item=UiText.HIDE_LOGS if self._log_panel.isVisible() else UiText.SHOW_LOGS)
-        )
+        if self._logs_button is not None and self._log_panel is not None:
+            self._logs_button.setText(
+                translator.text(item=UiText.HIDE_LOGS if self._log_panel.isVisible() else UiText.SHOW_LOGS)
+            )
 
     def show_hardware(self, *, hardware: HardwareView) -> None:
         """
@@ -861,6 +866,8 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
 
         :return: None
         """
+        if self._logs_button is None or self._log_panel is None:  # pragma: no cover
+            return
         shown: bool = not self._log_panel.isVisible()
         self._log_panel.setVisible(shown)
         if self._translator is not None:

@@ -36,6 +36,7 @@ from app.ui.cover_view import CoverView
 from app.ui.games_panel import GamesPanel
 from app.ui.games_presenter import GamesPresenter
 from app.ui.icons import IconButton
+from app.ui.log_panel import LogPanel
 from app.ui.main_window import MainWindow
 from app.ui.notice import Notice
 from app.ui.preset_slider import PresetSlider
@@ -736,6 +737,22 @@ class TestMainWindow:
         button.click()
         # Assert
         assert (shown, button.text()) == ("Hide logs", "Show logs")
+
+    def test_no_logs_without_lines(self, qt_app: QApplication, translator: Translator) -> None:
+        """
+        Has neither the log panel nor its button when the window gets no log lines, as in a release.
+
+        :param qt_app: Qt application
+        :param translator: English translator
+        :return: None
+        """
+        # Arrange
+        widget: MainWindow = MainWindow(log_lines=None)
+        # Act
+        widget.apply_language(translator=translator)
+        # Assert
+        assert not [button for button in widget.findChildren(QPushButton) if button.text() == "Show logs"]
+        assert widget.findChild(LogPanel) is None
 
     def test_apply_theme(self, window: _Window, monkeypatch: pytest.MonkeyPatch) -> None:
         """

@@ -77,7 +77,7 @@ class TestLoggingManager:
         :return: None
         """
         # Arrange
-        manager: LoggingManager = LoggingManager(debug=False)
+        manager: LoggingManager = LoggingManager(debug=True)
         # Act
         logger.info("Loaded {} games", 3)
         # Assert
@@ -85,6 +85,19 @@ class TestLoggingManager:
         assert len(lines) == 1
         assert lines[0].endswith("| INFO     | Loaded 3 games")
         assert not lines[0].endswith("\n")
+
+    def test_no_panel_lines_in_release(self) -> None:
+        """
+        Collects no panel lines outside debug mode: a release has no log panel to drain them.
+
+        :return: None
+        """
+        # Arrange
+        manager: LoggingManager = LoggingManager(debug=False)
+        # Act
+        logger.warning("Retrying request")
+        # Assert
+        assert (manager.debug, self._drain(manager=manager)) == (False, [])
 
     @pytest.mark.parametrize(
         argnames=("debug", "expected"), argvalues=[(True, 1), (False, 0)], ids=["debug", "release"]
@@ -126,7 +139,7 @@ class TestLoggingManager:
         :return: None
         """
         # Arrange
-        manager: LoggingManager = LoggingManager(debug=False)
+        manager: LoggingManager = LoggingManager(debug=True)
         # Act
         logging.getLogger(name="third.party").warning(msg="Retrying request")
         # Assert
@@ -141,7 +154,7 @@ class TestLoggingManager:
         :return: None
         """
         # Arrange
-        manager: LoggingManager = LoggingManager(debug=False)
+        manager: LoggingManager = LoggingManager(debug=True)
         # Act
         logging.getLogger(name="third.party").log(level=25, msg="Custom level")
         # Assert
@@ -170,7 +183,7 @@ class TestLoggingManager:
         :return: None
         """
         # Arrange
-        manager: LoggingManager = LoggingManager(debug=False)
+        manager: LoggingManager = LoggingManager(debug=True)
         thread: threading.Thread = threading.Thread(target=self._raise_runtime_error, name="worker")
         # Act
         thread.start()
@@ -188,7 +201,7 @@ class TestLoggingManager:
         :return: None
         """
         # Arrange
-        manager: LoggingManager = LoggingManager(debug=False)
+        manager: LoggingManager = LoggingManager(debug=True)
         thread: threading.Thread = threading.Thread(target=self._raise_system_exit, name="worker")
         # Act
         thread.start()
@@ -206,7 +219,7 @@ class TestLoggingManager:
         # Arrange
         monkeypatch.setattr(target=sys, name="stderr", value=None)
         # Act
-        manager: LoggingManager = LoggingManager(debug=False)
+        manager: LoggingManager = LoggingManager(debug=True)
         logger.info("No console")
         # Assert
         assert len(self._drain(manager=manager)) == 1

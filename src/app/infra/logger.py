@@ -39,7 +39,7 @@ class _InterceptHandler(logging.Handler):
 
 
 class LoggingManager:
-    """Configures loguru for the application and collects log lines for the UI log panel.
+    """Configures loguru for the application and, in debug mode, collects log lines for the UI log panel.
 
     The panel drains ``lines`` periodically; lines logged before the window exists wait in the queue."""
 
@@ -47,8 +47,9 @@ class LoggingManager:
         """
         Set up all sinks, standard logging interception and the thread exception hook.
 
-        :param debug: log DEBUG records and caller details if True
+        :param debug: log DEBUG records and caller details and fill the log panel if True
         """
+        self.debug: bool = debug
         self.lines: Queue[str] = Queue()
         logger.remove()
         log_level: int = logging.DEBUG if debug else logging.INFO
@@ -71,7 +72,9 @@ class LoggingManager:
             backtrace=True,
             diagnose=debug,
         )
-        logger.add(sink=self._to_panel, level=log_level, format="{time:HH:mm:ss} | {level: <8} | {message}")
+        # A release has no log panel: nothing would drain the queue.
+        if debug:
+            logger.add(sink=self._to_panel, level=log_level, format="{time:HH:mm:ss} | {level: <8} | {message}")
         self._setup_intercept_handler(log_level=log_level)
         threading.excepthook = self._log_thread_exception
 
