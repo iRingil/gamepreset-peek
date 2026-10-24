@@ -54,7 +54,7 @@ class TestText:
 
     def test_placeholders_filled(self, locale_dir: Path) -> None:
         """
-        Fills the placeholders of a translated text.
+        Fills the placeholders with a translated text.
 
         :param locale_dir: compiled catalogs
         :return: None

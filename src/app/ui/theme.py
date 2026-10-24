@@ -45,7 +45,7 @@ class Theme:
         ThemeMode.DARK: Qt.ColorScheme.Dark,
     }
 
-    # The theme's own light palette is near white with grey text and faint borders: a steel window holds lighter
+    # The theme's own light palette is near white with gray text and faint borders: a steel window holds lighter
     # lists and tables, with near-black text and one teal-blue accent (links, slider, selection).
     _LIGHT_COLORS: dict[str, str] = {
         "background": "#d9e0e8",

@@ -9,6 +9,7 @@ import pytest
 from loguru import logger
 from PySide6.QtWidgets import QApplication
 
+# noinspection PyProtectedMember
 from app.__main__ import _Application
 
 __all__: tuple = ()
@@ -49,6 +50,7 @@ class TestLogUnhandled:
         :param error: exception to raise
         :return: type, exception and traceback
         """
+        # noinspection PyBroadException
         try:
             raise error
         except BaseException:  # pylint: disable=broad-exception-caught

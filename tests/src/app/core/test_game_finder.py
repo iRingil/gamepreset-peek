@@ -354,7 +354,7 @@ class TestWindowsRegistry:
     @pytest.fixture(name="key", autouse=True)
     def _key(self) -> Iterator[str]:
         """
-        Write test values: a folder, a default value, a number and a versioned subkey; remove them afterwards.
+        Write test values: a folder, a default value, a number and a versioned subkey; remove them afterward.
 
         :return: the key path under HKEY_CURRENT_USER
         """

@@ -100,7 +100,7 @@ class PresetSlider(QSlider):
         stops: list[float] = self._stops()
         top: float = self._track_top()
         middle: float = top + track / 2
-        # Segment i joins the stops of presets i and i + 1 (0-based).
+        # Segment 'i' joins the stops of presets i and i + 1 (0-based).
         for i, segment in enumerate(self._segments()):
             painter.setBrush(accent if self.minimum() + i < self.value() else rest)
             painter.drawRoundedRect(segment, track / 2, track / 2)

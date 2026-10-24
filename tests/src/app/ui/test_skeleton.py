@@ -4,6 +4,7 @@ from PySide6.QtCore import QRectF
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
+# noinspection PyProtectedMember
 from app.ui.skeleton import _ROW, _TABLE_HEADER, _TABLE_ROW, _TABLE_TOP, ListSkeleton, SettingsSkeleton, Skeleton
 from app.ui.typography import Typography
 

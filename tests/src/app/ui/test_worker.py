@@ -17,11 +17,11 @@ class TestWorker:
     """Tests of Worker; callbacks are delivered by processing the Qt events once the tasks are done."""
 
     @staticmethod
-    def _unexpected(value: object) -> None:
+    def _unexpected(value: int | Exception | None) -> None:
         """
         Fail the test from a callback that must not be called.
 
-        :param value: what the callback got
+        :param value: what the callback got: a task's result or its error
         :return: None
         """
         raise AssertionError(f"unexpected callback with {value!r}")

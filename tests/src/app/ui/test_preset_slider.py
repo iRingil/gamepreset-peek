@@ -9,6 +9,7 @@ from PySide6.QtGui import QColor, QImage, QMouseEvent, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
+# noinspection PyProtectedMember
 from app.ui.preset_slider import _FOCUS, _HANDLE, _MARK, _TRACK, PresetSlider
 from app.ui.typography import Typography
 

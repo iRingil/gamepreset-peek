@@ -36,7 +36,7 @@ class ExeIcons:
         Get the icon file of an executable, extracting the icon the first time.
 
         :param executable: the executable
-        :return: the PNG file, None when the executable has no icon or it can't be read
+        :return: the PNG file, None when the executable has no icon, or it can't be read
         """
         path: Path = self._folder / f"{hashlib.sha256(str(executable).casefold().encode()).hexdigest()[:32]}.png"
         if path.is_file():

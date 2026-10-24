@@ -22,7 +22,7 @@ class SettingsMenu(QFrame):
     """A popup under the settings button; a click outside closes it, a language pick too.
 
     The theme is one of three symbol buttons, the language a list of flags with language codes, the automatic
-    database update a check box."""
+    database update a checkbox."""
 
     # Theme modes in menu order with the symbol and the tooltip of each.
     _THEMES: dict[ThemeMode, tuple[str, UiText]] = {

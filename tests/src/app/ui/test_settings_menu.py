@@ -63,7 +63,7 @@ class _Menu:
         """
         Get the database update switch.
 
-        :return: the check box
+        :return: the checkbox
         """
         found: QCheckBox | None = self.widget.findChild(QCheckBox)
         assert found is not None

@@ -33,7 +33,7 @@ class Elevation:
         """
         Start the program again as administrator; the user confirms it in the UAC prompt.
 
-        :return: True when the new copy started, False when the user declined or it failed
+        :return: True when the new copy started, False when the user declined, or it failed
         """
         parameters: str = subprocess.list2cmdline(sys.orig_argv[1:])
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.

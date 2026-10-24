@@ -49,7 +49,7 @@ def _locale_dir(tmp_path: Path, catalogs: dict[str, Catalog]) -> Path:
 @pytest.fixture(name="qt_app", scope="session")
 def _qt_app() -> Iterator[QApplication]:
     """
-    Create one Qt application for the session, drawing off screen.
+    Create one Qt application for the session, drawing off-screen.
 
     :return: the application
     """
