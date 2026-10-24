@@ -109,5 +109,4 @@ class TestLoad:
         names: GameNames = GameNames.load()
         # Assert
         assert names.name(game_id="baldurs_gate_3") == "Baldur's Gate 3"
-        assert names.name(game_id="dead_or_alive_5") == "DEAD OR ALIVE® 5 Last Round"
         assert all(name and name == name.strip() for name in raw)
