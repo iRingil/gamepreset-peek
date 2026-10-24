@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Callable, Sequence
 
 from PySide6.QtCore import QFileInfo, QModelIndex, QSize, Qt
-from PySide6.QtGui import QIcon, QPalette, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QIcon, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFileDialog,
@@ -25,6 +25,7 @@ from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.icons import IconButton
 from app.ui.skeleton import ListSkeleton
+from app.ui.theme import Theme
 from app.ui.typography import GAP, Typography
 from app.ui.views import InstalledGameView
 
@@ -128,13 +129,13 @@ class _InstalledTab(QWidget):  # pylint: disable=too-many-instance-attributes
         self._empty: QLabel = QLabel(parent=self)
         self._empty.setWordWrap(True)
         self._empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._empty.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        Theme.mute(label=self._empty)
         self._empty.setMargin(Typography.px(ems=GAP * 2))
         self.pages: QStackedWidget = QStackedWidget(parent=self)
         for page in (self.skeleton, self.list, self._empty):
             self.pages.addWidget(page)
         self._caption: QLabel = QLabel(parent=self)
-        self._caption.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        Theme.mute(label=self._caption)
         self.folder_list: QListWidget = QListWidget(parent=self)
         self.folder_list.currentRowChanged.connect(lambda _: self._update_buttons())
         self.add: IconButton = IconButton(symbol="plus", parent=self)

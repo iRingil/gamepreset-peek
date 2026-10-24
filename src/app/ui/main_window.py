@@ -166,13 +166,13 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
     @staticmethod
     def _muted(*, parent: QWidget) -> QLabel:
         """
-        Make a label in the dimmed text color of the palette.
+        Make a label in the dimmed text color of the theme.
 
         :param parent: widget the label belongs to
         :return: the label
         """
         label: QLabel = QLabel(parent=parent)
-        label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        Theme.mute(label=label)
         return label
 
     def _settings_table(self) -> QTreeWidget:
@@ -317,12 +317,12 @@ class _HardwareBlock(QWidget):
 
     def _caption(self) -> QLabel:
         """
-        Make a caption in the dimmed text color of the palette.
+        Make a caption in the dimmed text color of the theme.
 
         :return: the caption
         """
         label: QLabel = QLabel(parent=self)
-        label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        Theme.mute(label=label)
         return label
 
     def _value(self) -> QLabel:
@@ -397,7 +397,7 @@ class _TopBar(QWidget):
 
 
 class _StatusLine(QLabel):
-    """The status line: an informing line in the placeholder text color, a warning in yellow, an error in red.
+    """The status line: an informing line in the dimmed text color, a warning in yellow, an error in red.
 
     A line wider than the window is cut with an ellipsis and shown whole in the tooltip; it never widens the window."""
 
@@ -410,7 +410,8 @@ class _StatusLine(QLabel):
         super().__init__(parent)
         self._level: StatusLevel = StatusLevel.INFO
         self._text: str = ""
-        self.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        # Dimmed while informing; a warning's or an error's own color overrides it.
+        Theme.mute(label=self)
         self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
 
     def show_status(self, *, text: str, level: StatusLevel) -> None:

@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QListView,
-    QMessageBox,
     QPushButton,
     QSlider,
     QStyle,
@@ -674,7 +673,7 @@ class TestMainWindow:
 
     def test_status(self, window: _Window) -> None:
         """
-        Shows the status line, an informing one in the placeholder text color.
+        Shows the status line, an informing one in the dimmed text color.
 
         :param window: the window
         :return: None
@@ -684,7 +683,7 @@ class TestMainWindow:
         # Assert
         label: QLabel = window.label(text="Loading…")
         assert label.isVisible()
-        assert (label.foregroundRole(), label.styleSheet()) == (QPalette.ColorRole.PlaceholderText, "")
+        assert (label.property("muted"), label.styleSheet()) == (True, "")
         assert label.toolTip() == ""
 
     def test_long_status_cut(self, window: _Window) -> None:
@@ -720,7 +719,7 @@ class TestMainWindow:
         # Act
         window.widget.setPalette(dark)
         # Assert
-        assert (light, label.styleSheet()) == ("color:#d93025", "color:#f28b82")
+        assert (light, label.styleSheet()) == ("color:#b3261e", "color:#f28b82")
 
     def test_logs_toggled(self, window: _Window) -> None:
         """

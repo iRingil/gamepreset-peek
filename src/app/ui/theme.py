@@ -2,6 +2,7 @@
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QGuiApplication
+from PySide6.QtWidgets import QLabel
 
 from app.core.models import ThemeMode
 from app.ui.vendor import qdarktheme
@@ -16,6 +17,7 @@ __all__: tuple[str, ...] = ("Theme",)
 # The first tab starts a little in from the pane edge, so the pane keeps its rounded top-left corner.
 # The detected item of a choice, mostly the one in use, still answers the mouse with a stronger selection color.
 # The settings table, reached with Tab to scroll by keys, shows its focus in the frame: its rows can't be selected.
+# Dimmed labels get an opaque color: Qt draws the placeholder text role at half the opacity of the text color.
 # The {{name|color}} placeholders take the colors of the theme in use.
 _QSS: str = """
 QListView, QTreeView {padding:0}
@@ -30,6 +32,7 @@ QTabBar::tab:top:selected, QTabBar::tab:top:selected:hover:enabled {margin-botto
 border-color:{{border|color}};background:{{background|color}}}
 QListView#detected::item:selected:hover {background:{{primary|color(state="table.selectionBackground")}}}
 QTreeView#settings:focus {border-color:{{primary|color}}}
+QLabel[muted="true"] {color:{{foreground|color(state="input.placeholder")}}}
 """
 
 
@@ -59,14 +62,18 @@ class Theme:
         "primary>table.inactiveSelectionBackground": "#c4e0ea",
         "statusBar.background": "#c9d2dc",
         "tableSectionHeader.background": "#c6d0db",
+        # Dimmed text: 6.8:1 on the window, the AA contrast for text.
+        "foreground>input.placeholder": "#3d4a5a",
     }
+    # Dimmed text of the dark mode: the theme's text at half opacity on its window, as it always looked.
+    _DARK_COLORS: dict[str, str] = {"foreground>input.placeholder": "#828488"}
 
-    # Status line colors on a dark and a light background; an informing line keeps the placeholder text color.
+    # Status line colors on a dark and a light background; an informing line keeps the dimmed text color.
     _STATUS_COLORS: dict[tuple[StatusLevel, bool], str] = {
         (StatusLevel.WARNING, True): "#fdd663",
         (StatusLevel.ERROR, True): "#f28b82",
-        (StatusLevel.WARNING, False): "#b06000",
-        (StatusLevel.ERROR, False): "#d93025",
+        (StatusLevel.WARNING, False): "#8a4b00",
+        (StatusLevel.ERROR, False): "#b3261e",
     }
 
     # Green of a confirmation on a dark and a light background.
@@ -81,6 +88,16 @@ class Theme:
         :return: the color as "#rrggbb"
         """
         return cls._SUCCESS_COLORS[background.lightness() < 128]
+
+    @staticmethod
+    def mute(*, label: QLabel) -> None:
+        """
+        Draw a label in the dimmed text color of the theme, e.g. a caption next to its value.
+
+        :param label: the label, not yet shown
+        :return: None
+        """
+        label.setProperty("muted", True)
 
     @classmethod
     def status_color(cls, *, level: StatusLevel, background: QColor) -> str | None:
@@ -114,5 +131,5 @@ class Theme:
         # The Qt color scheme still drives the window title bar, which the style sheet can't reach.
         QGuiApplication.styleHints().setColorScheme(cls.scheme(mode=mode))
         # ThemeMode values are the theme names of PyQtDarkTheme.
-        colors: dict[str, str | dict[str, str]] = {"[light]": cls._LIGHT_COLORS}
+        colors: dict[str, str | dict[str, str]] = {"[light]": cls._LIGHT_COLORS, "[dark]": cls._DARK_COLORS}
         qdarktheme.setup_theme(theme=mode.value, custom_colors=colors, additional_qss=_QSS)

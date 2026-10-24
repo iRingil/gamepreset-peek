@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QGuiApplication, QPalette
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QLabel
 
 from app.core.models import ThemeMode
 from app.ui.theme import Theme
@@ -47,8 +47,8 @@ class TestTheme:
             (StatusLevel.WARNING, "#202124", "#fdd663"),
             (StatusLevel.ERROR, "#202124", "#f28b82"),
             (StatusLevel.INFO, "#f8f9fa", None),
-            (StatusLevel.WARNING, "#f8f9fa", "#b06000"),
-            (StatusLevel.ERROR, "#f8f9fa", "#d93025"),
+            (StatusLevel.WARNING, "#f8f9fa", "#8a4b00"),
+            (StatusLevel.ERROR, "#f8f9fa", "#b3261e"),
         ],
         ids=["dark info", "dark warning", "dark error", "light info", "light warning", "light error"],
     )
@@ -128,3 +128,27 @@ class TestTheme:
         assert themed.palette().color(QPalette.ColorRole.Link).name() == "#0b6b8a"
         assert "qwidget {background:rgba(217, 224, 232, 1.000)" in sheet
         assert "rgba(247, 249, 251, 1.000)" in sheet
+
+    @pytest.mark.parametrize(
+        argnames=("mode", "color"),
+        argvalues=[(ThemeMode.LIGHT, (61, 74, 90)), (ThemeMode.DARK, (130, 132, 136))],
+        ids=["light", "dark"],
+    )
+    def test_muted_label(self, themed: QApplication, mode: ThemeMode, color: tuple[int, int, int]) -> None:
+        """
+        Draws a dimmed label in an opaque color of the theme: AA contrast in light mode, the old look in dark mode.
+
+        :param themed: Qt application, restored after the test
+        :param mode: theme mode
+        :param color: expected text color
+        :return: None
+        """
+        # Arrange
+        Theme.apply(mode=mode)
+        label: QLabel = QLabel(text="Caption")
+        # Act
+        Theme.mute(label=label)
+        label.ensurePolished()
+        # Assert
+        assert label.palette().color(label.foregroundRole()).getRgb() == (*color, 255)
+        assert themed is not None
