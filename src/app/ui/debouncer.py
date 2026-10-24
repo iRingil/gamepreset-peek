@@ -43,14 +43,13 @@ class QtDebouncer(QObject):
         :param action: the action, run in the UI thread
         :return: None
         """
-        timer: QTimer | None = self._timers.get(key)
-        if timer is None:
-            timer = QTimer(parent=self)
+        if key not in self._timers:
+            timer: QTimer = QTimer(parent=self)
             timer.setSingleShot(True)
             timer.timeout.connect(lambda: self._fire(key=key))
             self._timers[key] = timer
         self._actions[key] = action
-        timer.start(delay_ms)
+        self._timers[key].start(delay_ms)
 
     def _fire(self, *, key: str) -> None:
         """

@@ -23,7 +23,6 @@ from app.core.models import (
     SystemHardware,
     ThemeMode,
 )
-from app.i18n.ui_text import UiText
 from app.ui.presenter import Presenter
 from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, SettingRow, SettingsView, StatusLevel
 from presenter_fakes import (
@@ -930,6 +929,7 @@ class TestAutoUpdate(PresenterTests):
 class TestDatabaseUpdate(PresenterTests):
     """Tests of the database update run at the start."""
 
+    # noinspection PyMethodOverriding
     @pytest.fixture(name="updater")
     def _updater(self) -> FakeRunner:
         """
@@ -1111,6 +1111,7 @@ class TestDatabaseUpdate(PresenterTests):
 class TestSaves(PresenterTests):
     """Tests of the settings saves: a runner of their own and a failure in the status line."""
 
+    # noinspection PyMethodOverriding
     @pytest.fixture(name="saver")
     def _saver(self) -> FakeRunner:
         """

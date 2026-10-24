@@ -39,6 +39,7 @@ class TestTypography:
         Typography.install()
         # Assert
         assert (QApplication.font().family(), QApplication.font().pointSizeF()) == ("Golos Text", 10)
+        # noinspection PyTypeChecker
         assert QApplication.font("QAbstractItemView").family() == "Golos Text"
 
     def test_install_without_font_file(self, font_kept: QFont, monkeypatch: pytest.MonkeyPatch) -> None:

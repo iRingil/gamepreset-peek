@@ -299,9 +299,10 @@ class TestRegistry:
             (None, "   "),
             ('^"([^"]*)"', "{root}\\Mordhau"),
             ("([", "{root}\\Mordhau"),
+            ('^(")?C:', "C:\\Games"),
             (None, "{root}\\Elsewhere"),
         ],
-        ids=["missing", "blank", "pattern not fitting", "bad pattern", "no executable there"],
+        ids=["missing", "blank", "pattern not fitting", "bad pattern", "group not matched", "no executable there"],
     )
     def test_not_found(self, tmp_path: Path, regex: str | None, text: str | None) -> None:
         """

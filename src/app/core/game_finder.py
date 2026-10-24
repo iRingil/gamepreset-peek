@@ -42,7 +42,7 @@ class WindowsRegistry:
         hive: int | None = cls._HIVES.get(parts[0].upper())
         if hive is None or len(parts) < 3:
             return None
-        views: tuple[int, ...] = (value.view,) if value.view in cls._VIEWS else (64, 32)
+        views: tuple[int, ...] = (value.view,) if value.view is not None and value.view in cls._VIEWS else (64, 32)
         for view in views:
             for key_path in cls._key_paths(hive=hive, parts=parts[1:-1], view=view):
                 text: str | None = cls._string(hive=hive, key_path=key_path, name=parts[-1], view=view)
@@ -154,10 +154,10 @@ class GameFinder:
                 if game_id is not None:
                     found.setdefault(game_id, file)
         games: list[InstalledGame] = []
-        for game_id, executable in found.items():
-            game: Game | None = catalog.game(game_id=game_id)
+        for found_id, found_file in found.items():
+            game: Game | None = catalog.game(game_id=found_id)
             if game is not None:
-                games.append(InstalledGame(game=game, executable=executable))
+                games.append(InstalledGame(game=game, executable=found_file))
         logger.info("Found {} installed games in {}", len(games), ", ".join(str(folder) for folder in folders))
         return tuple(sorted(games, key=lambda item: item.game.name.casefold()))
 
@@ -186,9 +186,10 @@ class GameFinder:
         :param value: the value
         :return: the folder, None when the value is missing or doesn't fit its pattern
         """
-        text: str | None = self._registry(value)
-        if text is None:
+        read: str | None = self._registry(value)
+        if read is None:
             return None
+        text: str = read
         if value.value_regex is not None:
             try:
                 match: re.Match[str] | None = re.search(pattern=value.value_regex, string=text)
@@ -197,7 +198,8 @@ class GameFinder:
                 return None
             if match is None:
                 return None
-            text = match.group(1) if match.re.groups else match.group(0)
+            # A group that took no part in the match gives None.
+            text = (match.group(1) if match.re.groups else match.group(0)) or ""
         text = os.path.expandvars(path=text.strip().strip('"'))
         if not text:
             return None

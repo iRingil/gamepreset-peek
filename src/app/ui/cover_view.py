@@ -102,7 +102,8 @@ class CoverView(Skeleton):
         radius: float = Typography.length(ems=_RADIUS)
         frame.addRoundedRect(QRectF(self.rect()), radius, radius)
         painter: QPainter = QPainter(self)
-        painter.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
         if self._picture is not None:
             painter.setClipPath(frame)
             ratio: float = self.devicePixelRatioF()

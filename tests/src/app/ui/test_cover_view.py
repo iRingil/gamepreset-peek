@@ -126,8 +126,9 @@ class TestCoverView:
         # Arrange
         path: Path | None = None
         if broken:
-            path = tmp_path / "broken.jpg"
-            path.write_bytes(data=b"<html>")
+            broken_file: Path = tmp_path / "broken.jpg"
+            broken_file.write_bytes(data=b"<html>")
+            path = broken_file
         # Act
         cover.show_picture(path=path)
         cover.grab()

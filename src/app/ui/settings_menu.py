@@ -104,7 +104,7 @@ class SettingsMenu(QFrame):
             button.setToolTip(translator.text(item=hint))
             group.addButton(button, position)
             row.addWidget(button)
-        group.idClicked.connect(lambda position: on_theme(modes[position]))
+        group.idClicked.connect(lambda clicked: on_theme(modes[int(clicked)]))
         return row
 
     def _pick_language(self, position: int) -> None:

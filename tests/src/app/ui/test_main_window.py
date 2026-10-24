@@ -495,8 +495,8 @@ class TestMainWindow:
         hints: tuple[str, ...] = (
             window.child(parent=window.widget, kind=PresetSlider).toolTip(),
             window.button(text="Optimal").toolTip(),
-            table.topLevelItem(0).toolTip(1),
-            table.topLevelItem(1).toolTip(1),
+            table.model().index(0, 1).data(Qt.ItemDataRole.ToolTipRole),
+            table.model().index(1, 1).data(Qt.ItemDataRole.ToolTipRole),
         )
         # Assert
         assert [link.toolTip() for link in links] == [

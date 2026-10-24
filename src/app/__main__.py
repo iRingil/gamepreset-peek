@@ -62,7 +62,7 @@ class _Application:  # pylint: disable=too-few-public-methods
                 covers=CoverCache(http=http),
             )
             translator: Translator = Translator(language=Translator.pick_language(saved=service.saved_language()))
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+            ctypes.WinDLL(name="shell32")["SetCurrentProcessExplicitAppUserModelID"](APP_USER_MODEL_ID)
             application: QApplication = QApplication(sys.argv)
             application.setWindowIcon(QIcon(str(APP_ICON_FILE)))
             # The theme's first call sets the style, which restores the Windows fonts of lists and menus: install

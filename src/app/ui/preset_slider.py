@@ -207,6 +207,5 @@ class PresetSlider(QSlider):
         :param x: horizontal position in the widget
         :return: 1-based preset index
         """
-        stops: list[float] = self._stops()
-        nearest: int = min(range(len(stops)), key=lambda i: abs(stops[i] - x))
-        return self.minimum() + nearest
+        distances: list[float] = [abs(stop - x) for stop in self._stops()]
+        return self.minimum() + distances.index(min(distances))
