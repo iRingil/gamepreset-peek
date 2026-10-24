@@ -30,6 +30,7 @@ class UiText(StrEnum):
     AUTO_UPDATE = "Auto-update"
     AUTO_UPDATE_HINT = "Downloads the latest lists of processors, graphics cards and games once a week."
     SEARCH = "Search"
+    DETECTED = "Detected"
     SETTING = "Setting"
     VALUE = "Value"
     SHOW_LOGS = "Show logs"

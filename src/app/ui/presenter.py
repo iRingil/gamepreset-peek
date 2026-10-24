@@ -2,7 +2,6 @@
 
 from dataclasses import replace
 from pathlib import Path, PureWindowsPath
-from typing import Callable
 
 from loguru import logger
 
@@ -29,6 +28,7 @@ from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.debouncer import Debouncer
 from app.ui.game_lists import GameLists
+from app.ui.status import Status, StatusTexts
 from app.ui.views import (
     ChoiceGroup,
     ChoiceView,
@@ -37,6 +37,7 @@ from app.ui.views import (
     MainView,
     SettingRow,
     SettingsView,
+    StatusLevel,
 )
 from app.ui.worker import TaskRunner
 
@@ -62,12 +63,6 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
     The database update runs once the first hardware check has answered, so a slow download never delays the start;
     a new database refreshes the games, the installed ones and the choice lists."""
 
-    _COMPONENTS: dict[str, UiText] = {
-        "cpu": UiText.COMPONENT_CPU,
-        "gpu": UiText.COMPONENT_GPU,
-        "memory": UiText.COMPONENT_MEMORY,
-        "os": UiText.COMPONENT_OS,
-    }
     # Tabs of the bundled CPUs: vendor names, not translated.
     _AMD: str = "AMD"
     _INTEL: str = "Intel"
@@ -116,7 +111,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._choice: HardwareChoice = HardwareChoice(cpu_name=None, gpu=None)
         self._hardware: Hardware | None = None
         self._resolution_name: str | None = None
-        self._problem: Callable[[], str] | None = None
+        self._problem: Status | None = None
         self._lists: GameLists = GameLists(choice=GameChoice())
         self._saved_choice: GameChoice = GameChoice()
         self._folders: tuple[str, ...] = ()
@@ -129,7 +124,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._preset_index: int = 0
         self._request: int = 0
         self._cover_request: int = 0
-        self._status: Callable[[], str] | None = None
+        self._status: Status | None = None
+        self._texts: StatusTexts = StatusTexts(translator=lambda: self._translator)
 
     @property
     def language(self) -> str:
@@ -284,7 +280,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         )
         self._view.apply_language(translator=self._translator)
         self._render_hardware()
-        self._set_status(text=self._status)
+        self._set_status(status=self._status)
         if self._settings is not None:
             self._render_settings()
 
@@ -435,14 +431,14 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         if game is None:
             self._view.clear_cover(loading=False)
             self._clear_game(loading=False)
-            self._set_status(text=self._problem)
+            self._set_status(status=self._problem)
             return
         self._request_cover()
         self._clear_game(loading=self._hardware is not None)
         if self._hardware is None:
-            self._set_status(text=self._problem or self._text(item=UiText.LOADING))
+            self._set_status(status=self._problem or self._texts.info(item=UiText.LOADING))
             return
-        self._set_status(text=self._text(item=UiText.LOADING))
+        self._set_status(status=self._texts.info(item=UiText.LOADING))
         self._debouncer.call(key=self._PRESETS, delay_ms=REQUEST_DELAY_MS, action=self._request_presets)
 
     def _save_game_choice(self) -> None:
@@ -577,7 +573,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :return: None
         """
         self._on_found(games=())
-        self._set_status(text=self._text(item=UiText.FIND_FAILED, error=str(error)))
+        self._set_status(status=self._texts.error(item=UiText.FIND_FAILED, error=error))
 
     def _on_setup(self, setup: HardwareSetup) -> None:
         """
@@ -607,7 +603,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param error: the failure
         :return: None
         """
-        self._lose_hardware(text=self._text(item=UiText.HARDWARE_FAILED, error=str(error)))
+        self._lose_hardware(status=self._texts.error(item=UiText.HARDWARE_FAILED, error=error))
         self._update_database_once()
 
     def _choose(self, *, choice: HardwareChoice) -> None:
@@ -638,13 +634,13 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         if check.state is HardwareState.READY and check.hardware is not None:
             self._hardware = check.hardware
             if self._problem is not None and self._status is self._problem:
-                self._set_status(text=None)
+                self._set_status(status=None)
             self._problem = None
             if self._game is not None:
                 self._clear_game(loading=True)
                 self._request_presets()
         else:
-            self._lose_hardware(text=self._problem_text(check=check))
+            self._lose_hardware(status=self._texts.problem(check=check))
         self._update_database_once()
 
     def _on_check_error(self, *, previous: HardwareChoice, error: Exception) -> None:
@@ -655,49 +651,25 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         :param error: the failure
         :return: None
         """
-        text: Callable[[], str] = self._text(item=UiText.REQUEST_FAILED, error=str(error))
+        status: Status = self._texts.error(item=UiText.REQUEST_FAILED, error=error)
         if self._hardware is None:
-            self._lose_hardware(text=text)
+            self._lose_hardware(status=status)
         else:
             self._choice = previous
             self._render_hardware()
-            self._set_status(text=text)
+            self._set_status(status=status)
         self._update_database_once()
 
-    def _problem_text(self, *, check: HardwareCheck) -> Callable[[], str]:
-        """
-        Explain why presets can't be requested.
-
-        :param check: a result other than READY
-        :return: the explanation in the current language
-        """
-        if check.state is HardwareState.NO_NVIDIA_GPU:
-            return self._text(item=UiText.NO_NVIDIA_GPU)
-        if check.state is HardwareState.NO_CPU:
-            return self._text(item=UiText.CPU_NOT_DETECTED)
-        if check.failed == ("cpu",):
-            return self._text(item=UiText.CPU_REJECTED)
-        if check.failed == ("gpu",):
-            return self._text(item=UiText.GPU_REJECTED)
-        failed: tuple[str, ...] = check.failed
-        return lambda: self._translator.text(
-            item=UiText.HARDWARE_REJECTED,
-            components=", ".join(
-                self._translator.text(item=self._COMPONENTS[name]) if name in self._COMPONENTS else name
-                for name in failed
-            ),
-        )
-
-    def _lose_hardware(self, *, text: Callable[[], str]) -> None:
+    def _lose_hardware(self, *, status: Status) -> None:
         """
         Stop using any hardware: nothing can be requested until NVIDIA accepts a CPU and GPU.
 
-        :param text: why there is no hardware
+        :param status: why there is no hardware
         :return: None
         """
         self._hardware = None
-        self._problem = text
-        self._set_status(text=text)
+        self._problem = status
+        self._set_status(status=status)
         self._clear_game(loading=False)
 
     def _request_presets(self) -> None:
@@ -711,7 +683,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         request: int = self._next_request()
         game_id: str = self._game.game_id
         hardware: Hardware = self._hardware
-        self._set_status(text=self._text(item=UiText.LOADING))
+        self._set_status(status=self._texts.info(item=UiText.LOADING))
         self._runner.submit(
             task=lambda: self._service.game_presets(game_id=game_id, hardware=hardware),
             on_done=lambda presets: self._on_presets(request=request, presets=presets),
@@ -744,11 +716,11 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._settings = None
         self._view.clear_settings(loading=self._resolution is not None)
         if self._resolution is None:
-            self._set_status(text=self._text(item=UiText.NO_RECOMMENDATION))
+            self._set_status(status=self._texts.warning(item=UiText.NO_RECOMMENDATION))
             return
         game_id: str = self._game.game_id
         presets: GamePresets = self._presets
-        self._set_status(text=self._text(item=UiText.LOADING))
+        self._set_status(status=self._texts.info(item=UiText.LOADING))
         self._runner.submit(
             task=lambda: self._service.game_settings(game_id=game_id, presets=presets),
             on_done=lambda settings: self._on_settings(request=request, settings=settings),
@@ -767,7 +739,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             return
         self._settings = settings
         self._preset_index = self._resolution.preset_index
-        self._set_status(text=self._resolution_note())
+        self._set_status(status=self._resolution_note())
         self._render_settings()
 
     def _on_request_error(self, *, request: int, error: Exception) -> None:
@@ -781,22 +753,22 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         if request != self._request:
             return
         self._view.clear_settings(loading=False)
-        self._set_status(text=self._text(item=UiText.REQUEST_FAILED, error=str(error)))
+        self._set_status(status=self._texts.error(item=UiText.REQUEST_FAILED, error=error))
 
-    def _resolution_note(self) -> Callable[[], str] | None:
+    def _resolution_note(self) -> Status | None:
         """
         Tell what is special about the preset shown: another resolution than the one in use, or hardware too weak.
 
-        :return: the note in the current language, None when there is nothing to tell
+        :return: the note, a warning; None when there is nothing to tell
         """
         if self._resolution is None or self._resolution_name is None:  # pragma: no cover
             return None
         if self._resolution.resolution != self._resolution_name:
-            return self._text(
+            return self._texts.warning(
                 item=UiText.RESOLUTION_FALLBACK, chosen=self._resolution_name, shown=self._resolution.resolution
             )
         if self._resolution.below_min_spec:
-            return self._text(item=UiText.RESOLUTION_BELOW_MIN_SPEC)
+            return self._texts.warning(item=UiText.RESOLUTION_BELOW_MIN_SPEC)
         return None
 
     def _set_games(self, *, games: tuple[Game, ...]) -> None:
@@ -972,22 +944,15 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         self._request += 1
         return self._request
 
-    def _set_status(self, *, text: Callable[[], str] | None) -> None:
+    def _set_status(self, *, status: Status | None) -> None:
         """
         Show the status line and keep it for language switches.
 
-        :param text: the line in the current language, None to clear it
+        :param status: the line, None to clear it
         :return: None
         """
-        self._status = text
-        self._view.show_status(text="" if text is None else text())
-
-    def _text(self, *, item: UiText, **values: str) -> Callable[[], str]:
-        """
-        Make a text that translates itself into the UI language at the time it is shown.
-
-        :param item: the text
-        :param values: placeholder values by name
-        :return: function giving the translated text
-        """
-        return lambda: self._translator.text(item=item, **values)
+        self._status = status
+        if status is None:
+            self._view.show_status(text="", level=StatusLevel.INFO)
+        else:
+            self._view.show_status(text=status.text(), level=status.level)

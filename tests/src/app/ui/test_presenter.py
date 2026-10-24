@@ -36,7 +36,15 @@ from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.presenter import Presenter
-from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, InstalledGameView, SettingRow, SettingsView
+from app.ui.views import (
+    ChoiceGroup,
+    ChoiceView,
+    HardwareView,
+    InstalledGameView,
+    SettingRow,
+    SettingsView,
+    StatusLevel,
+)
 
 __all__: tuple = ()
 
@@ -156,6 +164,7 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         self.auto_update: bool | None = None
         self.hardware: HardwareView | None = None
         self.status: str = ""
+        self.status_level: StatusLevel = StatusLevel.INFO
         self.tab: GamesTab | None = None
         self.games: list[str] = []
         self.game_selected: int | None = None
@@ -236,14 +245,16 @@ class _FakeView:  # pylint: disable=too-many-instance-attributes
         """
         self.resolution_offers.append(choice)
 
-    def show_status(self, *, text: str) -> None:
+    def show_status(self, *, text: str, level: StatusLevel) -> None:
         """
         Record the status line.
 
         :param text: the line
+        :param level: how serious the line is
         :return: None
         """
         self.status = text
+        self.status_level = level
 
     def warn(self, *, text: str) -> None:
         """
@@ -666,6 +677,7 @@ class TestStart(_PresenterTests):
         presenter.start()
         # Assert
         assert view.status == "Could not detect the hardware: no registry"
+        assert view.status_level is StatusLevel.ERROR
         service.check_hardware.assert_not_called()
 
     def test_first_check_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
@@ -861,6 +873,7 @@ class TestGame(_PresenterTests):
         presenter.select_game(index=0)
         # Assert
         assert (view.settings, view.status) == (None, "No recommendations")
+        assert view.status_level is StatusLevel.WARNING
         service.game_settings.assert_not_called()
 
     def test_presets_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
@@ -931,6 +944,7 @@ class TestGame(_PresenterTests):
         presenter.select_game(index=0)
         # Assert
         assert (view.settings, view.status) == (None, "Loading…")
+        assert view.status_level is StatusLevel.INFO
 
 
 class TestSettings(_PresenterTests):
@@ -1110,6 +1124,7 @@ class TestResolution(_PresenterTests):
         # Assert
         assert view.settings is not None and view.settings.index == 3
         assert view.status == "No preset for 2560x1600: showing the one for 2560x1440."
+        assert view.status_level is StatusLevel.WARNING
 
     def test_smallest_when_all_larger(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
         """
@@ -1143,6 +1158,7 @@ class TestResolution(_PresenterTests):
         # Assert
         assert view.settings is not None and view.settings.index == 1
         assert view.status == "Too demanding for this PC: even the lowest settings may stutter at this resolution."
+        assert view.status_level is StatusLevel.WARNING
 
     def test_same_resolution(self, presenter: Presenter, service: MagicMock) -> None:
         """
@@ -1746,6 +1762,7 @@ class TestHardwareChoice(_PresenterTests):
         # Assert
         assert view.hardware is not None and view.hardware.gpu == "NVIDIA GeForce RTX 4090"
         assert view.status == "NVIDIA does not know your graphics card. Choose the closest one from the list."
+        assert view.status_level is StatusLevel.ERROR
         service.game_presets.assert_not_called()
 
     def test_check_failed(self, presenter: Presenter, view: _FakeView, service: MagicMock) -> None:
@@ -1764,6 +1781,7 @@ class TestHardwareChoice(_PresenterTests):
         presenter.choose_gpu(position=1)
         # Assert
         assert (view.hardware, view.status) == (_LAPTOP_VIEW, "Could not get data from NVIDIA: timeout")
+        assert view.status_level is StatusLevel.ERROR
 
 
 class TestInstalledGames(_PresenterTests):

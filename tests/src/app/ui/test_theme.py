@@ -5,11 +5,12 @@ from unittest.mock import MagicMock
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QColor, QGuiApplication
 from PySide6.QtWidgets import QApplication
 
 from app.core.models import ThemeMode
 from app.ui.theme import Theme
+from app.ui.views import StatusLevel
 
 __all__: tuple = ()
 
@@ -39,6 +40,32 @@ class TestTheme:
         # Assert
         assert scheme == expected
 
+    @pytest.mark.parametrize(
+        argnames=("level", "background", "expected"),
+        argvalues=[
+            (StatusLevel.INFO, "#202124", None),
+            (StatusLevel.WARNING, "#202124", "#fdd663"),
+            (StatusLevel.ERROR, "#202124", "#f28b82"),
+            (StatusLevel.INFO, "#f8f9fa", None),
+            (StatusLevel.WARNING, "#f8f9fa", "#b06000"),
+            (StatusLevel.ERROR, "#f8f9fa", "#d93025"),
+        ],
+        ids=["dark info", "dark warning", "dark error", "light info", "light warning", "light error"],
+    )
+    def test_status_color(self, level: StatusLevel, background: str, expected: str | None) -> None:
+        """
+        Gives warnings and errors a color that reads on the background; an informing line keeps its own.
+
+        :param level: how serious the line is
+        :param background: background color
+        :param expected: expected text color
+        :return: None
+        """
+        # Arrange & Act
+        color: str | None = Theme.status_color(level=level, background=QColor(background))
+        # Assert
+        assert color == expected
+
     @pytest.fixture(name="themed")
     def _themed(self, qt_app: QApplication) -> Iterator[QApplication]:
         """
@@ -53,7 +80,7 @@ class TestTheme:
 
     def test_apply(self, themed: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """
-        Sets the color scheme of the mode and a style sheet that runs list rows up to the frame.
+        Sets the color scheme of the mode and a style sheet: list rows up to the frame, a detected item's hover.
 
         :param themed: Qt application, restored after the test
         :param monkeypatch: pytest monkeypatch
@@ -68,6 +95,7 @@ class TestTheme:
         # Assert
         hints.setColorScheme.assert_called_once_with(Qt.ColorScheme.Dark)
         assert "QListView, QTreeView {padding:0}" in themed.styleSheet()
+        assert "QListView#detected::item:selected:hover {background:" in themed.styleSheet()
 
     def test_tab_colors_of_theme(self, themed: QApplication) -> None:
         """

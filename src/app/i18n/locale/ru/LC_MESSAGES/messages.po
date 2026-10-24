@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 10:01+0300\n"
+"POT-Creation-Date: 2026-10-24 11:30+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -98,6 +98,10 @@ msgstr "Раз в неделю загружает свежие списки пр
 #. SEARCH
 msgid "Search"
 msgstr "Поиск"
+
+#. DETECTED
+msgid "Detected"
+msgstr "Определено"
 
 #. SETTING
 msgid "Setting"

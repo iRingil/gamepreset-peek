@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, create_autospec
 
 import pytest
 from PySide6.QtCore import QModelIndex, QObject
-from PySide6.QtGui import QFont, QPalette
+from PySide6.QtGui import QColor, QFont, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QAbstractItemView,
@@ -41,7 +41,7 @@ from app.ui.presenter import Presenter
 from app.ui.settings_menu import SettingsMenu
 from app.ui.skeleton import SettingsSkeleton
 from app.ui.theme import Theme
-from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, InstalledGameView, SettingRow, SettingsView
+from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, InstalledGameView, SettingRow, SettingsView, StatusLevel
 
 __all__: tuple = ()
 
@@ -563,15 +563,35 @@ class TestMainWindow:
 
     def test_status(self, window: _Window) -> None:
         """
-        Shows the status line.
+        Shows the status line, an informing one in the placeholder text color.
 
         :param window: the window
         :return: None
         """
         # Arrange & Act
-        window.widget.show_status(text="Loading…")
+        window.widget.show_status(text="Loading…", level=StatusLevel.INFO)
         # Assert
-        assert window.label(text="Loading…").isVisible()
+        label: QLabel = window.label(text="Loading…")
+        assert label.isVisible()
+        assert (label.foregroundRole(), label.styleSheet()) == (QPalette.ColorRole.PlaceholderText, "")
+
+    def test_status_recolored(self, window: _Window) -> None:
+        """
+        Colors an error for the background in use and again when the palette changes to a dark one.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        window.widget.show_status(text="Could not search for games: denied", level=StatusLevel.ERROR)
+        label: QLabel = window.label(text="Could not search for games: denied")
+        light: str = label.styleSheet()
+        dark: QPalette = QPalette(window.widget.palette())
+        dark.setColor(QPalette.ColorRole.Window, QColor("#202124"))
+        # Act
+        window.widget.setPalette(dark)
+        # Assert
+        assert (light, label.styleSheet()) == ("color:#d93025", "color:#f28b82")
 
     def test_warn(self, window: _Window, monkeypatch: pytest.MonkeyPatch) -> None:
         """

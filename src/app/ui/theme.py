@@ -1,17 +1,19 @@
 """Light and dark mode of the window on the PyQtDarkTheme style."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QColor, QGuiApplication
 
 from app.core.models import ThemeMode
 from app.ui.vendor import qdarktheme
+from app.ui.views import StatusLevel
 
 __all__: tuple[str, ...] = ("Theme",)
 
 # Lists and tables run their rows up to the frame; a list in a tab page leaves the frame to the tab pane.
 # Table rows get a little air, still fitting a long settings list in the smallest window.
-# A check box gets no underline on hover: it looked like a link.
+# A checkbox gets no underline on hover: it looked like a link.
 # Tabs are folder tabs: the selected one is framed on top and at the sides and opens into the pane below it.
+# The detected item of a choice, mostly the one in use, still answers the mouse with a stronger selection color.
 # The {{name|color}} placeholders take the colors of the theme in use.
 _QSS: str = """
 QListView, QTreeView {padding:0}
@@ -25,6 +27,7 @@ border-top-left-radius:4px;border-top-right-radius:4px}
 QTabBar::tab:top:first, QTabBar::tab:top:only-one {margin-left:0}
 QTabBar::tab:top:selected, QTabBar::tab:top:selected:hover:enabled {margin-bottom:-1px;
 border-color:{{border|color}};background:{{background|color}}}
+QListView#detected::item:selected:hover {background:{{primary|color(state="table.selectionBackground")}}}
 """
 
 
@@ -36,6 +39,38 @@ class Theme:
         ThemeMode.LIGHT: Qt.ColorScheme.Light,
         ThemeMode.DARK: Qt.ColorScheme.Dark,
     }
+
+    # Status line colors on a dark and a light background; an informing line keeps the placeholder text color.
+    _STATUS_COLORS: dict[tuple[StatusLevel, bool], str] = {
+        (StatusLevel.WARNING, True): "#fdd663",
+        (StatusLevel.ERROR, True): "#f28b82",
+        (StatusLevel.WARNING, False): "#b06000",
+        (StatusLevel.ERROR, False): "#d93025",
+    }
+
+    # Green of a confirmation on a dark and a light background.
+    _SUCCESS_COLORS: dict[bool, str] = {True: "#81c995", False: "#188038"}
+
+    @classmethod
+    def success_color(cls, *, background: QColor) -> str:
+        """
+        Get the green of a confirmation, e.g. the check of a detected item, that reads well on the background.
+
+        :param background: color the mark is drawn on
+        :return: the color as "#rrggbb"
+        """
+        return cls._SUCCESS_COLORS[background.lightness() < 128]
+
+    @classmethod
+    def status_color(cls, *, level: StatusLevel, background: QColor) -> str | None:
+        """
+        Get the text color of a status line that reads well on the background.
+
+        :param level: how serious the line is
+        :param background: color the line is drawn on
+        :return: the color as "#rrggbb", None for an informing line
+        """
+        return cls._STATUS_COLORS.get((level, background.lightness() < 128))
 
     @classmethod
     def scheme(cls, *, mode: ThemeMode) -> Qt.ColorScheme:

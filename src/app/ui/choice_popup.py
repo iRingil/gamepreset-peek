@@ -2,19 +2,25 @@
 
 from typing import Callable, Sequence
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, Qt
+from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QFrame,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QStyle,
+    QStyledItemDelegate,
+    QStyleOptionViewItem,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
 
+from app.ui.icons import Icons
+from app.ui.theme import Theme
 from app.ui.typography import Typography
 from app.ui.views import ChoiceView
 
@@ -22,6 +28,57 @@ __all__: tuple[str, ...] = ("ChoicePopup",)
 
 # Width and height of the list with bundled items, in ems.
 _POPUP_SIZE: tuple[float, float] = (35, 28)
+# Space between the check and the word of the detected mark, and before the mark, in ems.
+_MARK_GAP: float = 0.35
+
+
+class _DetectedDelegate(QStyledItemDelegate):
+    """Draws a detected item with a green check and a word saying it was detected at its right end."""
+
+    def __init__(self, *, mark: str, parent: QListWidget) -> None:
+        """
+        Use the word of the mark.
+
+        :param mark: the translated word, e.g. "Detected"
+        :param parent: the list of detected items
+        """
+        super().__init__(parent)
+        self._mark: str = mark
+
+    def paint(
+        self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
+    ) -> None:
+        """
+        Draw the item as usual with its text shortened to leave room for the mark, then the mark.
+
+        :param painter: painter of the list
+        :param option: how to draw the item
+        :param index: the item
+        :return: None
+        """
+        item: QStyleOptionViewItem = QStyleOptionViewItem(option)
+        self.initStyleOption(item, index)
+        widget: QWidget | None = item.widget
+        style: QStyle = widget.style() if widget is not None else QApplication.style()
+        gap: int = Typography.px(ems=_MARK_GAP)
+        size: int = item.fontMetrics.height()
+        word: int = item.fontMetrics.horizontalAdvance(self._mark)
+        text: QRect = style.subElementRect(QStyle.SubElement.SE_ItemViewItemText, item, widget)
+        item.text = item.fontMetrics.elidedText(
+            item.text, Qt.TextElideMode.ElideRight, text.width() - size - word - 3 * gap
+        )
+        style.drawControl(QStyle.ControlElement.CE_ItemViewItem, item, painter, widget)
+        painter.save()
+        painter.setPen(item.palette.color(QPalette.ColorRole.PlaceholderText))
+        word_box: QRect = QRect(text.right() - gap - word, text.top(), word, text.height())
+        painter.drawText(word_box, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, self._mark)
+        background: QColor = item.palette.color(QPalette.ColorRole.Base)
+        Icons.symbol(
+            name="circle-check",
+            color=QColor(Theme.success_color(background=background)),
+            ratio=widget.devicePixelRatio() if widget is not None else 1.0,
+        ).paint(painter, QRect(word_box.left() - gap - size, text.center().y() - size // 2, size, size))
+        painter.restore()
 
 
 class ChoicePopup(QFrame):
@@ -30,8 +87,14 @@ class ChoicePopup(QFrame):
     A click or Enter on an item picks it and closes the list; a click outside closes it with no choice. The search
     filters the bundled items of every tab at once and opens a tab with matches when the open one has none."""
 
-    def __init__(
-        self, *, parent: QWidget, choice: ChoiceView, search_hint: str, on_choose: Callable[[int], None]
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        *,
+        parent: QWidget,
+        choice: ChoiceView,
+        search_hint: str,
+        detected_mark: str,
+        on_choose: Callable[[int], None],
     ) -> None:
         """
         Build the list with the item in use selected; the search field takes the keys when there are bundled items.
@@ -39,6 +102,7 @@ class ChoicePopup(QFrame):
         :param parent: window the list belongs to
         :param choice: items to choose from
         :param search_hint: placeholder text of the search field
+        :param detected_mark: word marking the detected items, e.g. "Detected"
         :param on_choose: called with the position of the item picked
         """
         super().__init__(parent, Qt.WindowType.Popup)
@@ -58,6 +122,10 @@ class ChoicePopup(QFrame):
         offset: int = 0
         if choice.detected:
             detected: QListWidget = self._list(items=choice.detected, offset=offset, selected=choice.selected)
+            detected.setObjectName("detected")
+            detected.setItemDelegate(_DetectedDelegate(mark=detected_mark, parent=detected))
+            # A long name is shortened instead: a scroll bar would take the height of the only row.
+            detected.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             detected.setFixedHeight(detected.sizeHintForRow(0) * detected.count() + 2 * detected.frameWidth())
             layout.addWidget(detected)
             focus = detected

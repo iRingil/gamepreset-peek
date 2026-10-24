@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 10:01+0300\n"
+"POT-Creation-Date: 2026-10-24 11:30+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -98,6 +98,10 @@ msgstr "Downloads the latest lists of processors, graphics cards and games once 
 #. SEARCH
 msgid "Search"
 msgstr "Search"
+
+#. DETECTED
+msgid "Detected"
+msgstr "Detected"
 
 #. SETTING
 msgid "Setting"

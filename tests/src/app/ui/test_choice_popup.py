@@ -4,6 +4,7 @@ from typing import Iterator
 
 import pytest
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLineEdit, QListWidget, QListWidgetItem, QTabWidget, QWidget
 
@@ -43,7 +44,11 @@ class _Popup:
         # The window the popup belongs to; kept so that it outlives the popup.
         self.owner: QWidget = QWidget()
         self.widget: ChoicePopup = ChoicePopup(
-            parent=self.owner, choice=choice, search_hint="Search", on_choose=self.picked.append
+            parent=self.owner,
+            choice=choice,
+            search_hint="Search",
+            detected_mark="Detected",
+            on_choose=self.picked.append,
         )
         self.widget.show()
         self.widget.activateWindow()
@@ -158,6 +163,40 @@ class TestChoicePopup:
         )
         assert popup.titles() == ["AMD", "Intel"]
         assert tabs is not None and tabs.currentWidget() is amd and amd.currentRow() == 1
+
+    def test_detected_mark(self, popup: _Popup) -> None:
+        """
+        Draws the green check of the detected mark at the right end of a detected item only.
+
+        :param popup: the CPU choice
+        :return: None
+        """
+        # Arrange
+        detected, amd, _ = popup.lists()
+        # Act
+        image: QImage = detected.grab().toImage()
+        bundled: QImage = amd.grab().toImage()
+        # Assert
+        assert detected.objectName() == "detected"
+        assert self._green_columns(image=image)[0] > image.width() // 2
+        assert not self._green_columns(image=bundled)
+
+    @staticmethod
+    def _green_columns(*, image: QImage) -> list[int]:
+        """
+        Find the columns of an image with clearly green pixels.
+
+        :param image: the picture of a list
+        :return: the columns from left to right
+        """
+        return [
+            x
+            for x in range(image.width())
+            if any(
+                (color := image.pixelColor(x, y)).green() > color.red() + 40 and color.green() > color.blue() + 20
+                for y in range(image.height())
+            )
+        ]
 
     def test_selected_tab_opened(self, qt_app: QApplication, cpus: ChoiceView) -> None:
         """

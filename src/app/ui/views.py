@@ -1,6 +1,7 @@
 """What the presenter shows: the view data of the window parts and the protocol of the window itself."""
 
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Protocol, Sequence
 
@@ -15,7 +16,16 @@ __all__: tuple[str, ...] = (
     "MainView",
     "SettingRow",
     "SettingsView",
+    "StatusLevel",
 )
+
+
+class StatusLevel(StrEnum):
+    """How serious a status line is: it only informs, warns of something short of the request, or reports a failure."""
+
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,11 +151,12 @@ class MainView(Protocol):
         :return: None
         """
 
-    def show_status(self, *, text: str) -> None:
+    def show_status(self, *, text: str, level: StatusLevel) -> None:
         """
-        Show progress, an error or a notice; an empty text clears the line.
+        Show progress, a warning or an error, colored by how serious it is; an empty text clears the line.
 
         :param text: the line to show
+        :param level: how serious the line is
         :return: None
         """
 

@@ -39,7 +39,7 @@ from app.ui.settings_menu import SettingsMenu
 from app.ui.skeleton import SettingsSkeleton
 from app.ui.theme import Theme
 from app.ui.typography import GAP, Typography
-from app.ui.views import ChoiceView, HardwareView, InstalledGameView, SettingsView
+from app.ui.views import ChoiceView, HardwareView, InstalledGameView, SettingsView, StatusLevel
 
 __all__: tuple[str, ...] = ("MainWindow",)
 
@@ -380,6 +380,47 @@ class _TopBar(QWidget):
         self.settings.setToolTip(translator.text(item=UiText.SETTINGS))
 
 
+class _StatusLine(QLabel):
+    """The status line: an informing line in the placeholder text color, a warning in yellow, an error in red."""
+
+    def __init__(self, *, parent: QWidget | None = None) -> None:
+        """
+        Build an empty informing line.
+
+        :param parent: widget the line belongs to
+        """
+        super().__init__(parent)
+        self._level: StatusLevel = StatusLevel.INFO
+        self.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+
+    def show_status(self, *, text: str, level: StatusLevel) -> None:
+        """
+        Show a line in the color of its level.
+
+        :param text: the line, empty to clear it
+        :param level: how serious the line is
+        :return: None
+        """
+        self._level = level
+        self.setText(text)
+        self.recolor()
+
+    def recolor(self) -> None:
+        """
+        Color the text for its level on the background of the parent, e.g. again after a theme switch.
+
+        :return: None
+        """
+        # The own style sheet keeps the line's palette from following its parent's background.
+        backdrop: QWidget = self.parentWidget() or self
+        color: str | None = Theme.status_color(
+            level=self._level, background=backdrop.palette().color(QPalette.ColorRole.Window)
+        )
+        sheet: str = "" if color is None else f"color:{color}"
+        if sheet != self.styleSheet():
+            self.setStyleSheet(sheet)
+
+
 class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
     """The main window; user actions go to the presenter set with attach(), which fills the widgets in turn."""
 
@@ -438,8 +479,7 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         layout.addLayout(self._body(), stretch=1)
 
         bottom: QHBoxLayout = QHBoxLayout()
-        self._status: QLabel = QLabel(parent=self)
-        self._status.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        self._status: _StatusLine = _StatusLine(parent=self)
         self._logs_button: QPushButton = QPushButton(parent=self)
         self._logs_button.clicked.connect(self._toggle_logs)
         bottom.addWidget(self._status, stretch=1)
@@ -471,6 +511,17 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         body.addSpacing(Typography.px(ems=GAP * 3))
         body.addWidget(self._settings_area, stretch=1)
         return body
+
+    def changeEvent(self, event: QEvent) -> None:  # pylint: disable=invalid-name
+        """
+        Recolor the status line when the palette changes, e.g. on a switch between the light and the dark theme.
+
+        :param event: the change
+        :return: None
+        """
+        super().changeEvent(event)
+        if event.type() in (QEvent.Type.PaletteChange, QEvent.Type.ApplicationPaletteChange):
+            self._status.recolor()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # pylint: disable=invalid-name
         """
@@ -577,14 +628,15 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
             ),
         )
 
-    def show_status(self, *, text: str) -> None:
+    def show_status(self, *, text: str, level: StatusLevel) -> None:
         """
-        Show progress, an error or a notice; an empty text clears the line.
+        Show progress, a warning or an error, colored by how serious it is; an empty text clears the line.
 
         :param text: the line to show
+        :param level: how serious the line is
         :return: None
         """
-        self._status.setText(text)
+        self._status.show_status(text=text, level=level)
 
     def warn(self, *, text: str) -> None:
         """
@@ -692,8 +744,14 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         """
         if not choice.detected and not any(group.items for group in choice.groups):
             return
-        search_hint: str = self._translator.text(item=UiText.SEARCH) if self._translator is not None else ""
-        popup: ChoicePopup = ChoicePopup(parent=self, choice=choice, search_hint=search_hint, on_choose=on_choose)
+        translator: Translator | None = self._translator
+        popup: ChoicePopup = ChoicePopup(
+            parent=self,
+            choice=choice,
+            search_hint="" if translator is None else translator.text(item=UiText.SEARCH),
+            detected_mark="" if translator is None else translator.text(item=UiText.DETECTED),
+            on_choose=on_choose,
+        )
         popup.move(anchor.mapToGlobal(anchor.rect().bottomLeft()))
         popup.show()
 
