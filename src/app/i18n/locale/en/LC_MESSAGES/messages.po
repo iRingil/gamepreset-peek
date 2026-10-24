@@ -1,5 +1,5 @@
 # English translations for GamePresetPeek.
-# Copyright (C) 2026 ORGANIZATION
+# Copyright (C) 2026 Ringil
 # This file is distributed under the same license as the GamePresetPeek project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
 #
@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 16:40+0300\n"
+"POT-Creation-Date: 2026-10-24 17:57+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -18,272 +18,272 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#. MY_GAMES
+#: src/app/i18n/ui_text.py:23
 msgid "My games"
 msgstr "My games"
 
-#. ALL_GAMES
+#: src/app/i18n/ui_text.py:24
 msgid "All games"
 msgstr "All games"
 
-#. GAME_FOLDERS
+#: src/app/i18n/ui_text.py:25
 msgid "Where to look for games"
 msgstr "Where to look for games"
 
-#. ADD_FOLDER
+#: src/app/i18n/ui_text.py:26
 msgid "Add a folder"
 msgstr "Add a folder"
 
-#. CHANGE_FOLDER
+#: src/app/i18n/ui_text.py:27
 msgid "Change the folder"
 msgstr "Change the folder"
 
-#. REMOVE_FOLDER
+#: src/app/i18n/ui_text.py:28
 msgid "Remove the folder"
 msgstr "Remove the folder"
 
-#. FIND_AGAIN
+#: src/app/i18n/ui_text.py:29
 msgid "Search again"
 msgstr "Search again"
 
-#. FIND_AGAIN_HINT
+#: src/app/i18n/ui_text.py:30
 msgid "Search the folders in the list for installed games again"
 msgstr "Search the folders in the list for installed games again"
 
-#. CHOOSE_FOLDER
+#: src/app/i18n/ui_text.py:31
 msgid "Choose a folder with games"
 msgstr "Choose a folder with games"
 
-#. NO_GAMES_FOUND
+#: src/app/i18n/ui_text.py:32
 msgid "No games found. Add the folder your games are installed in."
 msgstr "No games found. Add the folder your games are installed in."
 
-#. FIND_FAILED
+#: src/app/i18n/ui_text.py:33
 #, python-brace-format
 msgid "Could not search for games: {error}"
 msgstr "Could not search for games: {error}"
 
-#. RESOLUTION
+#: src/app/i18n/ui_text.py:34
 msgid "Resolution:"
 msgstr "Resolution:"
 
-#. LANGUAGE
+#: src/app/i18n/ui_text.py:35
 msgid "Language"
 msgstr "Language"
 
-#. THEME
+#: src/app/i18n/ui_text.py:36
 msgid "Theme"
 msgstr "Theme"
 
-#. THEME_AUTO
+#: src/app/i18n/ui_text.py:37
 msgid "Auto"
 msgstr "Auto"
 
-#. THEME_LIGHT
+#: src/app/i18n/ui_text.py:38
 msgid "Light"
 msgstr "Light"
 
-#. THEME_DARK
+#: src/app/i18n/ui_text.py:39
 msgid "Dark"
 msgstr "Dark"
 
-#. SETTINGS
+#: src/app/i18n/ui_text.py:40
 msgid "Settings"
 msgstr "Settings"
 
-#. AUTO_UPDATE
+#: src/app/i18n/ui_text.py:41
 msgid "Auto-update"
 msgstr "Auto-update"
 
-#. AUTO_UPDATE_HINT
+#: src/app/i18n/ui_text.py:42
 msgid "Downloads the latest lists of processors, graphics cards and games once a week."
 msgstr "Downloads the latest lists of processors, graphics cards and games once a week."
 
-#. SEARCH
+#: src/app/i18n/ui_text.py:43
 msgid "Search"
 msgstr "Search"
 
-#. DETECTED
+#: src/app/i18n/ui_text.py:44
 msgid "Detected"
 msgstr "Detected"
 
-#. FITS_SCREEN
+#: src/app/i18n/ui_text.py:45
 #, python-brace-format
 msgid "Same shape as your screen ({ratio}): fills it with no black bars or stretching."
 msgstr "Same shape as your screen ({ratio}): fills it with no black bars or stretching."
 
-#. SETTING
+#: src/app/i18n/ui_text.py:46
 msgid "Setting"
 msgstr "Setting"
 
-#. VALUE
+#: src/app/i18n/ui_text.py:47
 msgid "Value"
 msgstr "Value"
 
-#. SHOW_LOGS
+#: src/app/i18n/ui_text.py:48
 msgid "Show logs"
 msgstr "Show logs"
 
-#. HIDE_LOGS
+#: src/app/i18n/ui_text.py:49
 msgid "Hide logs"
 msgstr "Hide logs"
 
-#. LOADING
+#: src/app/i18n/ui_text.py:50
 msgid "Loading…"
 msgstr "Loading…"
 
-#. CPU
+#: src/app/i18n/ui_text.py:51
 msgid "CPU:"
 msgstr "CPU:"
 
-#. GPU
+#: src/app/i18n/ui_text.py:52
 msgid "GPU:"
 msgstr "GPU:"
 
-#. RAM
+#: src/app/i18n/ui_text.py:53
 msgid "RAM:"
 msgstr "RAM:"
 
-#. VRAM
+#: src/app/i18n/ui_text.py:54
 msgid "VRAM:"
 msgstr "VRAM:"
 
-#. SIZE_GB
+#: src/app/i18n/ui_text.py:55
 #, python-brace-format
 msgid "{size} GB"
 msgstr "{size} GB"
 
-#. UNKNOWN
+#: src/app/i18n/ui_text.py:56
 msgid "unknown"
 msgstr "unknown"
 
-#. CHOOSE_CPU
+#: src/app/i18n/ui_text.py:57
 msgid "Choose a processor"
 msgstr "Choose a processor"
 
-#. CHOOSE_GPU
+#: src/app/i18n/ui_text.py:58
 msgid "Choose a graphics card"
 msgstr "Choose a graphics card"
 
-#. CPU_HINT
+#: src/app/i18n/ui_text.py:59
 msgid "Choose another processor"
 msgstr "Choose another processor"
 
-#. GPU_HINT
+#: src/app/i18n/ui_text.py:60
 msgid "Choose another graphics card"
 msgstr "Choose another graphics card"
 
-#. RESOLUTION_HINT
+#: src/app/i18n/ui_text.py:61
 msgid "Choose another screen resolution"
 msgstr "Choose another screen resolution"
 
-#. REQUEST_FAILED
+#: src/app/i18n/ui_text.py:62
 #, python-brace-format
 msgid "Could not get data from NVIDIA: {error}"
 msgstr "Could not get data from NVIDIA: {error}"
 
-#. SAVE_FAILED
+#: src/app/i18n/ui_text.py:63
 #, python-brace-format
 msgid "Could not save the settings: {error}"
 msgstr "Could not save the settings: {error}"
 
-#. ERROR_NO_CONNECTION
+#: src/app/i18n/ui_text.py:64
 msgid "no connection, check your internet"
 msgstr "no connection, check your internet"
 
-#. ERROR_NO_ANSWER
+#: src/app/i18n/ui_text.py:65
 msgid "the server is not answering, try again later"
 msgstr "the server is not answering, try again later"
 
-#. ERROR_HTTP
+#: src/app/i18n/ui_text.py:66
 #, python-brace-format
 msgid "the server answered with error {status}"
 msgstr "the server answered with error {status}"
 
-#. ERROR_BAD_ANSWER
+#: src/app/i18n/ui_text.py:67
 msgid "the server sent data in an unexpected format"
 msgstr "the server sent data in an unexpected format"
 
-#. ERROR_UNEXPECTED
+#: src/app/i18n/ui_text.py:68
 msgid "unexpected error, see the logs"
 msgstr "unexpected error, see the logs"
 
-#. NO_RECOMMENDATION_TITLE
+#: src/app/i18n/ui_text.py:69
 msgid "No recommendations"
 msgstr "No recommendations"
 
-#. NO_RECOMMENDATION
+#: src/app/i18n/ui_text.py:71
 msgid "No recommendations (there are none, or your hardware is too weak for this resolution and game)"
 msgstr "No recommendations (there are none, or your hardware is too weak for this resolution and game)"
 
-#. RESOLUTION_FALLBACK
+#: src/app/i18n/ui_text.py:73
 #, python-brace-format
 msgid "No preset for {chosen}: showing the one for {shown}."
 msgstr "No preset for {chosen}: showing the one for {shown}."
 
-#. RESOLUTION_BELOW_MIN_SPEC
+#: src/app/i18n/ui_text.py:75
 msgid "Too demanding for this PC: even the lowest settings may stutter at this resolution."
 msgstr "Too demanding for this PC: even the lowest settings may stutter at this resolution."
 
-#. PERFORMANCE
+#: src/app/i18n/ui_text.py:77
 msgid "Performance"
 msgstr "Performance"
 
-#. QUALITY
+#: src/app/i18n/ui_text.py:78
 msgid "Quality"
 msgstr "Quality"
 
-#. PRESET
+#: src/app/i18n/ui_text.py:79
 msgid "preset"
 msgstr "preset"
 
-#. OPTIMAL_PRESET
+#: src/app/i18n/ui_text.py:80
 msgid "optimal preset"
 msgstr "optimal preset"
 
-#. OPTIMAL
+#: src/app/i18n/ui_text.py:81
 msgid "Optimal"
 msgstr "Optimal"
 
-#. OPTIMAL_HINT
+#: src/app/i18n/ui_text.py:82
 msgid "Go back to the preset NVIDIA recommends"
 msgstr "Go back to the preset NVIDIA recommends"
 
-#. SLIDER_HINT
+#: src/app/i18n/ui_text.py:83
 msgid "Other presets NVIDIA has for this game; the dot marks the recommended one"
 msgstr "Other presets NVIDIA has for this game; the dot marks the recommended one"
 
-#. CHANGED_HINT
+#: src/app/i18n/ui_text.py:84
 #, python-brace-format
 msgid "Differs from the recommended preset ({value})"
 msgstr "Differs from the recommended preset ({value})"
 
-#. NO_NVIDIA_GPU
+#: src/app/i18n/ui_text.py:86
 msgid "No NVIDIA graphics card found. Choose yours from the list: the app works with NVIDIA cards only."
 msgstr "No NVIDIA graphics card found. Choose yours from the list: the app works with NVIDIA cards only."
 
-#. NOTHING_DETECTED
+#: src/app/i18n/ui_text.py:88
 msgid "Could not detect the processor or an NVIDIA graphics card. Choose both from the lists."
 msgstr "Could not detect the processor or an NVIDIA graphics card. Choose both from the lists."
 
-#. CPU_NOT_DETECTED
+#: src/app/i18n/ui_text.py:89
 msgid "Could not detect the processor. Choose yours from the list."
 msgstr "Could not detect the processor. Choose yours from the list."
 
-#. CPU_REJECTED
+#: src/app/i18n/ui_text.py:90
 msgid "NVIDIA does not know your processor. Choose it from the list."
 msgstr "NVIDIA does not know your processor. Choose it from the list."
 
-#. GPU_REJECTED
+#: src/app/i18n/ui_text.py:91
 msgid "NVIDIA does not know your graphics card. Choose the closest one from the list."
 msgstr "NVIDIA does not know your graphics card. Choose the closest one from the list."
 
-#. HARDWARE_FAILED
+#: src/app/i18n/ui_text.py:92
 #, python-brace-format
 msgid "Could not detect the hardware: {error}"
 msgstr "Could not detect the hardware: {error}"
 
-#. READ_ONLY_FOLDER
+#: src/app/i18n/ui_text.py:94
 #, python-brace-format
 msgid ""
 "GamePreset Peek can't write to its folder:\n"
@@ -298,24 +298,24 @@ msgstr ""
 "It needs to, to keep its lists of games and hardware up to date. Reinstall it outside Program Files, or run it as "
 "administrator."
 
-#. HARDWARE_REJECTED
+#: src/app/i18n/ui_text.py:97
 #, python-brace-format
 msgid "NVIDIA does not support this computer: {components}."
 msgstr "NVIDIA does not support this computer: {components}."
 
-#. COMPONENT_CPU
+#: src/app/i18n/ui_text.py:98
 msgid "processor"
 msgstr "processor"
 
-#. COMPONENT_GPU
+#: src/app/i18n/ui_text.py:99
 msgid "graphics card"
 msgstr "graphics card"
 
-#. COMPONENT_MEMORY
+#: src/app/i18n/ui_text.py:100
 msgid "memory"
 msgstr "memory"
 
-#. COMPONENT_OS
+#: src/app/i18n/ui_text.py:101
 msgid "Windows version"
 msgstr "Windows version"
 

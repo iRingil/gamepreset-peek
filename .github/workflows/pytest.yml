@@ -6,7 +6,6 @@ on:
     branches: [ "master" ]
     paths:
       - 'src/**'
-      - 'tools/**'
       - 'tests/**'
       - 'pyproject.toml'
       - '.github/workflows/**'
@@ -14,7 +13,6 @@ on:
     branches: [ "master" ]
     paths:
       - 'src/**'
-      - 'tools/**'
       - 'tests/**'
       - 'pyproject.toml'
       - '.github/workflows/**'

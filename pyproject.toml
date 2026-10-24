@@ -5,7 +5,7 @@ fail-under = 10
 # vendor holds third-party code copied as is.
 ignore = ["CVS", "vendor"]
 ignore-patterns = ["^\\.#"]
-init-hook="import sys; sys.path.extend(['src', 'tools'])"
+init-hook="import sys; sys.path.extend(['src'])"
 jobs = 0
 limit-inference-results = 100
 persistent = true
@@ -152,7 +152,7 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 ignore_missing_imports = true
-mypy_path = ["src", "tools"]
+mypy_path = ["src"]
 
 [[tool.mypy.overrides]]
 # Third-party code copied as is: its own typing is not ours to fix.
@@ -161,5 +161,5 @@ ignore_errors = true
 
 
 [tool.pytest.ini_options]
-pythonpath = ["src", "tools"]
+pythonpath = ["src"]
 python_files = ["tests/**/*.py"]
