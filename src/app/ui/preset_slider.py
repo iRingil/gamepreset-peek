@@ -1,4 +1,4 @@
-"""The quality slider over the presets of a game: one segment per preset, the recommended one marked."""
+"""The quality slider over the presets of a game: a stop per preset, the recommended one marked."""
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPalette, QPen
@@ -16,7 +16,7 @@ _MARK: float = 0.2
 _OUTLINE: float = 0.15
 _HEIGHT: float = 2.6
 _WIDTH: float = 15
-# Gap between segments in ems, at most this and at most a quarter of a segment.
+# Gap at a stop between two segments in ems, at most this and at most a quarter of a segment.
 _GAP: float = 0.25
 # Opacity out of 255 of the segments past the handle, in the text color of the palette.
 _REST_ALPHA: int = 48
@@ -24,10 +24,11 @@ _FOCUS_ALPHA: int = 70
 
 
 class PresetSlider(QSlider):
-    """A horizontal slider drawn as a row of segments, one per preset, the handle in the middle of the current one.
+    """A horizontal slider drawn as a track broken into segments; the presets are its stops, the handle on one of them.
 
-    Segments up to the handle take the accent color. A dot under a segment marks the recommended preset. A click or
-    a drag moves the handle to the segment under the pointer; the arrow keys step through the presets."""
+    The first preset is the start of the track, the last one its end, and the others are the gaps between the
+    segments. Segments up to the handle take the accent color. A dot under a stop marks the recommended preset. A click
+    or a drag moves the handle to the stop nearest to the pointer; the arrow keys step through the presets."""
 
     def __init__(self, *, parent: QWidget | None = None) -> None:
         """
@@ -96,17 +97,21 @@ class PresetSlider(QSlider):
         painter: QPainter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
-        segments: list[QRectF] = self._segments()
-        for value, segment in zip(range(self.minimum(), self.maximum() + 1), segments, strict=True):
-            painter.setBrush(accent if value <= self.value() else rest)
+        stops: list[float] = self._stops()
+        top: float = self._track_top()
+        middle: float = top + track / 2
+        # Segment i joins the stops of presets i and i + 1 (0-based).
+        for i, segment in enumerate(self._segments()):
+            painter.setBrush(accent if self.minimum() + i < self.value() else rest)
             painter.drawRoundedRect(segment, track / 2, track / 2)
         if self.maximum() > self.minimum():
-            mark: QRectF = segments[self._recommended - self.minimum()]
             painter.setBrush(accent)
             painter.drawEllipse(
-                QPointF(mark.center().x(), mark.bottom() + radius + mark_radius), mark_radius, mark_radius
+                QPointF(stops[self._recommended - self.minimum()], top + track + radius + mark_radius),
+                mark_radius,
+                mark_radius,
             )
-        handle: QPointF = segments[self.value() - self.minimum()].center()
+        handle: QPointF = QPointF(stops[self.value() - self.minimum()], middle)
         if self.hasFocus():
             ring: QColor = QColor(accent)
             ring.setAlpha(_FOCUS_ALPHA)
@@ -151,29 +156,57 @@ class PresetSlider(QSlider):
         """
         event.accept()
 
-    def _segments(self) -> list[QRectF]:
+    def _stops(self) -> list[float]:
         """
-        Lay out one segment per preset across the width, leaving room for the handle at both ends.
+        Place a stop per preset evenly from the start of the track to its end, leaving room for the handle at both ends.
 
-        :return: segments from the first preset to the last
+        :return: horizontal positions from the first preset to the last; a single preset stands at the start
         """
         count: int = self.maximum() - self.minimum() + 1
         focus: float = Typography.length(ems=_FOCUS)
+        step: float = (self.width() - focus * 2) / (count - 1) if count > 1 else 0.0
+        return [focus + i * step for i in range(count)]
+
+    def _segments(self) -> list[QRectF]:
+        """
+        Lay out the segments between neighboring stops, a gap at each stop inside the track.
+
+        :return: segments from the first stop to the last; one whole track for a single preset
+        """
+        stops: list[float] = self._stops()
+        track: float = Typography.length(ems=_TRACK)
+        top: float = self._track_top()
+        if len(stops) == 1:
+            focus: float = Typography.length(ems=_FOCUS)
+            return [QRectF(focus, top, self.width() - focus * 2, track)]
+        gap: float = min(Typography.length(ems=_GAP), (stops[1] - stops[0]) / 4)
+        return [
+            QRectF(
+                left + (0 if i == 0 else gap / 2),
+                top,
+                right - left - (0 if i == 0 else gap / 2) - (0 if i == len(stops) - 2 else gap / 2),
+                track,
+            )
+            for i, (left, right) in enumerate(zip(stops, stops[1:]))
+        ]
+
+    def _track_top(self) -> float:
+        """
+        Find the top of the track: the track and the mark below it are centered together.
+
+        :return: vertical position in the widget
+        """
         track: float = Typography.length(ems=_TRACK)
         mark: float = Typography.length(ems=_MARK)
-        width: float = self.width() - focus * 2
-        gap: float = min(Typography.length(ems=_GAP), width / count / 4) if count > 1 else 0
-        length: float = (width - gap * (count - 1)) / count
-        top: float = (self.height() - mark * 2) / 2 - track / 2 - mark
-        return [QRectF(focus + i * (length + gap), top, length, track) for i in range(count)]
+        return (self.height() - mark * 2) / 2 - track / 2 - mark
 
     def _value_at(self, *, x: float) -> int:
         """
-        Find the preset of the segment nearest to a point.
+        Find the preset of the stop nearest to a point.
 
         :param x: horizontal position in the widget
         :return: 1-based preset index
         """
-        centers: list[float] = [segment.center().x() for segment in self._segments()]
-        nearest: int = min(range(len(centers)), key=lambda i: abs(centers[i] - x))
+        stops: list[float] = self._stops()
+        nearest: int = min(range(len(stops)), key=lambda i: abs(stops[i] - x))
         return self.minimum() + nearest

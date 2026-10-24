@@ -1,4 +1,4 @@
-"""Tests of the quality slider drawn as one segment per preset."""
+"""Tests of the quality slider drawn as a broken track with a stop per preset."""
 
 from typing import Iterator
 from unittest.mock import MagicMock
@@ -9,7 +9,7 @@ from PySide6.QtGui import QColor, QImage, QMouseEvent, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from app.ui.preset_slider import _FOCUS, _GAP, _MARK, PresetSlider
+from app.ui.preset_slider import _FOCUS, _HANDLE, _MARK, _TRACK, PresetSlider
 from app.ui.typography import Typography
 
 __all__: tuple = ()
@@ -37,19 +37,31 @@ class TestPresetSlider:
         slider.close()
 
     @staticmethod
-    def _center(*, value: int, slider: PresetSlider) -> QPoint:
+    def _stop(*, value: float, slider: PresetSlider) -> QPoint:
         """
-        Find the middle of a preset's segment: segments start after the focus ring room, 4 of them with 3 gaps.
+        Find a preset's stop on the track: 4 stops from the start to the end, after the focus ring room at each side.
+
+        :param value: 1-based preset index; a fraction points between two stops
+        :param slider: the slider
+        :return: the point
+        """
+        left: float = Typography.length(ems=_FOCUS)
+        step: float = (_WIDTH - left * 2) / 3
+        middle: float = slider.height() / 2 - Typography.length(ems=_MARK) * 2
+        return QPoint(round(left + (value - 1) * step), round(middle))
+
+    @classmethod
+    def _mark(cls, *, value: int, slider: PresetSlider) -> QPoint:
+        """
+        Find the middle of the dot under a preset's stop.
 
         :param value: 1-based preset index
         :param slider: the slider
         :return: the point
         """
-        left: float = Typography.length(ems=_FOCUS)
-        gap: float = Typography.length(ems=_GAP)
-        segment: float = (_WIDTH - left * 2 - gap * 3) / 4
-        middle: float = slider.height() / 2 - Typography.length(ems=_MARK) * 2
-        return QPoint(round(left + (value - 1) * (segment + gap) + segment / 2), round(middle))
+        stop: QPoint = cls._stop(value=value, slider=slider)
+        below: float = Typography.length(ems=_TRACK) / 2 + Typography.length(ems=_HANDLE) + Typography.length(ems=_MARK)
+        return QPoint(stop.x(), round(stop.y() + below))
 
     @staticmethod
     def _image(*, slider: PresetSlider) -> QImage:
@@ -90,9 +102,9 @@ class TestPresetSlider:
         # Assert
         assert (slider.maximum(), slider.isEnabled()) == (1, False)
 
-    def test_click_picks_segment(self, slider: PresetSlider) -> None:
+    def test_click_picks_stop(self, slider: PresetSlider) -> None:
         """
-        Moves to the preset of the segment clicked and reports it.
+        Moves to the preset of the stop nearest to the click and reports it.
 
         :param slider: the slider
         :return: None
@@ -102,11 +114,11 @@ class TestPresetSlider:
         slider.valueChanged.connect(moved)
         # Act
         QTest.mouseClick(
-            slider, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center(value=4, slider=slider)
+            slider, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._stop(value=3.4, slider=slider)
         )
         # Assert
-        assert slider.value() == 4
-        moved.assert_called_once_with(4)
+        assert slider.value() == 3
+        moved.assert_called_once_with(3)
 
     def test_drag(self, slider: PresetSlider) -> None:
         """
@@ -116,7 +128,7 @@ class TestPresetSlider:
         :return: None
         """
         # Arrange
-        point: QPointF = QPointF(self._center(value=1, slider=slider))
+        point: QPointF = QPointF(self._stop(value=1, slider=slider))
         held: QMouseEvent = QMouseEvent(
             QMouseEvent.Type.MouseMove,
             point,
@@ -127,8 +139,8 @@ class TestPresetSlider:
         )
         hovering: QMouseEvent = QMouseEvent(
             QMouseEvent.Type.MouseMove,
-            QPointF(self._center(value=4, slider=slider)),
-            slider.mapToGlobal(QPointF(self._center(value=4, slider=slider))),
+            QPointF(self._stop(value=4, slider=slider)),
+            slider.mapToGlobal(QPointF(self._stop(value=4, slider=slider))),
             Qt.MouseButton.NoButton,
             Qt.MouseButton.NoButton,
             Qt.KeyboardModifier.NoModifier,
@@ -137,7 +149,7 @@ class TestPresetSlider:
         QApplication.sendEvent(slider, held)
         QApplication.sendEvent(slider, hovering)
         QTest.mouseRelease(
-            slider, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center(value=1, slider=slider)
+            slider, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._stop(value=1, slider=slider)
         )
         # Assert
         assert slider.value() == 1
@@ -151,7 +163,7 @@ class TestPresetSlider:
         """
         # Arrange & Act
         QTest.mouseClick(
-            slider, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._center(value=4, slider=slider)
+            slider, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._stop(value=4, slider=slider)
         )
         # Assert
         assert slider.value() == 2
@@ -172,7 +184,7 @@ class TestPresetSlider:
 
     def test_drawn(self, slider: PresetSlider) -> None:
         """
-        Draws the handle in the accent color on the current segment and the rest in a faint text color.
+        Draws the handle on its stop and the track up to it in the accent color, the rest in a faint text color.
 
         :param slider: the slider
         :return: None
@@ -183,9 +195,30 @@ class TestPresetSlider:
         # Act
         image: QImage = self._image(slider=slider)
         # Assert
-        assert image.pixelColor(self._center(value=2, slider=slider)) == accent
-        assert image.pixelColor(self._center(value=1, slider=slider)) == accent
-        assert image.pixelColor(self._center(value=4, slider=slider)) != accent
+        assert image.pixelColor(self._stop(value=2, slider=slider)) == accent
+        assert image.pixelColor(self._stop(value=1.5, slider=slider)) == accent
+        assert image.pixelColor(self._stop(value=3.5, slider=slider)) != accent
+        assert image.pixelColor(self._mark(value=3, slider=slider)) == accent
+        assert image.pixelColor(self._mark(value=2, slider=slider)) != accent
+
+    @pytest.mark.parametrize(argnames="index", argvalues=[1, 4], ids=["first", "last"])
+    def test_ends_are_presets(self, slider: PresetSlider, index: int) -> None:
+        """
+        Puts the first preset at the start of the track and the last one at its end.
+
+        :param slider: the slider
+        :param index: the preset shown
+        :return: None
+        """
+        # Arrange
+        accent: QColor = slider.palette().color(QPalette.ColorRole.Link)
+        slider.set_presets(count=4, index=index, recommended=3)
+        # Act
+        image: QImage = self._image(slider=slider)
+        # Assert
+        stop: QPoint = self._stop(value=index, slider=slider)
+        reach: int = round(Typography.length(ems=_HANDLE) / 2)
+        assert [image.pixelColor(QPoint(stop.x() + shift, stop.y())) for shift in (-reach, 0, reach)] == [accent] * 3
 
     def test_drawn_disabled(self, slider: PresetSlider) -> None:
         """
