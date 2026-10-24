@@ -1,6 +1,6 @@
-"""The drop-down choice of a CPU or a GPU, with a search over the bundled items."""
+"""The drop-down choice of a CPU, a GPU or a resolution, with a search over the bundled items."""
 
-from typing import Callable, Sequence
+from typing import Callable, Iterable, Sequence
 
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, Qt
 from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPalette
@@ -28,34 +28,45 @@ __all__: tuple[str, ...] = ("ChoicePopup",)
 
 # Width and height of the list with bundled items, in ems.
 _POPUP_SIZE: tuple[float, float] = (35, 28)
-# Space between the check and the word of the detected mark, and before the mark, in ems.
+# Space between the symbol and the word of a mark, and before the mark, in ems.
 _MARK_GAP: float = 0.35
+# Item data flagging an item that carries the mark of its list.
+_MARKED_ROLE: int = Qt.ItemDataRole.UserRole + 1
 
 
-class _DetectedDelegate(QStyledItemDelegate):
-    """Draws a detected item with a green check and a green word saying it was detected at its right end."""
+class _MarkDelegate(QStyledItemDelegate):
+    """Draws a symbol and a word in one color at the right end of the marked items of a list.
 
-    def __init__(self, *, mark: str, parent: QListWidget) -> None:
+    Detected items get a green check and "Detected"; resolutions of the screen's shape get a monitor and the ratio."""
+
+    def __init__(self, *, symbol: str, mark: str, color: Callable[[QPalette], QColor], parent: QListWidget) -> None:
         """
-        Use the word of the mark.
+        Use the symbol, the word and the color of the mark.
 
-        :param mark: the translated word, e.g. "Detected"
-        :param parent: the list of detected items
+        :param symbol: file name of the symbol, e.g. "circle-check"
+        :param mark: the word, e.g. "Detected"
+        :param color: picks the color of the mark from the palette of the item
+        :param parent: the list
         """
         super().__init__(parent)
+        self._symbol: str = symbol
         self._mark: str = mark
+        self._color: Callable[[QPalette], QColor] = color
 
     def paint(
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
     ) -> None:
         """
-        Draw the item as usual with its text shortened to leave room for the mark, then the mark.
+        Draw the item as usual; a marked one with its text shortened to leave room for the mark, then the mark.
 
         :param painter: painter of the list
         :param option: how to draw the item
         :param index: the item
         :return: None
         """
+        if not index.data(_MARKED_ROLE):
+            super().paint(painter, option, index)
+            return
         item: QStyleOptionViewItem = QStyleOptionViewItem(option)
         self.initStyleOption(item, index)
         widget: QWidget | None = item.widget
@@ -68,14 +79,14 @@ class _DetectedDelegate(QStyledItemDelegate):
             item.text, Qt.TextElideMode.ElideRight, text.width() - size - word - 3 * gap
         )
         style.drawControl(QStyle.ControlElement.CE_ItemViewItem, item, painter, widget)
-        green: QColor = QColor(Theme.success_color(background=item.palette.color(QPalette.ColorRole.Base)))
+        color: QColor = self._color(item.palette)
         painter.save()
-        painter.setPen(green)
+        painter.setPen(color)
         word_box: QRect = QRect(text.right() - gap - word, text.top(), word, text.height())
         painter.drawText(word_box, Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, self._mark)
         Icons.symbol(
-            name="circle-check",
-            color=green,
+            name=self._symbol,
+            color=color,
             ratio=widget.devicePixelRatio() if widget is not None else 1.0,
         ).paint(painter, QRect(word_box.left() - gap - size, text.center().y() - size // 2, size, size))
         painter.restore()
@@ -121,12 +132,7 @@ class ChoicePopup(QFrame):
         focus: QWidget | None = None
         offset: int = 0
         if choice.detected:
-            detected: QListWidget = self._list(items=choice.detected, offset=offset, selected=choice.selected)
-            detected.setObjectName("detected")
-            detected.setItemDelegate(_DetectedDelegate(mark=detected_mark, parent=detected))
-            # A long name is shortened instead: a scroll bar would take the height of the only row.
-            detected.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            detected.setFixedHeight(detected.sizeHintForRow(0) * detected.count() + 2 * detected.frameWidth())
+            detected: QListWidget = self._detected_list(choice=choice, mark=detected_mark)
             layout.addWidget(detected)
             focus = detected
             offset += len(choice.detected)
@@ -141,6 +147,7 @@ class ChoicePopup(QFrame):
             self._search.hide()
         for group in choice.groups:
             items: QListWidget = self._list(items=group.items, offset=offset, selected=choice.selected)
+            self._mark_fitting(view=items, offset=offset, choice=choice)
             self._groups.append((items, group.title))
             if self._tabs is None:
                 layout.addWidget(items, stretch=1)
@@ -252,6 +259,69 @@ class ChoicePopup(QFrame):
         view.itemClicked.connect(lambda item: self._pick(position=offset + view.row(item)))
         view.itemActivated.connect(lambda item: self._pick(position=offset + view.row(item)))
         return view
+
+    def _detected_list(self, *, choice: ChoiceView, mark: str) -> QListWidget:
+        """
+        Make the list of detected items, each with the detected mark, as high as its rows.
+
+        :param choice: items to choose from
+        :param mark: word marking the detected items, e.g. "Detected"
+        :return: the list
+        """
+        detected: QListWidget = self._list(items=choice.detected, offset=0, selected=choice.selected)
+        detected.setObjectName("detected")
+        self._mark(view=detected, rows=range(detected.count()), hint="")
+        detected.setItemDelegate(
+            _MarkDelegate(
+                symbol="circle-check",
+                mark=mark,
+                color=lambda palette: QColor(Theme.success_color(background=palette.color(QPalette.ColorRole.Base))),
+                parent=detected,
+            )
+        )
+        # A long name is shortened instead: a scroll bar would take the height of the only row.
+        detected.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        detected.setFixedHeight(detected.sizeHintForRow(0) * detected.count() + 2 * detected.frameWidth())
+        return detected
+
+    def _mark_fitting(self, *, view: QListWidget, offset: int, choice: ChoiceView) -> None:
+        """
+        Give the fitting items of a list of bundled items the fit mark and the fit hint.
+
+        :param view: the list
+        :param offset: position of its first item in the whole choice
+        :param choice: items to choose from
+        :return: None
+        """
+        fitting: list[int] = [row for row in range(view.count()) if offset + row in choice.fitting]
+        if not fitting:
+            return
+        self._mark(view=view, rows=fitting, hint=choice.fit_hint)
+        # The fit mark takes the accent of the theme, which it sets as the link color.
+        view.setItemDelegate(
+            _MarkDelegate(
+                symbol="monitor-check",
+                mark=choice.fit_mark,
+                color=lambda palette: palette.color(QPalette.ColorRole.Link),
+                parent=view,
+            )
+        )
+
+    @staticmethod
+    def _mark(*, view: QListWidget, rows: Iterable[int], hint: str) -> None:
+        """
+        Flag items of a list for its mark and give them a hint on hover.
+
+        :param view: the list
+        :param rows: rows of the items to flag
+        :param hint: text shown on hover, "" for none
+        :return: None
+        """
+        for row in rows:
+            item: QListWidgetItem = view.item(row)
+            item.setData(_MARKED_ROLE, True)
+            if hint:
+                item.setToolTip(hint)
 
     def _pick(self, *, position: int) -> None:
         """

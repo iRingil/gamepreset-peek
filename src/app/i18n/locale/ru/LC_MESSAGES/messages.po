@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 11:30+0300\n"
+"POT-Creation-Date: 2026-10-24 12:20+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: ru\n"
@@ -103,6 +103,11 @@ msgstr "Поиск"
 msgid "Detected"
 msgstr "Определено"
 
+#. FITS_SCREEN
+#, python-brace-format
+msgid "Same shape as your screen ({ratio}): fills it with no black bars or stretching."
+msgstr "Та же форма, что у вашего экрана ({ratio}): картинка заполнит его без чёрных полос и растяжения."
+
 #. SETTING
 msgid "Setting"
 msgstr "Настройка"
@@ -162,8 +167,8 @@ msgid "Could not get data from NVIDIA: {error}"
 msgstr "Не удалось получить данные от NVIDIA: {error}"
 
 #. NO_RECOMMENDATION
-msgid "No recommendations"
-msgstr "Нет рекомендаций"
+msgid "No recommendations (there are none, or your hardware is too weak for this resolution and game)"
+msgstr "Нет рекомендаций (они отсутствуют, либо ваше оборудование слишком слабое для выбранного разрешения и игры)"
 
 #. RESOLUTION_FALLBACK
 #, python-brace-format

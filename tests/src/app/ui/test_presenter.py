@@ -55,6 +55,7 @@ _AMD_CPU: str = "AMD Ryzen 7 7800X3D 8-Core Processor"
 _INTEL_CPU: str = "Intel(R) Core(TM) i7-14700K"
 _SCREEN: str = "1920x1080"
 _BUNDLED_RESOLUTIONS: tuple[str, ...] = ("3840x2160", "2560x1600", "2560x1440")
+_FIT_HINT: str = "Same shape as your screen (16:9): fills it with no black bars or stretching."
 # A laptop with its GPU and screen detected, the RTX 4090 in the bundled list and no bundled CPUs.
 _SETUP: HardwareSetup = HardwareSetup(
     system=SystemHardware(cpu_name=_CPU, gpus=(_LAPTOP_GPU,), memory_gb=16, os_version="10.0", resolution=_SCREEN),
@@ -872,7 +873,10 @@ class TestGame(_PresenterTests):
         # Act
         presenter.select_game(index=0)
         # Assert
-        assert (view.settings, view.status) == (None, "No recommendations")
+        assert (view.settings, view.status) == (
+            None,
+            "No recommendations (there are none, or your hardware is too weak for this resolution and game)",
+        )
         assert view.status_level is StatusLevel.WARNING
         service.game_settings.assert_not_called()
 
@@ -1039,7 +1043,7 @@ class TestResolution(_PresenterTests):
         self, presenter: Presenter, view: _FakeView, service: MagicMock, finder: _Runner
     ) -> None:
         """
-        Offers the detected screen above the bundled resolutions while no game's presets are known.
+        Offers the detected screen above the bundled resolutions while no game's presets are known, marking its shape.
 
         :param presenter: presenter under test
         :param view: fake window
@@ -1055,7 +1059,14 @@ class TestResolution(_PresenterTests):
         presenter.open_resolution_choice()
         # Assert
         assert view.resolution_offers == [
-            ChoiceView(detected=(_SCREEN,), groups=(ChoiceGroup(title="", items=_BUNDLED_RESOLUTIONS),), selected=0)
+            ChoiceView(
+                detected=(_SCREEN,),
+                groups=(ChoiceGroup(title="", items=_BUNDLED_RESOLUTIONS),),
+                selected=0,
+                fitting=frozenset({1, 3}),
+                fit_mark="16:9",
+                fit_hint=_FIT_HINT,
+            )
         ]
 
     def test_game_resolutions_offered(self, presenter: Presenter, view: _FakeView) -> None:
@@ -1073,7 +1084,12 @@ class TestResolution(_PresenterTests):
         # Assert
         assert view.resolution_offers == [
             ChoiceView(
-                detected=(_SCREEN,), groups=(ChoiceGroup(title="", items=("3840x2160", "2560x1440")),), selected=0
+                detected=(_SCREEN,),
+                groups=(ChoiceGroup(title="", items=("3840x2160", "2560x1440")),),
+                selected=0,
+                fitting=frozenset({1, 2}),
+                fit_mark="16:9",
+                fit_hint=_FIT_HINT,
             )
         ]
 
@@ -1099,7 +1115,7 @@ class TestResolution(_PresenterTests):
         self, presenter: Presenter, view: _FakeView, service: MagicMock, finder: _Runner
     ) -> None:
         """
-        Offers only the bundled resolutions when no screen is detected, the one in use selected among them.
+        Offers only the bundled resolutions, none marked, when no screen is detected, the one in use selected.
 
         :param presenter: presenter under test
         :param view: fake window

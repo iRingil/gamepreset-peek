@@ -12,6 +12,7 @@ __all__: tuple[str, ...] = (
     "COVER_WIDTH",
     "COVERS_DIR",
     "APP_USER_MODEL_ID",
+    "ASPECT_TOLERANCE",
     "DB_UPDATE_DAYS",
     "DB_UPDATE_URL",
     "DEFAULT_GAME_FOLDERS",
@@ -115,6 +116,8 @@ SCREEN_RESOLUTIONS: tuple[str, ...] = (
     "1280x720",
     "1024x768",
 )
+# Two resolutions have the same shape when their width-to-height ratios differ by at most this share (1366x768 is 16:9).
+ASPECT_TOLERANCE: float = 0.03
 # Used when the screen resolution is neither detected nor chosen.
 DEFAULT_RESOLUTION: str = "1920x1080"
 

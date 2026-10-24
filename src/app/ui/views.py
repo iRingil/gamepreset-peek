@@ -51,11 +51,15 @@ class ChoiceGroup:
 class ChoiceView:
     """A CPU, GPU or resolution choice: detected items above a line, bundled groups below it.
 
-    Positions run through the detected items, then through the groups in order; selected is the one in use."""
+    Positions run through the detected items, then through the groups in order; selected is the one in use. Fitting
+    bundled items, e.g. resolutions of the screen's shape, carry the fit mark with the fit hint on hover."""
 
     detected: tuple[str, ...]
     groups: tuple[ChoiceGroup, ...]
     selected: int | None
+    fitting: frozenset[int] = frozenset()
+    fit_mark: str = ""
+    fit_hint: str = ""
 
 
 @dataclass(frozen=True, slots=True)

@@ -23,6 +23,7 @@ from app.core.models import (
     ResolutionPreset,
     ThemeMode,
 )
+from app.core.screen_shape import ScreenShape
 from app.core.service import PresetService
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
@@ -362,7 +363,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
         """
         Offer the detected screen resolution, then the game's resolutions, the one in use selected.
 
-        Before a game's presets arrive, the bundled resolutions stand in for the game's.
+        Before a game's presets arrive, the bundled resolutions stand in for the game's. Resolutions of the screen's
+        shape are marked with its ratio.
 
         :return: None
         """
@@ -374,6 +376,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
             others = tuple(item for item in self._presets.resolution_names if item not in detected)
         # A pick maps to this list even if the game's presets arrive while the choice is open.
         self._offered_resolutions = detected + others
+        screen: str | None = self._setup.system.resolution
+        ratio: str = "" if screen is None else ScreenShape.name(resolution=screen)
         self._view.offer_resolutions(
             choice=ChoiceView(
                 detected=detected,
@@ -383,6 +387,13 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
                     if self._resolution_name in self._offered_resolutions
                     else None
                 ),
+                fitting=frozenset(
+                    len(detected) + row
+                    for row, item in enumerate(others)
+                    if screen is not None and ScreenShape.fits(resolution=item, screen=screen)
+                ),
+                fit_mark=ratio,
+                fit_hint=self._translator.text(item=UiText.FITS_SCREEN, ratio=ratio) if ratio else "",
             )
         )
 

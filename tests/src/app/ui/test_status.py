@@ -34,7 +34,10 @@ class TestStatusTexts:
         # Assert
         assert [(line.text(), line.level) for line in lines] == [
             ("Loading…", StatusLevel.INFO),
-            ("No recommendations", StatusLevel.WARNING),
+            (
+                "No recommendations (there are none, or your hardware is too weak for this resolution and game)",
+                StatusLevel.WARNING,
+            ),
             ("Could not get data from NVIDIA: timeout", StatusLevel.ERROR),
         ]
 

@@ -1,10 +1,10 @@
-"""Tests of the CPU and GPU drop-down choice."""
+"""Tests of the CPU, GPU and resolution drop-down choice."""
 
 from typing import Iterator
 
 import pytest
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage
+from PySide6.QtCore import QRect, Qt
+from PySide6.QtGui import QImage, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QLineEdit, QListWidget, QListWidgetItem, QTabWidget, QWidget
 
@@ -197,6 +197,48 @@ class TestChoicePopup:
                 for y in range(image.height())
             )
         ]
+
+    def test_fit_mark(self, qt_app: QApplication) -> None:
+        """
+        Draws the fit mark in the link color at the right end of fitting items only, with the hint on hover.
+
+        :param qt_app: Qt application
+        :return: None
+        """
+        # Arrange
+        choice: ChoiceView = ChoiceView(
+            detected=("2560x1600",),
+            groups=(ChoiceGroup(title="", items=("3840x2160", "1920x1200")),),
+            selected=0,
+            fitting=frozenset({2}),
+            fit_mark="16:10",
+            fit_hint="Same shape as your screen",
+        )
+        popup: _Popup = _Popup(qt_app=qt_app, choice=choice)
+        bundled: QListWidget = popup.lists()[1]
+        # Act
+        image: QImage = bundled.viewport().grab().toImage()
+        # Assert
+        wide, fitting = (bundled.visualItemRect(bundled.item(row)) for row in range(2))
+        assert (self._link_pixels(image=image, row=wide), self._link_pixels(image=image, row=fitting) > 0) == (0, True)
+        assert (bundled.item(0).toolTip(), bundled.item(1).toolTip()) == ("", "Same shape as your screen")
+        popup.widget.close()
+
+    @staticmethod
+    def _link_pixels(*, image: QImage, row: QRect) -> int:
+        """
+        Count the pixels of the link color in the right half of a row.
+
+        :param image: the picture of a list's viewport
+        :param row: the row in the picture
+        :return: number of pixels
+        """
+        link: str = QApplication.palette().color(QPalette.ColorRole.Link).name()
+        return sum(
+            image.pixelColor(x, y).name() == link
+            for x in range(image.width() // 2, image.width())
+            for y in range(row.top(), row.bottom() + 1)
+        )
 
     def test_selected_tab_opened(self, qt_app: QApplication, cpus: ChoiceView) -> None:
         """
