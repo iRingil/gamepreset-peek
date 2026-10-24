@@ -68,3 +68,20 @@ class TestTheme:
         # Assert
         hints.setColorScheme.assert_called_once_with(Qt.ColorScheme.Dark)
         assert "QListView, QTreeView {padding:0}" in themed.styleSheet()
+
+    def test_tab_colors_of_theme(self, themed: QApplication) -> None:
+        """
+        Fills the color placeholders of the folder tabs with the colors of the theme in use.
+
+        :param themed: Qt application, restored after the test
+        :return: None
+        """
+        # Arrange & Act
+        Theme.apply(mode=ThemeMode.LIGHT)
+        light: str = themed.styleSheet()
+        Theme.apply(mode=ThemeMode.DARK)
+        dark: str = themed.styleSheet()
+        # Assert
+        assert "{{" not in light + dark
+        assert "QTabBar::tab:top:selected" in light
+        assert light[light.index("QTabBar::tab:top:selected") :] != dark[dark.index("QTabBar::tab:top:selected") :]

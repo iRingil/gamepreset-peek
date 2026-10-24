@@ -24,12 +24,13 @@ from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.icons import IconButton
 from app.ui.skeleton import ListSkeleton
+from app.ui.typography import GAP, Typography
 from app.ui.views import InstalledGameView
 
 __all__: tuple[str, ...] = ("GamesPanel",)
 
-_PAD: int = 8
-_ICON: int = 16
+# Size of the executable icons in the installed games list, in ems.
+_ICON: float = 1.25
 # Shares of the installed games tab's height: the games above, the folders below.
 _GAMES_SHARE: int = 3
 _FOLDERS_SHARE: int = 2
@@ -122,12 +123,12 @@ class _InstalledTab(QWidget):  # pylint: disable=too-many-instance-attributes
         self._icon_provider: QFileIconProvider = QFileIconProvider()
         self.skeleton: ListSkeleton = ListSkeleton(icons=True, parent=self)
         self.list: _ChoiceList = _ChoiceList(on_select=on_select, parent=self)
-        self.list.setIconSize(QSize(_ICON, _ICON))
+        self.list.setIconSize(QSize(Typography.px(ems=_ICON), Typography.px(ems=_ICON)))
         self._empty: QLabel = QLabel(parent=self)
         self._empty.setWordWrap(True)
         self._empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty.setForegroundRole(QPalette.ColorRole.PlaceholderText)
-        self._empty.setMargin(_PAD * 2)
+        self._empty.setMargin(Typography.px(ems=GAP * 2))
         self.pages: QStackedWidget = QStackedWidget(parent=self)
         for page in (self.skeleton, self.list, self._empty):
             self.pages.addWidget(page)
@@ -261,10 +262,11 @@ class _InstalledTab(QWidget):  # pylint: disable=too-many-instance-attributes
         lower.addWidget(self._caption)
         lower.addWidget(self.folder_list, stretch=1)
         lower.addLayout(buttons)
+        pad: int = Typography.px(ems=GAP)
         layout: QVBoxLayout = QVBoxLayout(self)
-        layout.setContentsMargins(_PAD, _PAD, _PAD, _PAD)
+        layout.setContentsMargins(pad, pad, pad, pad)
         layout.addWidget(self.pages, stretch=_GAMES_SHARE)
-        layout.addSpacing(_PAD)
+        layout.addSpacing(pad)
         layout.addLayout(lower, stretch=_FOLDERS_SHARE)
 
 
@@ -286,8 +288,9 @@ class _AllTab(QWidget):
         self.search.setClearButtonEnabled(True)
         self.search.textChanged.connect(on_search)
         self.list: _ChoiceList = _ChoiceList(on_select=on_select, parent=self)
+        pad: int = Typography.px(ems=GAP)
         layout: QVBoxLayout = QVBoxLayout(self)
-        layout.setContentsMargins(_PAD, _PAD, _PAD, _PAD)
+        layout.setContentsMargins(pad, pad, pad, pad)
         layout.addWidget(self.search)
         layout.addWidget(self.list, stretch=1)
 

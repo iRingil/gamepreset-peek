@@ -15,11 +15,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.typography import Typography
 from app.ui.views import ChoiceView
 
 __all__: tuple[str, ...] = ("ChoicePopup",)
 
-_POPUP_SIZE: tuple[int, int] = (460, 360)
+# Width and height of the list with bundled items, in ems.
+_POPUP_SIZE: tuple[float, float] = (35, 28)
 
 
 class ChoicePopup(QFrame):
@@ -83,7 +85,10 @@ class ChoicePopup(QFrame):
             offset += len(group.items)
         if self._tabs is not None:
             layout.addWidget(self._tabs, stretch=1)
-        self.resize(_POPUP_SIZE[0], _POPUP_SIZE[1] if choice.groups else self.sizeHint().height())
+        self.resize(
+            Typography.px(ems=_POPUP_SIZE[0]),
+            Typography.px(ems=_POPUP_SIZE[1]) if choice.groups else self.sizeHint().height(),
+        )
         if focus is not None:
             focus.setFocus()
 

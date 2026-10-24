@@ -4,16 +4,25 @@ from PySide6.QtCore import QAbstractAnimation, QEasingCurve, QRectF, QVariantAni
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent, QPalette
 from PySide6.QtWidgets import QWidget
 
+from app.ui.typography import Typography
+
 __all__: tuple[str, ...] = ("ListSkeleton", "SettingsSkeleton", "Skeleton")
 
 # Opacity of the shapes and of the band's middle, out of 255, in the text color of the palette.
 _SHAPE_ALPHA: int = 24
 _BAND_ALPHA: int = 52
 _SWEEP_MS: int = 1400
-_RADIUS: float = 4
-# Line height of a text placeholder and the row height of the lists and the settings table.
-_LINE: float = 10
-_ROW: float = 28
+# Sizes in ems: corner radius, line height of a text placeholder, row heights of the lists and of the settings table
+# with its header.
+_RADIUS: float = 0.3
+_LINE: float = 0.75
+_ROW: float = 2.45
+_TABLE_ROW: float = 1.7
+_TABLE_HEADER: float = 1.85
+# Top of the settings table header in the settings panel, in ems.
+_TABLE_TOP: float = 8.6
+# Smallest half width of the sweeping band, in ems.
+_BAND: float = 9
 
 
 class Skeleton(QWidget):
@@ -73,9 +82,10 @@ class Skeleton(QWidget):
         :param event: the paint request
         :return: None
         """
+        radius: float = Typography.length(ems=_RADIUS)
         path: QPainterPath = QPainterPath()
         for shape in self.shapes():
-            path.addRoundedRect(shape, _RADIUS, _RADIUS)
+            path.addRoundedRect(shape, radius, radius)
         painter: QPainter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.paint_shapes(painter=painter, path=path)
@@ -93,7 +103,7 @@ class Skeleton(QWidget):
         painter.fillPath(path, self._faded(color=text, alpha=_SHAPE_ALPHA))
         if not self.active:
             return
-        band: float = max(self.width() * 0.35, 120.0)
+        band: float = max(self.width() * 0.35, Typography.length(ems=_BAND))
         middle: float = -band + (self.width() + band * 2) * float(self._sweep.currentValue())
         gradient: QLinearGradient = QLinearGradient(middle - band, 0, middle + band, 0)
         gradient.setColorAt(0, self._faded(color=text, alpha=0))
@@ -137,17 +147,21 @@ class ListSkeleton(Skeleton):
 
         :return: rectangles drawn with rounded corners
         """
+        em: float = Typography.length(ems=1)
+        row_height: float = _ROW * em
+        line: float = _LINE * em
+        icon: float = 1.25 * em
         shapes: list[QRectF] = []
-        left: float = 8
+        left: float = 0.6 * em
         width: float = self.width() - left * 2
-        for row in range(int(self.height() // _ROW)):
-            top: float = row * _ROW + (_ROW - _LINE) / 2
+        for row in range(int(self.height() // row_height)):
+            top: float = row * row_height + (row_height - line) / 2
             text_left: float = left
             if self._icons:
-                shapes.append(QRectF(left, row * _ROW + (_ROW - 16) / 2, 16, 16))
-                text_left += 24
+                shapes.append(QRectF(left, row * row_height + (row_height - icon) / 2, icon, icon))
+                text_left += icon + 0.6 * em
             length: float = self._LENGTHS[row % len(self._LENGTHS)] * (width - (text_left - left))
-            shapes.append(QRectF(text_left, top, length, _LINE))
+            shapes.append(QRectF(text_left, top, length, line))
         return shapes
 
 
@@ -163,19 +177,25 @@ class SettingsSkeleton(Skeleton):
 
         :return: rectangles drawn with rounded corners
         """
+        em: float = Typography.length(ems=1)
+        row_height: float = _TABLE_ROW * em
+        line: float = _LINE * em
+        inset: float = 0.45 * em
         width: float = self.width()
         shapes: list[QRectF] = [
-            QRectF(0, 10, width * 0.5, 18),
-            QRectF(width - 64, 2, 64, 30),
-            QRectF(width - 110, 40, 110, _LINE),
-            QRectF(0, 76, width - 190, 6),
-            QRectF(width - 170, 64, 170, 30),
-            QRectF(0, 112, width, _ROW),
+            QRectF(0, 0.75 * em, width * 0.5, 1.4 * em),
+            QRectF(width - 5 * em, 0.15 * em, 5 * em, 2.3 * em),
+            QRectF(width - 8.5 * em, 3.1 * em, 8.5 * em, line),
+            QRectF(0, 5.85 * em, width - 14.6 * em, 0.45 * em),
+            QRectF(width - 13 * em, 4.9 * em, 13 * em, 2.3 * em),
+            QRectF(0, _TABLE_TOP * em, width, _TABLE_HEADER * em),
         ]
+        rows_top: float = (_TABLE_TOP + _TABLE_HEADER) * em
         value_left: float = width * 0.72
-        for row in range(int((self.height() - 144) // _ROW)):
-            top: float = 144 + row * _ROW + (_ROW - _LINE) / 2
-            shapes.append(QRectF(6, top, self._NAME_LENGTHS[row % len(self._NAME_LENGTHS)] * value_left, _LINE))
-            value_width: float = self._VALUE_LENGTHS[row % len(self._VALUE_LENGTHS)] * (width - value_left - 6)
-            shapes.append(QRectF(value_left + 6, top, value_width, _LINE))
+        for row in range(int((self.height() - rows_top) // row_height)):
+            top: float = rows_top + row * row_height + (row_height - line) / 2
+            name_width: float = self._NAME_LENGTHS[row % len(self._NAME_LENGTHS)] * value_left
+            shapes.append(QRectF(inset, top, name_width, line))
+            value_width: float = self._VALUE_LENGTHS[row % len(self._VALUE_LENGTHS)] * (width - value_left - inset)
+            shapes.append(QRectF(value_left + inset, top, value_width, line))
         return shapes

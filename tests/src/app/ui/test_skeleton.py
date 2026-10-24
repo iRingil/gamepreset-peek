@@ -4,7 +4,8 @@ from PySide6.QtCore import QRectF
 from PySide6.QtGui import QImage
 from PySide6.QtWidgets import QApplication
 
-from app.ui.skeleton import ListSkeleton, SettingsSkeleton, Skeleton
+from app.ui.skeleton import _ROW, _TABLE_HEADER, _TABLE_ROW, _TABLE_TOP, ListSkeleton, SettingsSkeleton, Skeleton
+from app.ui.typography import Typography
 
 __all__: tuple = ()
 
@@ -43,7 +44,7 @@ class TestSkeleton:
         plain: ListSkeleton = ListSkeleton(icons=False)
         with_icons: ListSkeleton = ListSkeleton(icons=True)
         for skeleton in (plain, with_icons):
-            skeleton.resize(300, 28 * 5 + 10)
+            skeleton.resize(300, Typography.px(ems=_ROW * 5.4))
         # Act
         shapes: tuple[list[QRectF], list[QRectF]] = (plain.shapes(), with_icons.shapes())
         # Assert
@@ -60,7 +61,8 @@ class TestSkeleton:
         """
         # Arrange
         skeleton: SettingsSkeleton = SettingsSkeleton()
-        skeleton.resize(600, 144 + 28 * 3)
+        height: int = Typography.px(ems=_TABLE_TOP + _TABLE_HEADER + _TABLE_ROW * 3.4)
+        skeleton.resize(600, height)
         skeleton.set_active(active=True)
         # Act
         shapes: list[QRectF] = skeleton.shapes()
@@ -68,6 +70,6 @@ class TestSkeleton:
         skeleton.set_active(active=False)
         # Assert
         assert len(shapes) == 6 + 3 * 2
-        assert all(0 <= shape.left() and shape.right() <= 600 and shape.bottom() <= 228 for shape in shapes)
+        assert all(0 <= shape.left() and shape.right() <= 600 and shape.bottom() <= height for shape in shapes)
         assert not image.isNull()
         qt_app.processEvents()

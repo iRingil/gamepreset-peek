@@ -18,6 +18,7 @@ __all__: tuple[str, ...] = (
     "DEFAULT_LANGUAGE",
     "DEFAULT_RESOLUTION",
     "FLAGS_DIR",
+    "FONT_FILE",
     "GAME_SEARCH_DEPTH",
     "GETTEXT_DOMAIN",
     "HTTP_CONNECT_TIMEOUT",
@@ -61,6 +62,7 @@ APP_DB: Path = _DATA_DIR / "app.db"
 APP_ICON_FILE: Path = _DATA_DIR / "app.ico"
 ICONS_DIR: Path = _DATA_DIR / "icons"
 FLAGS_DIR: Path = _DATA_DIR / "flags"
+FONT_FILE: Path = _DATA_DIR / "fonts" / "GolosText.ttf"
 LOCALE_DIR: Path = Path(__file__).parent / "i18n" / "locale"
 GETTEXT_DOMAIN: str = "messages"
 # The latest database; a download replaces APP_DB in place (the build is a folder, so the file is writable).

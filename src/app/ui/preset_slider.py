@@ -4,15 +4,20 @@ from PySide6.QtCore import QPointF, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPalette, QPen
 from PySide6.QtWidgets import QSlider, QWidget
 
+from app.ui.typography import Typography
+
 __all__: tuple[str, ...] = ("PresetSlider",)
 
-_TRACK: float = 6
-_HANDLE: float = 8
-_FOCUS: float = 12
-_MARK: float = 2.5
-# Gap between segments, at most this and at most a quarter of a segment.
-_GAP: float = 3
-_HEIGHT: int = 34
+# Sizes in ems: track thickness, handle and focus ring radii, mark radius, handle outline, widget size.
+_TRACK: float = 0.45
+_HANDLE: float = 0.6
+_FOCUS: float = 0.9
+_MARK: float = 0.2
+_OUTLINE: float = 0.15
+_HEIGHT: float = 2.6
+_WIDTH: float = 15
+# Gap between segments in ems, at most this and at most a quarter of a segment.
+_GAP: float = 0.25
 # Opacity out of 255 of the segments past the handle, in the text color of the palette.
 _REST_ALPHA: int = 48
 _FOCUS_ALPHA: int = 70
@@ -34,7 +39,7 @@ class PresetSlider(QSlider):
         self._recommended: int = 1
         self.setPageStep(1)
         self.setRange(1, 1)
-        self.setMinimumHeight(_HEIGHT)
+        self.setMinimumHeight(Typography.px(ems=_HEIGHT))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
     @property
@@ -69,7 +74,7 @@ class PresetSlider(QSlider):
 
         :return: the size
         """
-        return QSize(200, _HEIGHT)
+        return QSize(Typography.px(ems=_WIDTH), Typography.px(ems=_HEIGHT))
 
     def paintEvent(self, event: QPaintEvent) -> None:  # pylint: disable=invalid-name,unused-argument
         """
@@ -84,26 +89,31 @@ class PresetSlider(QSlider):
         rest.setAlpha(_REST_ALPHA)
         if not self.isEnabled():
             accent = rest
+        track: float = Typography.length(ems=_TRACK)
+        radius: float = Typography.length(ems=_HANDLE)
+        mark_radius: float = Typography.length(ems=_MARK)
         painter: QPainter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setPen(Qt.PenStyle.NoPen)
         segments: list[QRectF] = self._segments()
         for value, segment in zip(range(self.minimum(), self.maximum() + 1), segments, strict=True):
             painter.setBrush(accent if value <= self.value() else rest)
-            painter.drawRoundedRect(segment, _TRACK / 2, _TRACK / 2)
+            painter.drawRoundedRect(segment, track / 2, track / 2)
         if self.maximum() > self.minimum():
             mark: QRectF = segments[self._recommended - self.minimum()]
             painter.setBrush(accent)
-            painter.drawEllipse(QPointF(mark.center().x(), mark.bottom() + _HANDLE + _MARK), _MARK, _MARK)
+            painter.drawEllipse(
+                QPointF(mark.center().x(), mark.bottom() + radius + mark_radius), mark_radius, mark_radius
+            )
         handle: QPointF = segments[self.value() - self.minimum()].center()
         if self.hasFocus():
             ring: QColor = QColor(accent)
             ring.setAlpha(_FOCUS_ALPHA)
             painter.setBrush(ring)
-            painter.drawEllipse(handle, _FOCUS, _FOCUS)
+            painter.drawEllipse(handle, Typography.length(ems=_FOCUS), Typography.length(ems=_FOCUS))
         painter.setBrush(accent)
-        painter.setPen(QPen(palette.color(QPalette.ColorRole.Base), 2))
-        painter.drawEllipse(handle, _HANDLE, _HANDLE)
+        painter.setPen(QPen(palette.color(QPalette.ColorRole.Base), Typography.length(ems=_OUTLINE)))
+        painter.drawEllipse(handle, radius, radius)
         painter.end()
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # pylint: disable=invalid-name
@@ -147,11 +157,14 @@ class PresetSlider(QSlider):
         :return: segments from the first preset to the last
         """
         count: int = self.maximum() - self.minimum() + 1
-        width: float = self.width() - _FOCUS * 2
-        gap: float = min(_GAP, width / count / 4) if count > 1 else 0
+        focus: float = Typography.length(ems=_FOCUS)
+        track: float = Typography.length(ems=_TRACK)
+        mark: float = Typography.length(ems=_MARK)
+        width: float = self.width() - focus * 2
+        gap: float = min(Typography.length(ems=_GAP), width / count / 4) if count > 1 else 0
         length: float = (width - gap * (count - 1)) / count
-        top: float = (self.height() - _MARK * 2) / 2 - _TRACK / 2 - _MARK
-        return [QRectF(_FOCUS + i * (length + gap), top, length, _TRACK) for i in range(count)]
+        top: float = (self.height() - mark * 2) / 2 - track / 2 - mark
+        return [QRectF(focus + i * (length + gap), top, length, track) for i in range(count)]
 
     def _value_at(self, *, x: float) -> int:
         """

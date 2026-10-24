@@ -9,14 +9,12 @@ from PySide6.QtGui import QColor, QImage, QMouseEvent, QPalette
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from app.ui.preset_slider import PresetSlider
+from app.ui.preset_slider import _FOCUS, _GAP, _MARK, PresetSlider
+from app.ui.typography import Typography
 
 __all__: tuple = ()
 
 _WIDTH: int = 424
-# Segments start after the focus ring room of 12 px; with 4 presets each is (400 - 3 * 3) / 4 wide.
-_LEFT: float = 12
-_SEGMENT: float = (_WIDTH - 24 - 9) / 4
 
 
 class TestPresetSlider:
@@ -39,14 +37,19 @@ class TestPresetSlider:
         slider.close()
 
     @staticmethod
-    def _center(*, value: int) -> QPoint:
+    def _center(*, value: int, slider: PresetSlider) -> QPoint:
         """
-        Find the middle of a preset's segment.
+        Find the middle of a preset's segment: segments start after the focus ring room, 4 of them with 3 gaps.
 
         :param value: 1-based preset index
+        :param slider: the slider
         :return: the point
         """
-        return QPoint(round(_LEFT + (value - 1) * (_SEGMENT + 3) + _SEGMENT / 2), 14)
+        left: float = Typography.length(ems=_FOCUS)
+        gap: float = Typography.length(ems=_GAP)
+        segment: float = (_WIDTH - left * 2 - gap * 3) / 4
+        middle: float = slider.height() / 2 - Typography.length(ems=_MARK) * 2
+        return QPoint(round(left + (value - 1) * (segment + gap) + segment / 2), round(middle))
 
     @staticmethod
     def _image(*, slider: PresetSlider) -> QImage:
@@ -98,7 +101,9 @@ class TestPresetSlider:
         moved: MagicMock = MagicMock()
         slider.valueChanged.connect(moved)
         # Act
-        QTest.mouseClick(slider, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center(value=4))
+        QTest.mouseClick(
+            slider, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center(value=4, slider=slider)
+        )
         # Assert
         assert slider.value() == 4
         moved.assert_called_once_with(4)
@@ -111,7 +116,7 @@ class TestPresetSlider:
         :return: None
         """
         # Arrange
-        point: QPointF = QPointF(self._center(value=1))
+        point: QPointF = QPointF(self._center(value=1, slider=slider))
         held: QMouseEvent = QMouseEvent(
             QMouseEvent.Type.MouseMove,
             point,
@@ -122,8 +127,8 @@ class TestPresetSlider:
         )
         hovering: QMouseEvent = QMouseEvent(
             QMouseEvent.Type.MouseMove,
-            QPointF(self._center(value=4)),
-            slider.mapToGlobal(QPointF(self._center(value=4))),
+            QPointF(self._center(value=4, slider=slider)),
+            slider.mapToGlobal(QPointF(self._center(value=4, slider=slider))),
             Qt.MouseButton.NoButton,
             Qt.MouseButton.NoButton,
             Qt.KeyboardModifier.NoModifier,
@@ -131,7 +136,9 @@ class TestPresetSlider:
         # Act
         QApplication.sendEvent(slider, held)
         QApplication.sendEvent(slider, hovering)
-        QTest.mouseRelease(slider, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center(value=1))
+        QTest.mouseRelease(
+            slider, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, self._center(value=1, slider=slider)
+        )
         # Assert
         assert slider.value() == 1
 
@@ -143,7 +150,9 @@ class TestPresetSlider:
         :return: None
         """
         # Arrange & Act
-        QTest.mouseClick(slider, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._center(value=4))
+        QTest.mouseClick(
+            slider, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, self._center(value=4, slider=slider)
+        )
         # Assert
         assert slider.value() == 2
 
@@ -174,9 +183,9 @@ class TestPresetSlider:
         # Act
         image: QImage = self._image(slider=slider)
         # Assert
-        assert image.pixelColor(self._center(value=2)) == accent
-        assert image.pixelColor(self._center(value=1)) == accent
-        assert image.pixelColor(self._center(value=4)) != accent
+        assert image.pixelColor(self._center(value=2, slider=slider)) == accent
+        assert image.pixelColor(self._center(value=1, slider=slider)) == accent
+        assert image.pixelColor(self._center(value=4, slider=slider)) != accent
 
     def test_drawn_disabled(self, slider: PresetSlider) -> None:
         """
@@ -191,4 +200,4 @@ class TestPresetSlider:
         # Act
         image: QImage = self._image(slider=slider)
         # Assert
-        assert image.pixelColor(QPoint(_WIDTH // 2, 14)) != accent
+        assert image.pixelColor(QPoint(_WIDTH // 2, slider.height() // 2)) != accent

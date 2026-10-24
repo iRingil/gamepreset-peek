@@ -5,8 +5,8 @@ from pathlib import Path
 from queue import Queue
 from typing import Callable, Sequence
 
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QPoint, Qt
-from PySide6.QtGui import QFont, QPalette
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QPoint, Qt
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QGridLayout,
@@ -38,37 +38,15 @@ from app.ui.presenter import Presenter
 from app.ui.settings_menu import SettingsMenu
 from app.ui.skeleton import SettingsSkeleton
 from app.ui.theme import Theme
+from app.ui.typography import GAP, Typography
 from app.ui.views import ChoiceView, HardwareView, InstalledGameView, SettingsView
 
 __all__: tuple[str, ...] = ("MainWindow",)
 
-_PAD: int = 8
-_VALUE_WIDTH: int = 220
-# Point size steps above the base font: the hardware block, the settings title and the preset position.
-_HEADLINE_STEP: float = 2
-_TITLE_STEP: float = 6
-_BIG_STEP: float = 10
+# Width of the value column of the settings table, in ems.
+_VALUE_WIDTH: float = 16
 # Item data role of the settings table telling that a value differs from the recommended preset.
 _CHANGED_ROLE: int = Qt.ItemDataRole.UserRole + 1
-
-
-class _Fonts:
-    """Fonts derived from the application font: bold and larger ones for headings."""
-
-    @staticmethod
-    def derived(*, base: QFont, step: float = 0, bold: bool = False) -> QFont:
-        """
-        Make a font from the base one.
-
-        :param base: font to start from
-        :param step: points to add to its size
-        :param bold: True for bold
-        :return: the font
-        """
-        font: QFont = QFont(base)
-        font.setPointSizeF(base.pointSizeF() + step)
-        font.setBold(bold)
-        return font
 
 
 class _ChangedDelegate(QStyledItemDelegate):
@@ -111,11 +89,11 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         self._on_slider: Callable[[int], None] = on_slider
         self._index: int = 0
         self._title: QLabel = QLabel(parent=self)
-        self._title.setFont(_Fonts.derived(base=self.font(), step=_TITLE_STEP, bold=True))
+        self._title.setFont(Typography.heading(base=self.font()))
         # A long name wraps instead of running under the preset number.
         self._title.setWordWrap(True)
         self._position: QLabel = QLabel(parent=self)
-        self._position.setFont(_Fonts.derived(base=self.font(), step=_BIG_STEP, bold=True))
+        self._position.setFont(Typography.heading(base=self.font()))
         self._position.setForegroundRole(QPalette.ColorRole.Accent)
         self._caption: QLabel = self._muted(parent=self)
         self._slider_row: QWidget = QWidget(parent=self)
@@ -138,7 +116,7 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         """
         self._performance.setText(translator.text(item=UiText.PERFORMANCE))
         self._quality.setText(translator.text(item=UiText.QUALITY))
-        self._optimal.setText(translator.text(item=UiText.BACK_TO_OPTIMAL))
+        self._optimal.setText(translator.text(item=UiText.OPTIMAL))
         self._table.setHeaderLabels([translator.text(item=UiText.SETTING), translator.text(item=UiText.VALUE)])
 
     def show_settings(self, *, settings: SettingsView) -> None:
@@ -206,7 +184,7 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         header: QHeaderView = table.header()
         header.setStretchLastSection(False)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.resizeSection(1, _VALUE_WIDTH)
+        header.resizeSection(1, Typography.px(ems=_VALUE_WIDTH))
         table.hide()
         return table
 
@@ -226,11 +204,11 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         head.addLayout(titles, stretch=1)
         head.addLayout(preset)
         slider: QHBoxLayout = QHBoxLayout(self._slider_row)
-        slider.setContentsMargins(0, _PAD, 0, _PAD)
+        slider.setContentsMargins(0, Typography.px(ems=GAP), 0, Typography.px(ems=GAP))
         slider.addWidget(self._performance)
         slider.addWidget(self.slider, stretch=1)
         slider.addWidget(self._quality)
-        slider.addSpacing(_PAD * 2)
+        slider.addSpacing(Typography.px(ems=GAP * 2))
         slider.addWidget(self._optimal)
         layout: QVBoxLayout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -281,8 +259,8 @@ class _HardwareBlock(QWidget):
         grid: QGridLayout = QGridLayout(self)
         grid.setContentsMargins(0, 0, 0, 0)
         # Caption, value, gap, caption, value, gap, caption, value.
-        grid.setColumnMinimumWidth(2, _PAD * 4)
-        grid.setColumnMinimumWidth(5, _PAD * 4)
+        grid.setColumnMinimumWidth(2, Typography.px(ems=GAP * 4))
+        grid.setColumnMinimumWidth(5, Typography.px(ems=GAP * 4))
         cells: tuple[tuple[UiText, QLabel, int, int], ...] = (
             (UiText.CPU, self.cpu, 0, 0),
             (UiText.GPU, self.gpu, 1, 0),
@@ -328,7 +306,6 @@ class _HardwareBlock(QWidget):
         :return: the caption
         """
         label: QLabel = QLabel(parent=self)
-        label.setFont(_Fonts.derived(base=self.font(), step=_HEADLINE_STEP))
         label.setForegroundRole(QPalette.ColorRole.PlaceholderText)
         return label
 
@@ -339,7 +316,7 @@ class _HardwareBlock(QWidget):
         :return: the label
         """
         label: QLabel = QLabel(parent=self)
-        label.setFont(_Fonts.derived(base=self.font(), step=_HEADLINE_STEP, bold=True))
+        label.setFont(Typography.strong(base=self.font()))
         return label
 
     def _link(self, *, on_click: Callable[[], None]) -> QLabel:
@@ -475,20 +452,34 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
 
         :return: the layout
         """
+        # Keeps the cover level with the top of the tab pages: the tab bar's height is known only once styled.
+        self._cover_gap: QWidget = QWidget(parent=self)
+        self._games.tabBar().installEventFilter(self)
         cover: QVBoxLayout = QVBoxLayout()
-        # Level with the top of the tab pages, below the tab bar.
-        cover.addSpacing(self._games.tabBar().sizeHint().height())
+        cover.addWidget(self._cover_gap)
         cover.addWidget(self._cover)
         cover.addStretch(1)
         games: QHBoxLayout = QHBoxLayout()
         games.addWidget(self._games, stretch=1)
-        games.addSpacing(_PAD * 2)
+        games.addSpacing(Typography.px(ems=GAP * 2))
         games.addLayout(cover)
         body: QHBoxLayout = QHBoxLayout()
         body.addLayout(games, stretch=1)
-        body.addSpacing(_PAD * 3)
+        body.addSpacing(Typography.px(ems=GAP * 3))
         body.addWidget(self._settings_area, stretch=1)
         return body
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # pylint: disable=invalid-name
+        """
+        Keep the gap above the cover as tall as the tab bar.
+
+        :param watched: object the event is for
+        :param event: the event
+        :return: False, so the event goes on as usual
+        """
+        if watched is self._games.tabBar() and event.type() == QEvent.Type.Resize:
+            self._cover_gap.setFixedHeight(self._games.tabBar().height())
+        return super().eventFilter(watched, event)
 
     def attach(self, *, presenter: Presenter) -> None:
         """

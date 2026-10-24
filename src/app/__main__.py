@@ -22,6 +22,8 @@ from app.infra.logger import LoggingManager
 from app.ui.debouncer import QtDebouncer
 from app.ui.main_window import MainWindow
 from app.ui.presenter import Presenter
+from app.ui.theme import Theme
+from app.ui.typography import Typography
 from app.ui.worker import Worker
 
 __all__: tuple = ()
@@ -59,6 +61,10 @@ class _Application:  # pylint: disable=too-few-public-methods
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
             application: QApplication = QApplication(sys.argv)
             application.setWindowIcon(QIcon(str(APP_ICON_FILE)))
+            # The theme's first call sets the style, which restores the Windows fonts of lists and menus: install
+            # the font after it and before any widget, since font changes reach widgets only once the loop runs.
+            Theme.apply(mode=service.saved_theme())
+            Typography.install()
             sys.excepthook = self._log_unhandled
             window: MainWindow = MainWindow(log_lines=self._logging.lines)
             worker: Worker = Worker()

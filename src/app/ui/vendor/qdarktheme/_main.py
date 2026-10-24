@@ -15,9 +15,7 @@ _proxy_style = None
 def _apply_style(app, additional_qss: str | None, **kargs) -> None:
     from app.ui.vendor.qdarktheme._proxy_style import QDarkThemeStyle
 
-    stylesheet = load_stylesheet(**kargs)
-    if additional_qss is not None:
-        stylesheet += additional_qss
+    stylesheet = load_stylesheet(**kargs, additional_qss=additional_qss or "")
     app.setStyleSheet(stylesheet)
 
     app.setPalette(

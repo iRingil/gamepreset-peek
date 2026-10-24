@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from app.config import UI_LANGUAGES
 from app.ui.icons import ICON_SIZE, IconButton, Icons
+from app.ui.typography import Typography
 
 __all__: tuple = ()
 
@@ -71,10 +72,11 @@ class TestIcons:
         """
         # Arrange & Act
         icon: QIcon = Icons.symbol(name="sun", color=_RED, ratio=2.0)
-        pixmap: QPixmap = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE), 2.0)
+        size: int = Typography.px(ems=ICON_SIZE)
+        pixmap: QPixmap = icon.pixmap(QSize(size, size), 2.0)
         # Assert
         assert qt_app is not None
-        assert (pixmap.devicePixelRatio(), pixmap.width()) == (2.0, ICON_SIZE * 2)
+        assert (pixmap.devicePixelRatio(), pixmap.width()) == (2.0, size * 2)
 
     def test_flag_keeps_proportions(self, qt_app: QApplication) -> None:
         """
@@ -125,6 +127,7 @@ class TestIconButton:
         button.setPalette(palette)
         qt_app.processEvents()
         # Assert
-        assert (button.iconSize(), button.autoRaise()) == (QSize(ICON_SIZE, ICON_SIZE), True)
+        size: int = Typography.px(ems=ICON_SIZE)
+        assert (button.iconSize(), button.autoRaise()) == (QSize(size, size), True)
         assert "#ff0000" not in before
         assert _Pixels.colors(icon=button.icon()) == {"#ff0000"}

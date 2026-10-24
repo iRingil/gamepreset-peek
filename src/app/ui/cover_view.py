@@ -8,14 +8,16 @@ from PySide6.QtWidgets import QWidget
 
 from app.ui.icons import Icons
 from app.ui.skeleton import Skeleton
+from app.ui.typography import Typography
 
 __all__: tuple[str, ...] = ("CoverView",)
 
-# Width of the cover in logical pixels; the height follows the box art's 628 x 888 shape.
-_WIDTH: int = 220
-_HEIGHT: int = round(_WIDTH * 888 / 628)
-_RADIUS: float = 8
-_SYMBOL: int = 32
+# Width of the cover in ems; the height follows the box art's 628 x 888 shape.
+_WIDTH: float = 17
+_SHAPE: float = 888 / 628
+# Corner radius and placeholder symbol size, in ems.
+_RADIUS: float = 0.6
+_SYMBOL: float = 2.5
 
 
 class CoverView(Skeleton):
@@ -28,7 +30,7 @@ class CoverView(Skeleton):
         :param parent: widget the cover belongs to
         """
         super().__init__(parent=parent)
-        self.setFixedSize(QSize(_WIDTH, _HEIGHT))
+        self.setFixedSize(QSize(Typography.px(ems=_WIDTH), Typography.px(ems=_WIDTH * _SHAPE)))
         self._picture: QPixmap | None = None
         self._placeholder: bool = False
 
@@ -93,7 +95,8 @@ class CoverView(Skeleton):
             super().paintEvent(event)
             return
         frame: QPainterPath = QPainterPath()
-        frame.addRoundedRect(QRectF(self.rect()), _RADIUS, _RADIUS)
+        radius: float = Typography.length(ems=_RADIUS)
+        frame.addRoundedRect(QRectF(self.rect()), radius, radius)
         painter: QPainter = QPainter(self)
         painter.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform)
         if self._picture is not None:
@@ -116,5 +119,6 @@ class CoverView(Skeleton):
                 color=self.palette().color(QPalette.ColorRole.PlaceholderText),
                 ratio=self.devicePixelRatioF(),
             )
-            symbol.paint(painter, (self.width() - _SYMBOL) // 2, (self.height() - _SYMBOL) // 2, _SYMBOL, _SYMBOL)
+            size: int = Typography.px(ems=_SYMBOL)
+            symbol.paint(painter, (self.width() - size) // 2, (self.height() - size) // 2, size, size)
         painter.end()

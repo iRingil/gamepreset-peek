@@ -105,6 +105,7 @@ def load_stylesheet(
     custom_colors: dict[str, str | dict[str, str]] | None = None,
     *,
     default_theme: str = "dark",
+    additional_qss: str = "",
 ) -> str:
     """Load the style sheet which looks like flat design. There are `dark` and `light` theme.
 
@@ -185,7 +186,7 @@ def load_stylesheet(
 
     get_cash_root_path(__version__).mkdir(parents=True, exist_ok=True)
 
-    stylesheet = _resources.stylesheets.TEMPLATE_STYLESHEET
+    stylesheet = _resources.stylesheets.TEMPLATE_STYLESHEET + additional_qss
     try:
         from app.ui.vendor.qdarktheme.qtpy.QtCore import QCoreApplication
 

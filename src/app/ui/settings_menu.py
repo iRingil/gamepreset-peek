@@ -10,10 +10,10 @@ from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.icons import ICON_SIZE, IconButton, Icons
+from app.ui.typography import GAP, Typography
 
 __all__: tuple[str, ...] = ("SettingsMenu",)
 
-_PAD: int = 8
 # Language codes are shown as two letters, e.g. "RU".
 _LANGUAGE_CODE_LENGTH: int = 2
 
@@ -58,12 +58,12 @@ class SettingsMenu(QFrame):
         self.setFrameShape(QFrame.Shape.StyledPanel)
         self._on_language: Callable[[str], None] = on_language
         grid: QGridLayout = QGridLayout(self)
-        grid.setHorizontalSpacing(_PAD * 2)
+        grid.setHorizontalSpacing(Typography.px(ems=GAP * 2))
         grid.addWidget(QLabel(translator.text(item=UiText.THEME), parent=self), 0, 0)
         grid.addLayout(self._theme_buttons(translator=translator, theme=theme, on_theme=on_theme), 0, 1)
         grid.addWidget(QLabel(translator.text(item=UiText.LANGUAGE), parent=self), 1, 0)
         self._languages: QComboBox = QComboBox(parent=self)
-        self._languages.setIconSize(QSize(ICON_SIZE, ICON_SIZE))
+        self._languages.setIconSize(QSize(Typography.px(ems=ICON_SIZE), Typography.px(ems=ICON_SIZE)))
         # The default width counts the text only and cuts the code next to the flag.
         self._languages.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._languages.setMinimumContentsLength(_LANGUAGE_CODE_LENGTH + 2)

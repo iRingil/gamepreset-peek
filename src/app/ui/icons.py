@@ -9,13 +9,14 @@ from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import QToolButton, QWidget
 
 from app.config import FLAGS_DIR, ICONS_DIR
+from app.ui.typography import Typography
 
 __all__: tuple[str, ...] = ("ICON_SIZE", "IconButton", "Icons")
 
-# Icon size of the buttons, in logical pixels.
-ICON_SIZE: int = 20
-# Logical sizes every icon is drawn at; a widget takes the one nearest to its icon size.
-_SIZES: tuple[int, ...] = (16, ICON_SIZE, 24, 32)
+# Icon size of the buttons and the language flags, in ems.
+ICON_SIZE: float = 1.5
+# Sizes in ems every icon is drawn at; a widget takes the one nearest to its icon size.
+_SIZES: tuple[float, ...] = (1.25, ICON_SIZE, 2.5)
 
 
 class Icons:
@@ -68,7 +69,8 @@ class Icons:
         renderer: QSvgRenderer = QSvgRenderer(QByteArray(svg.encode(encoding="utf-8")))
         shape: QSizeF = renderer.viewBoxF().size()
         icon: QIcon = QIcon()
-        for size in _SIZES:
+        for ems in _SIZES:
+            size: int = Typography.px(ems=ems)
             pixmap: QPixmap = QPixmap(round(size * ratio), round(size * ratio))
             pixmap.setDevicePixelRatio(ratio)
             pixmap.fill(Qt.GlobalColor.transparent)
@@ -95,7 +97,7 @@ class IconButton(QToolButton):
         super().__init__(parent)
         self._symbol: str = symbol
         self.setAutoRaise(True)
-        self.setIconSize(QSize(ICON_SIZE, ICON_SIZE))
+        self.setIconSize(QSize(Typography.px(ems=ICON_SIZE), Typography.px(ems=ICON_SIZE)))
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.redraw()
 

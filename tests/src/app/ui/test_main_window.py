@@ -441,7 +441,7 @@ class TestMainWindow:
         slider.setValue(3)
         # Assert
         assert (slider.minimum(), slider.maximum(), slider.recommended, table.topLevelItemCount()) == (1, 3, 2, 2)
-        assert (window.label(text="2 / 3").isVisible(), window.button(text="Back to optimal").isEnabled()) == (
+        assert (window.label(text="2 / 3").isVisible(), window.button(text="Optimal").isEnabled()) == (
             True,
             False,
         )
@@ -500,7 +500,7 @@ class TestMainWindow:
         method: MagicMock = window.spy(action="back_to_optimal")
         window.widget.show_settings(settings=replace(_SETTINGS, index=3, optimal=False))
         # Act
-        window.button(text="Back to optimal").click()
+        window.button(text="Optimal").click()
         # Assert
         method.assert_called_once_with(window.presenter)
 
