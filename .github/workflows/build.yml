@@ -1,0 +1,46 @@
+name: Build
+
+# Builds the Nuitka standalone folder on demand and for every version tag.
+on:
+  workflow_dispatch:
+  push:
+    tags: [ "v*" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      NUITKA_CACHE_DIR: ${{ github.workspace }}\.nuitka-cache
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      # The build script runs the Python of the project's .venv.
+      - name: Create the virtualenv
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python.exe -m pip install --upgrade pip
+          .venv\Scripts\python.exe -m pip install -r src/requirements.txt -r src/requirements-dev.txt
+      - name: Test with pytest
+        run: .venv\Scripts\python.exe -m pytest
+      # Compiled C objects and Nuitka's downloads make a rebuild much faster.
+      - name: Restore the Nuitka cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.NUITKA_CACHE_DIR }}
+          key: nuitka-${{ hashFiles('src/requirements*.txt', 'infrastructure/nuitka/build.cmd') }}
+          restore-keys: nuitka-
+      - name: Build with Nuitka
+        shell: cmd
+        run: infrastructure\nuitka\build.cmd
+      - name: Upload the app folder
+        uses: actions/upload-artifact@v7
+        with:
+          name: GamePresetPeek
+          path: build/GamePresetPeek.dist
+          if-no-files-found: error
