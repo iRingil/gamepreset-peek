@@ -178,7 +178,7 @@ class TestPresetSlider:
         :return: None
         """
         # Arrange
-        accent: QColor = slider.palette().color(QPalette.ColorRole.Accent)
+        accent: QColor = slider.palette().color(QPalette.ColorRole.Link)
         slider.setFocus()
         # Act
         image: QImage = self._image(slider=slider)
@@ -196,7 +196,7 @@ class TestPresetSlider:
         """
         # Arrange
         slider.set_presets(count=1, index=1, recommended=1)
-        accent: QColor = slider.palette().color(QPalette.ColorRole.Accent)
+        accent: QColor = slider.palette().color(QPalette.ColorRole.Link)
         # Act
         image: QImage = self._image(slider=slider)
         # Assert

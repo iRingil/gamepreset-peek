@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QGuiApplication
+from PySide6.QtGui import QColor, QGuiApplication, QPalette
 from PySide6.QtWidgets import QApplication
 
 from app.core.models import ThemeMode
@@ -113,3 +113,18 @@ class TestTheme:
         assert "{{" not in light + dark
         assert "QTabBar::tab:top:selected" in light
         assert light[light.index("QTabBar::tab:top:selected") :] != dark[dark.index("QTabBar::tab:top:selected") :]
+
+    def test_light_palette(self, themed: QApplication) -> None:
+        """
+        Gives the light theme a steel window, lighter lists and the teal-blue accent as the link color.
+
+        :param themed: Qt application, restored after the test
+        :return: None
+        """
+        # Arrange & Act
+        Theme.apply(mode=ThemeMode.LIGHT)
+        sheet: str = themed.styleSheet().lower()
+        # Assert
+        assert themed.palette().color(QPalette.ColorRole.Link).name() == "#0b6b8a"
+        assert "qwidget {background:rgba(217, 224, 232, 1.000)" in sheet
+        assert "rgba(247, 249, 251, 1.000)" in sheet

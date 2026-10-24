@@ -50,7 +50,7 @@ _CHANGED_ROLE: int = Qt.ItemDataRole.UserRole + 1
 
 
 class _ChangedDelegate(QStyledItemDelegate):
-    """Draws the values that differ from the recommended preset in bold and in the accent color of the palette.
+    """Draws the values that differ from the recommended preset in bold and in the accent color of the theme.
 
     The color is taken while painting, so a switch between light and dark mode reaches it at once."""
 
@@ -67,7 +67,7 @@ class _ChangedDelegate(QStyledItemDelegate):
         super().initStyleOption(option, index)
         if index.data(_CHANGED_ROLE):
             option.font.setBold(True)
-            option.palette.setColor(QPalette.ColorRole.Text, option.palette.color(QPalette.ColorRole.Accent))
+            option.palette.setColor(QPalette.ColorRole.Text, option.palette.color(QPalette.ColorRole.Link))
 
 
 class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
@@ -94,7 +94,8 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         self._title.setWordWrap(True)
         self._position: QLabel = QLabel(parent=self)
         self._position.setFont(Typography.heading(base=self.font()))
-        self._position.setForegroundRole(QPalette.ColorRole.Accent)
+        # The theme's accent comes as Link, the Accent role is Windows' own.
+        self._position.setForegroundRole(QPalette.ColorRole.Link)
         self._caption: QLabel = self._muted(parent=self)
         self._slider_row: QWidget = QWidget(parent=self)
         self._slider_row.hide()

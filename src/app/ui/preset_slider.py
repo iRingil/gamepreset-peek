@@ -84,7 +84,8 @@ class PresetSlider(QSlider):
         :return: None
         """
         palette: QPalette = self.palette()
-        accent: QColor = palette.color(QPalette.ColorRole.Accent)
+        # The theme sets its accent as Link; Accent is left to Windows and would differ from the links.
+        accent: QColor = palette.color(QPalette.ColorRole.Link)
         rest: QColor = QColor(palette.color(QPalette.ColorRole.WindowText))
         rest.setAlpha(_REST_ALPHA)
         if not self.isEnabled():

@@ -452,7 +452,7 @@ class TestMainWindow:
             False,
         )
         assert option.font.bold() and option.palette.color(QPalette.ColorRole.Text) == option.palette.color(
-            QPalette.ColorRole.Accent
+            QPalette.ColorRole.Link
         )
         window.presenter.move_slider.assert_called_once_with(index=3)
 

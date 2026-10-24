@@ -40,6 +40,25 @@ class Theme:
         ThemeMode.DARK: Qt.ColorScheme.Dark,
     }
 
+    # The theme's own light palette is near white with grey text and faint borders: a steel window holds lighter
+    # lists and tables, with near-black text and one teal-blue accent (links, slider, selection).
+    _LIGHT_COLORS: dict[str, str] = {
+        "background": "#d9e0e8",
+        "background>list": "#f7f9fb",
+        "background>table": "#f7f9fb",
+        "background>textarea": "#f7f9fb",
+        "foreground": "#0f1b2a",
+        "border": "#9fabba",
+        "input.background": "#f2f5f8",
+        "primary": "#0b6b8a",
+        "primary>list.selectionBackground": "#a9d3e3",
+        "primary>table.selectionBackground": "#a9d3e3",
+        "primary>list.inactiveSelectionBackground": "#c4e0ea",
+        "primary>table.inactiveSelectionBackground": "#c4e0ea",
+        "statusBar.background": "#c9d2dc",
+        "tableSectionHeader.background": "#c6d0db",
+    }
+
     # Status line colors on a dark and a light background; an informing line keeps the placeholder text color.
     _STATUS_COLORS: dict[tuple[StatusLevel, bool], str] = {
         (StatusLevel.WARNING, True): "#fdd663",
@@ -93,4 +112,5 @@ class Theme:
         # The Qt color scheme still drives the window title bar, which the style sheet can't reach.
         QGuiApplication.styleHints().setColorScheme(cls.scheme(mode=mode))
         # ThemeMode values are the theme names of PyQtDarkTheme.
-        qdarktheme.setup_theme(theme=mode.value, additional_qss=_QSS)
+        colors: dict[str, str | dict[str, str]] = {"[light]": cls._LIGHT_COLORS}
+        qdarktheme.setup_theme(theme=mode.value, custom_colors=colors, additional_qss=_QSS)
