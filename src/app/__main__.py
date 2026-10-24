@@ -8,7 +8,7 @@ from loguru import logger
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
-from app.config import APP_ICON_FILE, APP_USER_MODEL_ID
+from app.config import APP_ICON_FILE, APP_USER_MODEL_ID, SAVE_WAIT_SECONDS
 from app.core.covers import CoverCache
 from app.core.database import AppDatabase
 from app.core.game_finder import GameFinder
@@ -24,7 +24,7 @@ from app.ui.main_window import MainWindow
 from app.ui.presenter import Presenter
 from app.ui.theme import Theme
 from app.ui.typography import Typography
-from app.ui.worker import Worker
+from app.ui.worker import Runners, Worker
 
 __all__: tuple = ()
 
@@ -67,13 +67,14 @@ class _Application:  # pylint: disable=too-few-public-methods
             Typography.install()
             sys.excepthook = self._log_unhandled
             window: MainWindow = MainWindow(log_lines=self._logging.lines)
-            worker: Worker = Worker()
+            requests: Worker = Worker(name="requests")
             finder: Worker = Worker(name="finder")
+            updater: Worker = Worker(name="updater")
+            saver: Worker = Worker(name="saver")
             presenter: Presenter = Presenter(
                 view=window,
                 service=service,
-                runner=worker,
-                finder=finder,
+                runners=Runners(requests=requests, finder=finder, updater=updater, saver=saver),
                 debouncer=QtDebouncer(parent=window),
                 translator=translator,
                 theme=service.saved_theme(),
@@ -85,8 +86,10 @@ class _Application:  # pylint: disable=too-few-public-methods
             try:
                 application.exec()
             finally:
-                worker.close()
-                finder.close()
+                for worker in (requests, finder, updater, saver):
+                    worker.close()
+                # Settings changed just before the window closed are still written; a hung request is left behind.
+                saver.join(timeout=SAVE_WAIT_SECONDS)
 
     @staticmethod
     def _log_unhandled(

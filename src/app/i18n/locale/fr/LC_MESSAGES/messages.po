@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GamePresetPeek VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-24 12:43+0300\n"
+"POT-Creation-Date: 2026-10-24 15:31+0300\n"
 "PO-Revision-Date: 2026-10-21 04:34+0300\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: fr\n"
@@ -181,6 +181,32 @@ msgstr "Choisir une autre résolution d’écran"
 #, python-brace-format
 msgid "Could not get data from NVIDIA: {error}"
 msgstr "Impossible d’obtenir les données de NVIDIA : {error}"
+
+#. SAVE_FAILED
+#, python-brace-format
+msgid "Could not save the settings: {error}"
+msgstr "Impossible d’enregistrer les paramètres : {error}"
+
+#. ERROR_NO_CONNECTION
+msgid "no connection, check your internet"
+msgstr "pas de connexion, vérifiez votre accès à Internet"
+
+#. ERROR_NO_ANSWER
+msgid "the server is not answering, try again later"
+msgstr "le serveur ne répond pas, réessayez plus tard"
+
+#. ERROR_HTTP
+#, python-brace-format
+msgid "the server answered with error {status}"
+msgstr "le serveur a répondu avec l’erreur {status}"
+
+#. ERROR_BAD_ANSWER
+msgid "the server sent data in an unexpected format"
+msgstr "le serveur a envoyé des données dans un format inattendu"
+
+#. ERROR_UNEXPECTED
+msgid "unexpected error, see the logs"
+msgstr "erreur inattendue, voir le journal"
 
 #. NO_RECOMMENDATION_TITLE
 msgid "No recommendations"

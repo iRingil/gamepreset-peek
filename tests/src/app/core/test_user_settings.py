@@ -1,5 +1,7 @@
 """Tests of the saved user settings."""
 
+import threading
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
@@ -168,3 +170,76 @@ class TestUserSettingsStore:
             game_folders=None,
             game_choice=GameChoice(tab=GamesTab.INSTALLED, installed_game_id=None, catalog_game_id=None),
         )
+
+    def test_save_leaves_one_file(self, path: Path) -> None:
+        """
+        Writes the settings file over an earlier one, leaving no other file beside it.
+
+        :param path: settings file path
+        :return: None
+        """
+        # Arrange
+        store: UserSettingsStore = UserSettingsStore(path=path)
+        store.save(settings=UserSettings(language="ru"))
+        # Act
+        store.save(settings=UserSettings(language="de"))
+        # Assert
+        assert (store.load(), list(path.parent.iterdir())) == (UserSettings(language="de"), [path])
+
+    def test_update(self, path: Path) -> None:
+        """
+        Changes the saved settings and gives them after the change.
+
+        :param path: settings file path
+        :return: None
+        """
+        # Arrange
+        store: UserSettingsStore = UserSettingsStore(path=path)
+        store.save(settings=UserSettings(language="ru"))
+        # Act
+        updated: UserSettings = store.update(change=lambda saved: replace(saved, theme=ThemeMode.DARK))
+        # Assert
+        assert updated == store.load() == UserSettings(language="ru", theme=ThemeMode.DARK)
+
+    def test_update_without_change(self, path: Path) -> None:
+        """
+        Writes nothing when the change makes no difference.
+
+        :param path: settings file path
+        :return: None
+        """
+        # Arrange
+        store: UserSettingsStore = UserSettingsStore(path=path)
+        # Act
+        updated: UserSettings = store.update(change=lambda saved: saved)
+        # Assert
+        assert (updated, path.exists()) == (UserSettings(), False)
+
+    def test_updates_from_threads(self, path: Path) -> None:
+        """
+        Keeps every change when several threads change the settings at once.
+
+        :param path: settings file path
+        :return: None
+        """
+        # Arrange
+        store: UserSettingsStore = UserSettingsStore(path=path)
+        folders: list[str] = [rf"D:\Games{number}" for number in range(20)]
+        threads: list[threading.Thread] = [
+            threading.Thread(
+                target=store.update,
+                kwargs={
+                    "change": lambda saved, folder=folder: replace(
+                        saved, game_folders=(*(saved.game_folders or ()), folder)
+                    )
+                },
+            )
+            for folder in folders
+        ]
+        # Act
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        # Assert
+        assert sorted(store.load().game_folders or ()) == sorted(folders)

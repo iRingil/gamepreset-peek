@@ -9,7 +9,7 @@ __all__: tuple[str, ...] = ("DbFiles",)
 
 
 class DbFiles:
-    """Writes database files with the tables the app reads; the real file is written by the scheduled update."""
+    """Writes database files with the tables the app reads; the real file is written outside this repository."""
 
     _SCHEMA: str = """
         CREATE TABLE cpus (

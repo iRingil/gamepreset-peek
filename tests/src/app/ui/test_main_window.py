@@ -7,8 +7,8 @@ from typing import Iterator
 from unittest.mock import MagicMock, create_autospec
 
 import pytest
-from PySide6.QtCore import QModelIndex, QObject
-from PySide6.QtGui import QColor, QFont, QPalette
+from PySide6.QtCore import QModelIndex, QObject, QSize, Qt
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QAbstractItemView,
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSlider,
+    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTreeWidget,
@@ -34,6 +35,7 @@ from app.i18n.translator import Translator
 from app.ui.choice_popup import ChoicePopup
 from app.ui.cover_view import CoverView
 from app.ui.games_panel import GamesPanel
+from app.ui.games_presenter import GamesPresenter
 from app.ui.icons import IconButton
 from app.ui.main_window import MainWindow
 from app.ui.notice import Notice
@@ -72,6 +74,8 @@ class _Window:
         :param monkeypatch: pytest monkeypatch, for the presenter methods the window calls through the class
         """
         self.presenter: MagicMock = create_autospec(spec=Presenter, instance=True)
+        # Set in Presenter.__init__, so the class spec doesn't have it.
+        self.presenter.games = create_autospec(spec=GamesPresenter, instance=True)
         self.monkeypatch: pytest.MonkeyPatch = monkeypatch
         self.widget: MainWindow = MainWindow(log_lines=Queue())
         self.widget.attach(presenter=self.presenter)
@@ -354,8 +358,8 @@ class TestMainWindow:
         window.child(parent=window.widget, kind=QLineEdit).setText("mord")
         # Assert
         assert games.model().rowCount() == 2
-        window.presenter.select_game.assert_called_once_with(index=1)
-        window.presenter.search_games.assert_called_once_with(text="mord")
+        window.presenter.games.select_game.assert_called_once_with(index=1)
+        window.presenter.games.search_games.assert_called_once_with(text="mord")
 
     def test_installed_games(self, window: _Window, tmp_path: Path) -> None:
         """
@@ -366,7 +370,6 @@ class TestMainWindow:
         :return: None
         """
         # Arrange
-        method: MagicMock = window.spy(action="find_games")
         panel: GamesPanel = window.panel()
         window.widget.show_finding()
         searching: bool = panel.installed.pages.currentWidget() is panel.installed.skeleton
@@ -379,8 +382,8 @@ class TestMainWindow:
         # Assert
         assert (searching, panel.installed.pages.currentWidget() is panel.installed.list) == (True, True)
         assert [panel.tabText(0), panel.tabText(1)] == ["My games", "All games"]
-        window.presenter.select_installed_game.assert_called_once_with(index=0)
-        method.assert_called_once_with(window.presenter)
+        window.presenter.games.select_installed_game.assert_called_once_with(index=0)
+        window.presenter.games.find_games.assert_called_once_with()
 
     def test_tab_and_folders(self, window: _Window, monkeypatch: pytest.MonkeyPatch) -> None:
         """
@@ -405,14 +408,14 @@ class TestMainWindow:
         panel.installed.remove.click()
         # Assert
         assert shown is panel.all
-        assert [call.kwargs for call in window.presenter.select_tab.call_args_list] == [
+        assert [call.kwargs for call in window.presenter.games.select_tab.call_args_list] == [
             {"tab": GamesTab.ALL},
             {"tab": GamesTab.INSTALLED},
         ]
         assert panel.installed.folder_list.count() == 2
-        window.presenter.add_folder.assert_called_once_with(folder="E:/Games")
-        window.presenter.change_folder.assert_called_once_with(position=1, folder="E:/Games")
-        window.presenter.remove_folder.assert_called_once_with(position=1)
+        window.presenter.games.add_folder.assert_called_once_with(folder="E:/Games")
+        window.presenter.games.change_folder.assert_called_once_with(position=1, folder="E:/Games")
+        window.presenter.games.remove_folder.assert_called_once_with(position=1)
 
     def test_cover(self, window: _Window) -> None:
         """
@@ -456,6 +459,24 @@ class TestMainWindow:
             QPalette.ColorRole.Link
         )
         window.presenter.move_slider.assert_called_once_with(index=3)
+
+    def test_settings_by_keyboard(self, window: _Window) -> None:
+        """
+        Lets the settings table take the focus by Tab, so it scrolls with the keys, without a focus mark on a row.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        window.widget.show_settings(settings=_SETTINGS)
+        table: QTreeWidget = window.table()
+        option: QStyleOptionViewItem = QStyleOptionViewItem()
+        option.state = QStyle.StateFlag.State_HasFocus
+        # Act
+        window.delegate(view=table).initStyleOption(option, table.model().index(0, 0))
+        # Assert
+        assert table.focusPolicy() == Qt.FocusPolicy.TabFocus
+        assert not option.state & QStyle.StateFlag.State_HasFocus
 
     def test_hints(self, window: _Window) -> None:
         """
@@ -619,6 +640,21 @@ class TestMainWindow:
         # Assert
         assert widget.findChild(SettingsMenu) is None
 
+    def test_size(self, window: _Window) -> None:
+        """
+        Can be made as small as a 1600x900 screen at 150 % allows, and opens no larger than the screen.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        screen: QSize = QGuiApplication.primaryScreen().availableSize()
+        # Act
+        size: QSize = window.widget.size()
+        # Assert
+        assert window.widget.minimumSize() == QSize(1040, 520)
+        assert size.width() <= max(screen.width(), 1040) and size.height() <= max(screen.height(), 520)
+
     def test_status(self, window: _Window) -> None:
         """
         Shows the status line, an informing one in the placeholder text color.
@@ -632,6 +668,24 @@ class TestMainWindow:
         label: QLabel = window.label(text="Loading…")
         assert label.isVisible()
         assert (label.foregroundRole(), label.styleSheet()) == (QPalette.ColorRole.PlaceholderText, "")
+        assert label.toolTip() == ""
+
+    def test_long_status_cut(self, window: _Window) -> None:
+        """
+        Cuts a line wider than the window with an ellipsis, shows it whole in the tooltip and keeps the window size.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        width: int = window.widget.minimumSizeHint().width()
+        text: str = "Could not get data from NVIDIA: " + "details " * 200
+        # Act
+        window.widget.show_status(text=text, level=StatusLevel.ERROR)
+        # Assert
+        label: QLabel = next(label for label in window.widget.findChildren(QLabel) if label.toolTip() == text)
+        assert (label.text().endswith("…"), len(label.text()) < len(text)) == (True, True)
+        assert window.widget.minimumSizeHint().width() == width
 
     def test_status_recolored(self, window: _Window) -> None:
         """

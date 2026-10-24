@@ -3,10 +3,13 @@
 from pathlib import Path
 
 import pytest
+import requests
 
 from app.core.models import HardwareCheck, HardwareState
+from app.core.ops_api import OpsFormatError
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
+from app.infra.http_client import HttpClientError
 from app.ui.status import Status, StatusTexts
 from app.ui.views import StatusLevel
 
@@ -29,7 +32,7 @@ class TestStatusTexts:
         lines: list[Status] = [
             texts.info(item=UiText.LOADING),
             texts.warning(item=UiText.NO_RECOMMENDATION),
-            texts.error(item=UiText.REQUEST_FAILED, error=TimeoutError("timeout")),
+            texts.error(item=UiText.REQUEST_FAILED, error=requests.ConnectionError("refused")),
         ]
         # Assert
         assert [(line.text(), line.level) for line in lines] == [
@@ -38,8 +41,39 @@ class TestStatusTexts:
                 "No recommendations (there are none, or your hardware is too weak for this resolution and game)",
                 StatusLevel.WARNING,
             ),
-            ("Could not get data from NVIDIA: timeout", StatusLevel.ERROR),
+            ("Could not get data from NVIDIA: no connection, check your internet", StatusLevel.ERROR),
         ]
+
+    @pytest.mark.parametrize(
+        argnames=("error", "cause"),
+        argvalues=[
+            (requests.ConnectionError("refused"), "no connection, check your internet"),
+            (requests.ConnectTimeout("connect timeout"), "no connection, check your internet"),
+            (requests.ReadTimeout("read timeout"), "the server is not answering, try again later"),
+            (
+                HttpClientError(status=503, url="https://ops.example.test/?cpu.name=x", body=""),
+                "the server answered with error 503",
+            ),
+            (OpsFormatError("Unexpected presets file"), "the server sent data in an unexpected format"),
+            (OSError("access denied"), "unexpected error, see the logs"),
+        ],
+        ids=["connection", "connect timeout", "read timeout", "http", "format", "other"],
+    )
+    def test_error_cause(self, locale_dir: Path, error: Exception, cause: str) -> None:
+        """
+        Names the cause of a failure in a few words instead of the exception text, which stays in the logs.
+
+        :param locale_dir: compiled catalogs
+        :param error: the failure
+        :param cause: the expected cause
+        :return: None
+        """
+        # Arrange
+        texts: StatusTexts = StatusTexts(translator=lambda: Translator(language="en", locale_dir=locale_dir))
+        # Act
+        line: Status = texts.error(item=UiText.REQUEST_FAILED, error=error)
+        # Assert
+        assert line.text() == f"Could not get data from NVIDIA: {cause}"
 
     def test_translated_when_shown(self, locale_dir: Path) -> None:
         """

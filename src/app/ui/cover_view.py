@@ -33,6 +33,8 @@ class CoverView(Skeleton):
         self.setFixedSize(QSize(Typography.px(ems=_WIDTH), Typography.px(ems=_WIDTH * _SHAPE)))
         self._picture: QPixmap | None = None
         self._placeholder: bool = False
+        # The picture scaled for the last size and pixel ratio drawn, so a repaint doesn't scale it again.
+        self._scaled: tuple[QSize, float, QPixmap] | None = None
 
     @property
     def picture(self) -> QPixmap | None:
@@ -63,6 +65,7 @@ class CoverView(Skeleton):
         picture: QPixmap | None = None if path is None else QPixmap(str(path))
         self._picture = None if picture is None or picture.isNull() else picture
         self._placeholder = self._picture is None
+        self._scaled = None
         self.update()
 
     def clear(self, *, loading: bool) -> None:
@@ -74,6 +77,7 @@ class CoverView(Skeleton):
         """
         self._picture = None
         self._placeholder = False
+        self._scaled = None
         self.set_active(active=loading)
 
     def shapes(self) -> list[QRectF]:
@@ -102,13 +106,7 @@ class CoverView(Skeleton):
         if self._picture is not None:
             painter.setClipPath(frame)
             ratio: float = self.devicePixelRatioF()
-            scaled: QPixmap = self._picture.scaled(
-                round(self.width() * ratio),
-                round(self.height() * ratio),
-                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            scaled.setDevicePixelRatio(ratio)
+            scaled: QPixmap = self._scaled_picture(picture=self._picture, ratio=ratio)
             left: float = (self.width() - scaled.width() / ratio) / 2
             top: float = (self.height() - scaled.height() / ratio) / 2
             painter.drawPixmap(round(left), round(top), scaled)
@@ -122,3 +120,23 @@ class CoverView(Skeleton):
             size: int = Typography.px(ems=_SYMBOL)
             symbol.paint(painter, (self.width() - size) // 2, (self.height() - size) // 2, size, size)
         painter.end()
+
+    def _scaled_picture(self, *, picture: QPixmap, ratio: float) -> QPixmap:
+        """
+        Scale the picture to cover the widget in device pixels, once per size and pixel ratio.
+
+        :param picture: the picture
+        :param ratio: device pixel ratio of the screen
+        :return: the scaled picture, its pixel ratio set
+        """
+        if self._scaled is not None and self._scaled[:2] == (self.size(), ratio):
+            return self._scaled[2]
+        scaled: QPixmap = picture.scaled(
+            round(self.width() * ratio),
+            round(self.height() * ratio),
+            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        scaled.setDevicePixelRatio(ratio)
+        self._scaled = (self.size(), ratio, scaled)
+        return scaled

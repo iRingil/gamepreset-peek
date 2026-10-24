@@ -10,7 +10,7 @@ from typing import Any, Mapping, Self
 
 from loguru import logger
 
-from app.config import APP_DB
+from app.config import APP_DB, DEFAULT_MEMORY_GB
 from app.core.app_db import AppDb
 from app.core.models import Gpu
 
@@ -66,7 +66,10 @@ class HardwareDetector:
     """Reads the hardware NVIDIA identifies a system by, and the screen resolution.
 
     GPUs come from HARDWARE\\DEVICEMAP\\VIDEO, which Windows rebuilds at boot with the active adapters only, so a
-    removed or disabled card left in the driver class key is never reported."""
+    removed or disabled card left in the driver class key is never reported.
+
+    A component that can't be read is logged and left out, or guessed for the memory size: the user can still choose
+    the others by hand."""
 
     _CPU_KEY: str = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
     _VIDEO_MAP_KEY: str = r"HARDWARE\DEVICEMAP\VIDEO"
@@ -119,13 +122,14 @@ class HardwareDetector:
         """
         Get the size of the physical memory available to Windows.
 
-        :return: size in GiB, rounded (15.7 -> 16)
+        :return: size in GiB, rounded (15.7 -> 16); a common size when Windows doesn't report it
         """
         status: _MemoryStatus = _MemoryStatus(dwLength=ctypes.sizeof(_MemoryStatus))
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
         global_memory_status: Any = ctypes.WinDLL(name="kernel32")["GlobalMemoryStatusEx"]
         if not global_memory_status(ctypes.byref(status)):
-            raise ctypes.WinError()  # pragma: no cover
+            logger.warning("Memory size not detected ({!r}), assuming {} GB", ctypes.WinError(), DEFAULT_MEMORY_GB)
+            return DEFAULT_MEMORY_GB
         size: int = round(status.ullTotalPhys / 2**30)
         logger.info("Memory: {} GB", size)
         return size
@@ -164,10 +168,15 @@ class HardwareDetector:
         """
         List the driver keys of the active video adapters; an adapter with several outputs is listed several times.
 
-        :return: driver key paths relative to HKEY_LOCAL_MACHINE, in the order of the system
+        :return: driver key paths relative to HKEY_LOCAL_MACHINE, in the order of the system; none when unreadable
         """
         paths: list[str] = []
-        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, cls._VIDEO_MAP_KEY) as key:
+        try:
+            key: winreg.HKEYType = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, cls._VIDEO_MAP_KEY)
+        except OSError as error:
+            logger.warning("Video adapters not read: {!r}", error)
+            return paths
+        with key:
             index: int = 0
             while True:
                 try:

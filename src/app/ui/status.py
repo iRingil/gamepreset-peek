@@ -3,9 +3,13 @@
 from dataclasses import dataclass
 from typing import Callable
 
+import requests
+
 from app.core.models import HardwareCheck, HardwareState
+from app.core.ops_api import OpsFormatError
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
+from app.infra.http_client import HttpClientError
 from app.ui.views import StatusLevel
 
 __all__: tuple[str, ...] = ("Status", "StatusTexts")
@@ -59,13 +63,19 @@ class StatusTexts:
 
     def error(self, *, item: UiText, error: Exception) -> Status:
         """
-        Make the line of a failure.
+        Make the line of a failure, naming its cause in a few words; the details are in the logs.
 
         :param item: the text, with an {error} placeholder
         :param error: the failure
         :return: the line
         """
-        return self._status(item=item, level=StatusLevel.ERROR, values={"error": str(error)})
+        cause: UiText
+        values: dict[str, str]
+        cause, values = self._cause(error=error)
+        return Status(
+            text=lambda: self._translator().text(item=item, error=self._translator().text(item=cause, **values)),
+            level=StatusLevel.ERROR,
+        )
 
     def problem(self, *, check: HardwareCheck) -> Status:
         """
@@ -93,6 +103,25 @@ class StatusTexts:
             ),
             level=StatusLevel.ERROR,
         )
+
+    @staticmethod
+    def _cause(*, error: Exception) -> tuple[UiText, dict[str, str]]:
+        """
+        Name the cause of a failure as the user can act on it: the connection, the server, its answer, or the app.
+
+        :param error: the failure
+        :return: the text of the cause and its placeholder values
+        """
+        # A connect timeout is a ConnectionError as well; only a read timeout means the server went silent.
+        if isinstance(error, requests.ConnectionError):
+            return UiText.ERROR_NO_CONNECTION, {}
+        if isinstance(error, requests.Timeout):
+            return UiText.ERROR_NO_ANSWER, {}
+        if isinstance(error, HttpClientError):
+            return UiText.ERROR_HTTP, {"status": str(error.status)}
+        if isinstance(error, OpsFormatError):
+            return UiText.ERROR_BAD_ANSWER, {}
+        return UiText.ERROR_UNEXPECTED, {}
 
     def _status(self, *, item: UiText, level: StatusLevel, values: dict[str, str]) -> Status:
         """

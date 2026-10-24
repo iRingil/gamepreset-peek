@@ -1,9 +1,11 @@
 """Settings kept between runs: language, theme, hardware, resolution, updates, games; JSON in app data."""
 
 import json
+import os
+import threading
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from loguru import logger
 
@@ -14,7 +16,10 @@ __all__: tuple[str, ...] = ("UserSettingsStore",)
 
 
 class UserSettingsStore:
-    """Loads and saves the user settings; a missing or broken file gives the defaults instead of an error."""
+    """Loads and saves the user settings; a missing or broken file gives the defaults instead of an error.
+
+    A save writes a file beside the settings file and puts it in place, so a run ended mid-write leaves the old file.
+    update() reads, changes and writes under a lock: changes made from several threads don't overwrite each other."""
 
     def __init__(self, *, path: Path = SETTINGS_FILE) -> None:
         """
@@ -23,6 +28,7 @@ class UserSettingsStore:
         :param path: JSON file of the settings
         """
         self._path: Path = path
+        self._lock: threading.Lock = threading.Lock()
 
     def load(self) -> UserSettings:
         """
@@ -38,8 +44,22 @@ class UserSettingsStore:
         except (OSError, ValueError, TypeError, KeyError) as error:
             logger.warning("Ignored broken settings file {}: {!r}", self._path, error)
             return UserSettings()
-        logger.info("Loaded settings: {}", settings)
+        logger.debug("Loaded settings: {}", settings)
         return settings
+
+    def update(self, *, change: Callable[[UserSettings], UserSettings]) -> UserSettings:
+        """
+        Change the saved settings, writing them only when the change makes a difference.
+
+        :param change: gives the new settings from the saved ones
+        :return: the settings after the change
+        """
+        with self._lock:
+            saved: UserSettings = self.load()
+            changed: UserSettings = change(saved)
+            if changed != saved:
+                self.save(settings=changed)
+            return changed
 
     def save(self, *, settings: UserSettings) -> None:
         """
@@ -65,8 +85,10 @@ class UserSettingsStore:
             "catalog_game_id": settings.game_choice.catalog_game_id,
         }
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        self._path.write_text(data=json.dumps(obj=document, ensure_ascii=False, indent=2), encoding="utf-8")
-        logger.info("Saved settings: {}", settings)
+        temp: Path = self._path.with_suffix(".tmp")
+        temp.write_text(data=json.dumps(obj=document, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(src=temp, dst=self._path)
+        logger.debug("Saved settings: {}", settings)
 
     @classmethod
     def _parse(cls, *, document: Any) -> UserSettings:

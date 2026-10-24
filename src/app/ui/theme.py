@@ -15,6 +15,7 @@ __all__: tuple[str, ...] = ("Theme",)
 # Tabs are folder tabs: the selected one is framed on top and at the sides and opens into the pane below it.
 # The first tab starts a little in from the pane edge, so the pane keeps its rounded top-left corner.
 # The detected item of a choice, mostly the one in use, still answers the mouse with a stronger selection color.
+# The settings table, reached with Tab to scroll by keys, shows its focus in the frame: its rows can't be selected.
 # The {{name|color}} placeholders take the colors of the theme in use.
 _QSS: str = """
 QListView, QTreeView {padding:0}
@@ -28,6 +29,7 @@ QTabBar::tab:top:first, QTabBar::tab:top:only-one {margin-left:0}
 QTabBar::tab:top:selected, QTabBar::tab:top:selected:hover:enabled {margin-bottom:-1px;
 border-color:{{border|color}};background:{{background|color}}}
 QListView#detected::item:selected:hover {background:{{primary|color(state="table.selectionBackground")}}}
+QTreeView#settings:focus {border-color:{{primary|color}}}
 """
 
 

@@ -9,7 +9,7 @@ from typing import Any, Callable, Protocol
 from loguru import logger
 from PySide6.QtCore import QObject, Signal
 
-__all__: tuple[str, ...] = ("TaskRunner", "Worker")
+__all__: tuple[str, ...] = ("Runners", "TaskRunner", "Worker")
 
 
 class TaskRunner(Protocol):  # pylint: disable=too-few-public-methods
@@ -26,6 +26,19 @@ class TaskRunner(Protocol):  # pylint: disable=too-few-public-methods
         :param on_error: called with the error in the UI thread
         :return: None
         """
+
+
+@dataclass(frozen=True, slots=True)
+class Runners:
+    """The runners of the window, one per kind of work, so a slow task of one kind never holds up another.
+
+    requests: hardware detection, NVIDIA requests and box art; finder: the search for installed games; updater: the
+    database update; saver: settings writes, which the app lets finish when it closes."""
+
+    requests: TaskRunner
+    finder: TaskRunner
+    updater: TaskRunner
+    saver: TaskRunner
 
 
 @dataclass(frozen=True, slots=True)

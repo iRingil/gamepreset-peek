@@ -7,15 +7,14 @@ __all__: tuple[str, ...] = ("AppDb",)
 
 
 class AppDb:
-    """Connections to the SQLite file; the app only reads it.
+    """Connections to the SQLite file; the app only reads it and replaces it as a whole with a downloaded update.
 
-    A scheduled update refreshes the file in the repository; it only ever adds CPUs and GPUs, so a source that drops
-    one doesn't shrink the lists."""
+    The file is written outside this repository; it only ever gains CPUs and GPUs, so the lists never shrink."""
 
     @staticmethod
     def read(*, path: Path) -> sqlite3.Connection:
         """
-        Open the database read-only; the bundled file may sit in a read-only folder, so it is opened without locks.
+        Open the database read-only and without locks, so nothing keeps the file from being replaced once it is closed.
 
         :param path: database file
         :return: connection; the caller closes it

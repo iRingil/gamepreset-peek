@@ -36,6 +36,7 @@ from app.core.models import (
     UserSettings,
 )
 from app.config import DEFAULT_GAME_FOLDERS, SCREEN_RESOLUTIONS
+from app.core.ops_api import OpsFormatError
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
 
@@ -801,6 +802,29 @@ class TestGameSettings:
         service.game_settings(game_id="baldurs_gate_3", presets=presets)
         # Assert
         assert (game_ops.presets_file.call_count, game_ops.translations.call_count) == (2, 2)
+
+    @pytest.mark.parametrize(argnames="index", argvalues=[0, 3], ids=["zero", "past_last"])
+    def test_index_out_of_presets(
+        self, game_ops: MagicMock, service: PresetService, presets: GamePresets, index: int
+    ) -> None:
+        """
+        Fails with a format error, caching nothing, when a resolution's preset is not one of the two in the file.
+
+        :param game_ops: NVIDIA endpoints mock with game answers
+        :param service: service under test
+        :param presets: presets of the game
+        :param index: the wrong preset index
+        :return: None
+        """
+        # Arrange
+        wrong: GamePresets = replace(
+            presets, resolutions=(replace(presets.resolutions[0], preset_index=index), presets.resolutions[1])
+        )
+        # Act & Assert
+        with pytest.raises(expected_exception=OpsFormatError, match=f"1920x1080: {index}"):
+            service.game_settings(game_id="mordhau", presets=wrong)
+        service.game_settings(game_id="mordhau", presets=presets)
+        assert game_ops.presets_file.call_count == 2
 
 
 class TestLanguage:

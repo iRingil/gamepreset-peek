@@ -1,7 +1,7 @@
 """Tests of the database file and its download."""
 
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Sequence
 
 import pytest
 import responses
@@ -50,16 +50,23 @@ class TestAppDatabase:
         return AppDatabase(http=http, path=path, url=_URL)
 
     @staticmethod
-    def _database(*, path: Path, name: str) -> Path:
+    def _database(*, path: Path, name: str, extra: Sequence[tuple[str, tuple[object, ...]]] = ()) -> Path:
         """
-        Write a database whose games table names "mordhau".
+        Write a database naming "mordhau", with one CPU and one GPU.
 
         :param path: database file
         :param name: display name of the game
+        :param extra: further SQL statements with their parameters
         :return: the file
         """
         return DbFiles.create(
-            path=path, statements=[("INSERT INTO games (game_id, name) VALUES (?, ?)", ("mordhau", name))]
+            path=path,
+            statements=[
+                ("INSERT INTO games (game_id, name) VALUES (?, ?)", ("mordhau", name)),
+                ("INSERT INTO cpus (name, vendor) VALUES (?, ?)", ("AMD Ryzen 7 7800X3D 8-Core Processor", "amd")),
+                ("INSERT INTO gpus (name, device_id) VALUES (?, ?)", ("NVIDIA GeForce RTX 4090", "2684")),
+                *extra,
+            ],
         )
 
     def test_loaded(self, database: AppDatabase, path: Path) -> None:
@@ -124,6 +131,73 @@ class TestAppDatabase:
         """
         # Arrange
         mock.add(method=responses.GET, url=_URL, body=b"<html>not found</html>")
+        # Act & Assert
+        with pytest.raises(ValueError, match="not a usable database"):
+            database.download()
+        assert list(path.parent.iterdir()) == [path]
+        assert database.load().catalog.games[0].name == "MORDHAU"
+
+    @pytest.mark.parametrize(
+        argnames=("table", "missing"),
+        argvalues=[("games", "games"), ("cpus", "CPUs"), ("gpus", "GPUs")],
+        ids=["games", "cpus", "gpus"],
+    )
+    def test_empty_download_dropped(  # pylint: disable=too-many-arguments
+        self,
+        mock: responses.RequestsMock,
+        tmp_path: Path,
+        database: AppDatabase,
+        path: Path,
+        table: str,
+        missing: str,
+    ) -> None:
+        """
+        Drops a database with an empty list, keeping the file and leaving nothing behind.
+
+        :param mock: HTTP mock
+        :param tmp_path: temporary directory
+        :param database: database under test
+        :param path: database file
+        :param table: the table left empty
+        :param missing: how the error names the empty list
+        :return: None
+        """
+        # Arrange
+        empty: Path = self._database(
+            path=tmp_path / "empty.db", name="Mordhau II", extra=[(f"DELETE FROM {table}", ())]
+        )
+        mock.add(method=responses.GET, url=_URL, body=empty.read_bytes())
+        # Act & Assert
+        with pytest.raises(ValueError, match=f"no {missing}"):
+            database.download()
+        assert list(path.parent.iterdir()) == [path]
+        assert database.load().catalog.games[0].name == "MORDHAU"
+
+    def test_unknown_value_dropped(
+        self, mock: responses.RequestsMock, tmp_path: Path, database: AppDatabase, path: Path
+    ) -> None:
+        """
+        Drops a database holding a value the app doesn't know, keeping the file and leaving nothing behind.
+
+        :param mock: HTTP mock
+        :param tmp_path: temporary directory
+        :param database: database under test
+        :param path: database file
+        :return: None
+        """
+        # Arrange
+        unknown: Path = self._database(
+            path=tmp_path / "unknown.db",
+            name="Mordhau II",
+            extra=[
+                ("INSERT INTO game_sources (game_id, position) VALUES (?, ?)", ("mordhau", 0)),
+                (
+                    "INSERT INTO game_source_files (game_id, position, path, role) VALUES (?, ?, ?, ?)",
+                    ("mordhau", 0, "Mordhau.exe", "bogus"),
+                ),
+            ],
+        )
+        mock.add(method=responses.GET, url=_URL, body=unknown.read_bytes())
         # Act & Assert
         with pytest.raises(ValueError, match="not a usable database"):
             database.download()

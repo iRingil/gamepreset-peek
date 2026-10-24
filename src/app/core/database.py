@@ -29,8 +29,8 @@ class AppData:
 class AppDatabase:
     """The database file and its replacement by the latest one from the repository.
 
-    A download equal to the file in use is dropped, and so is one that is not a usable database; a new one takes
-    the file's place."""
+    A download equal to the file in use is dropped, and so is one that is not a usable database or lacks games, CPUs
+    or GPUs; a new one takes the file's place."""
 
     def __init__(self, *, http: HttpClient, path: Path = APP_DB, url: str = DB_UPDATE_URL) -> None:
         """
@@ -75,13 +75,34 @@ class AppDatabase:
         temp: Path = self._path.with_suffix(".download")
         temp.write_bytes(data=body)
         try:
-            self._load(path=temp)
-        except sqlite3.Error as error:
-            temp.unlink()
-            raise ValueError(f"downloaded file is not a usable database: {error}") from error
-        os.replace(src=temp, dst=self._path)
+            self._check(data=self._load(path=temp))
+            os.replace(src=temp, dst=self._path)
+        except (sqlite3.Error, ValueError, TypeError) as error:
+            raise ValueError(f"downloaded file is not a usable database: {error!r}") from error
+        finally:
+            temp.unlink(missing_ok=True)
         logger.info("Database updated: {} bytes from {} written to {}", len(body), self._url, self._path)
         return True
+
+    @staticmethod
+    def _check(*, data: AppData) -> None:
+        """
+        Make sure a database has games, CPUs and GPUs: an empty list would leave the user nothing to choose from.
+
+        :param data: lists read from the database
+        :return: None
+        """
+        empty: list[str] = [
+            name
+            for name, items in (
+                ("games", data.catalog.games),
+                ("CPUs", data.cpu_list.amd + data.cpu_list.intel),
+                ("GPUs", data.gpu_list.gpus),
+            )
+            if not items
+        ]
+        if empty:
+            raise ValueError(f"no {', '.join(empty)}")
 
     @staticmethod
     def _load(*, path: Path) -> AppData:

@@ -17,6 +17,7 @@ __all__: tuple[str, ...] = (
     "DB_UPDATE_URL",
     "DEFAULT_GAME_FOLDERS",
     "DEFAULT_LANGUAGE",
+    "DEFAULT_MEMORY_GB",
     "DEFAULT_RESOLUTION",
     "FLAGS_DIR",
     "FONT_FILE",
@@ -37,6 +38,7 @@ __all__: tuple[str, ...] = (
     "OPS_COMPATIBILITY_URL",
     "OPS_PRESETS_URL",
     "REQUEST_DELAY_MS",
+    "SAVE_WAIT_SECONDS",
     "SCREEN_RESOLUTIONS",
     "SEARCH_DELAY_MS",
     "SETTINGS_FILE",
@@ -84,9 +86,9 @@ LANGUAGE_NAMES: dict[str, str] = {
 }
 
 # Main window: initial and smallest width and height, in pixels at 100 % scale.
-# The smallest size fits a 1280x720 logical screen (1920x1080 at 150 %) under the taskbar and the title bar.
-WINDOW_MIN_SIZE: tuple[int, int] = (1264, 640)
-WINDOW_SIZE: tuple[int, int] = WINDOW_MIN_SIZE
+WINDOW_SIZE: tuple[int, int] = (1264, 640)
+# Fits a 1067x600 logical screen (1600x900 at 150 %, 1366x768 at 125 %) under the taskbar and the title bar.
+WINDOW_MIN_SIZE: tuple[int, int] = (1040, 520)
 # Visible lines of the log panel and the lines it keeps before dropping the oldest ones.
 LOG_PANEL_HEIGHT: int = 15
 LOG_PANEL_MAX_LINES: int = 2000
@@ -95,6 +97,8 @@ LOG_POLL_MS: int = 200
 # in the game search before the list is filtered: stepping through the list with the arrow keys sends no burst.
 REQUEST_DELAY_MS: int = 300
 SEARCH_DELAY_MS: int = 250
+# Longest wait at exit for the settings saves still queued.
+SAVE_WAIT_SECONDS: float = 5.0
 
 # Screen resolutions NVIDIA recommends presets for, the largest first; the detected one is offered on top of them.
 SCREEN_RESOLUTIONS: tuple[str, ...] = (
@@ -120,6 +124,8 @@ SCREEN_RESOLUTIONS: tuple[str, ...] = (
 ASPECT_TOLERANCE: float = 0.03
 # Used when the screen resolution is neither detected nor chosen.
 DEFAULT_RESOLUTION: str = "1920x1080"
+# Used when Windows doesn't report the memory size: the most common size of gaming PCs.
+DEFAULT_MEMORY_GB: int = 16
 
 # Folders searched for installed games until the user changes the list; the ones missing on a computer are dropped.
 DEFAULT_GAME_FOLDERS: tuple[str, ...] = (

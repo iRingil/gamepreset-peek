@@ -9,7 +9,7 @@ from typing import Any, Self
 
 import pytest
 
-from app.config import APP_DB
+from app.config import APP_DB, DEFAULT_MEMORY_GB
 from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
 from app.core.models import Gpu
 from db_files import DbFiles
@@ -246,6 +246,35 @@ class TestHardwareDetector:
         gpus: tuple[Gpu, ...] = HardwareDetector.nvidia_gpus(ranks=ranks)
         # Assert
         assert not gpus
+
+    def test_no_video_map(self, monkeypatch: pytest.MonkeyPatch, ranks: GpuRanks) -> None:
+        """
+        Reports no adapters instead of failing when the list of active adapters can't be read.
+
+        :param monkeypatch: pytest monkeypatch
+        :param ranks: GPU ranks
+        :return: None
+        """
+        # Arrange
+        _FakeRegistry(keys={}).install(monkeypatch=monkeypatch)
+        # Act
+        gpus: tuple[Gpu, ...] = HardwareDetector.nvidia_gpus(ranks=ranks)
+        # Assert
+        assert not gpus
+
+    def test_memory_not_detected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """
+        Assumes a common memory size instead of failing when Windows doesn't report it.
+
+        :param monkeypatch: pytest monkeypatch
+        :return: None
+        """
+        # Arrange
+        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda name: {"GlobalMemoryStatusEx": lambda *_: 0})
+        # Act
+        size: int = HardwareDetector.memory_gb()
+        # Assert
+        assert size == DEFAULT_MEMORY_GB
 
     def test_memory_gb(self) -> None:
         """

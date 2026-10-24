@@ -75,6 +75,44 @@ class TestCoverView:
         assert (cover.picture is not None, cover.placeholder, cover.active) == (True, False, False)
         assert image.pixelColor(QPoint(cover.width() // 2, cover.height() // 2)).red() > 240
 
+    def test_repainted(self, cover: CoverView, picture: Path) -> None:
+        """
+        Draws the picture again on a repaint.
+
+        :param cover: the cover
+        :param picture: the picture file
+        :return: None
+        """
+        # Arrange
+        cover.show_picture(path=picture)
+        cover.grab()
+        # Act
+        image: QImage = cover.grab().toImage()
+        # Assert
+        assert image.pixelColor(QPoint(cover.width() // 2, cover.height() // 2)).red() > 240
+
+    def test_next_picture(self, tmp_path: Path, cover: CoverView, picture: Path) -> None:
+        """
+        Draws the next picture shown, not the one drawn before.
+
+        :param tmp_path: temporary directory
+        :param cover: the cover
+        :param picture: the picture file
+        :return: None
+        """
+        # Arrange
+        blue: QImage = QImage(314, 444, QImage.Format.Format_RGB32)
+        blue.fill(QColor("#0000ff"))
+        path: Path = tmp_path / "next.png"
+        assert blue.save(str(path))
+        cover.show_picture(path=picture)
+        cover.grab()
+        # Act
+        cover.show_picture(path=path)
+        image: QImage = cover.grab().toImage()
+        # Assert
+        assert image.pixelColor(QPoint(cover.width() // 2, cover.height() // 2)).blue() > 240
+
     @pytest.mark.parametrize(argnames="broken", argvalues=[False, True], ids=["no picture", "broken file"])
     def test_placeholder(self, tmp_path: Path, cover: CoverView, broken: bool) -> None:
         """

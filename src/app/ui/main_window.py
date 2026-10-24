@@ -5,8 +5,8 @@ from pathlib import Path
 from queue import Queue
 from typing import Callable, Sequence
 
-from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QPoint, Qt
-from PySide6.QtGui import QPalette
+from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QPoint, QSize, Qt
+from PySide6.QtGui import QGuiApplication, QPalette, QResizeEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QGridLayout,
@@ -15,7 +15,9 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QStackedWidget,
+    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTreeWidget,
@@ -66,6 +68,8 @@ class _ChangedDelegate(QStyledItemDelegate):
         :return: None
         """
         super().initStyleOption(option, index)
+        # Nothing is selectable: the focused table shows its focus on the frame, not on a row.
+        option.state &= ~QStyle.StateFlag.State_HasFocus
         if index.data(_CHANGED_ROLE):
             option.font.setBold(True)
             option.palette.setColor(QPalette.ColorRole.Text, option.palette.color(QPalette.ColorRole.Link))
@@ -179,11 +183,13 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         :return: the table
         """
         table: QTreeWidget = QTreeWidget(parent=self)
+        table.setObjectName("settings")
         table.setColumnCount(2)
         table.setRootIsDecorated(False)
         table.setUniformRowHeights(True)
         table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # Reached with Tab, so a long list scrolls with the arrow and page keys; the theme marks its focus.
+        table.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         table.setItemDelegate(_ChangedDelegate(table))
         header: QHeaderView = table.header()
@@ -392,7 +398,9 @@ class _TopBar(QWidget):
 
 
 class _StatusLine(QLabel):
-    """The status line: an informing line in the placeholder text color, a warning in yellow, an error in red."""
+    """The status line: an informing line in the placeholder text color, a warning in yellow, an error in red.
+
+    A line wider than the window is cut with an ellipsis and shown whole in the tooltip; it never widens the window."""
 
     def __init__(self, *, parent: QWidget | None = None) -> None:
         """
@@ -402,7 +410,9 @@ class _StatusLine(QLabel):
         """
         super().__init__(parent)
         self._level: StatusLevel = StatusLevel.INFO
+        self._text: str = ""
         self.setForegroundRole(QPalette.ColorRole.PlaceholderText)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
 
     def show_status(self, *, text: str, level: StatusLevel) -> None:
         """
@@ -413,8 +423,37 @@ class _StatusLine(QLabel):
         :return: None
         """
         self._level = level
-        self.setText(text)
+        self._text = text
+        self._fit()
         self.recolor()
+
+    def minimumSizeHint(self) -> QSize:  # pylint: disable=invalid-name
+        """
+        Let the line be as narrow as the window needs: a long line is cut, not the window widened.
+
+        :return: no width, the height of a line
+        """
+        return QSize(0, super().minimumSizeHint().height())
+
+    def resizeEvent(self, event: QResizeEvent) -> None:  # pylint: disable=invalid-name
+        """
+        Cut the line again to the new width.
+
+        :param event: the resize
+        :return: None
+        """
+        super().resizeEvent(event)
+        self._fit()
+
+    def _fit(self) -> None:
+        """
+        Show the line cut to the width with an ellipsis, and whole in the tooltip when it is cut.
+
+        :return: None
+        """
+        shown: str = self.fontMetrics().elidedText(self._text, Qt.TextElideMode.ElideRight, self.width())
+        self.setText(shown)
+        self.setToolTip("" if shown == self._text else self._text)
 
     def recolor(self) -> None:
         """
@@ -447,8 +486,9 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._theme: ThemeMode = ThemeMode.AUTO
         self._auto_update: bool = True
         self.setWindowTitle(APP_TITLE)
-        self.resize(*WINDOW_SIZE)
         self.setMinimumSize(*WINDOW_MIN_SIZE)
+        # A screen too small for the initial size gets a window as large as it, down to the smallest size.
+        self.resize(QSize(*WINDOW_SIZE).boundedTo(QGuiApplication.primaryScreen().availableSize()))
         layout: QVBoxLayout = QVBoxLayout(self)
 
         self._top: _TopBar = _TopBar(
@@ -462,19 +502,19 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
 
         self._games: GamesPanel = GamesPanel(
             on_select_installed=lambda index: self._call(
-                action=lambda presenter: presenter.select_installed_game(index=index)
+                action=lambda presenter: presenter.games.select_installed_game(index=index)
             ),
-            on_select=lambda index: self._call(action=lambda presenter: presenter.select_game(index=index)),
-            on_search=lambda text: self._call(action=lambda presenter: presenter.search_games(text=text)),
-            on_find=lambda: self._call(action=Presenter.find_games),
-            on_add_folder=lambda folder: self._call(action=lambda presenter: presenter.add_folder(folder=folder)),
+            on_select=lambda index: self._call(action=lambda presenter: presenter.games.select_game(index=index)),
+            on_search=lambda text: self._call(action=lambda presenter: presenter.games.search_games(text=text)),
+            on_find=lambda: self._call(action=lambda presenter: presenter.games.find_games()),
+            on_add_folder=lambda folder: self._call(action=lambda presenter: presenter.games.add_folder(folder=folder)),
             on_change_folder=lambda position, folder: self._call(
-                action=lambda presenter: presenter.change_folder(position=position, folder=folder)
+                action=lambda presenter: presenter.games.change_folder(position=position, folder=folder)
             ),
             on_remove_folder=lambda position: self._call(
-                action=lambda presenter: presenter.remove_folder(position=position)
+                action=lambda presenter: presenter.games.remove_folder(position=position)
             ),
-            on_tab=lambda tab: self._call(action=lambda presenter: presenter.select_tab(tab=tab)),
+            on_tab=lambda tab: self._call(action=lambda presenter: presenter.games.select_tab(tab=tab)),
             parent=self,
         )
         self._cover: CoverView = CoverView(parent=self)

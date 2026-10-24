@@ -27,12 +27,13 @@ from app.core.models import (
     HardwareSetup,
     HardwareState,
     InstalledGame,
+    PresetsFile,
     RemoteFile,
     SystemHardware,
     ThemeMode,
     UserSettings,
 )
-from app.core.ops_api import OpsApi
+from app.core.ops_api import OpsApi, OpsFormatError
 from app.core.user_settings import UserSettingsStore
 
 __all__: tuple[str, ...] = ("PresetService",)
@@ -49,9 +50,10 @@ class _GameFiles:
 class PresetService:
     """Answers the UI by chaining NVIDIA requests, the bundled data, hardware detection and the saved settings.
 
-    Every method may block on the network, the disk or the registry: the UI calls them from a worker thread, one at a
-    time, so the files of the last game shown are cached without a lock. find_games() alone runs in a thread of its
-    own: it only reads the catalog in use, which an update replaces as a whole."""
+    Every method may block on the network, the disk or the registry, so the UI calls them from worker threads. The
+    NVIDIA requests run in one thread, so the files of the last game shown are cached without a lock. The search for
+    games, the database update and the settings saves run in threads of their own: the data in use is replaced as a
+    whole, and the settings store serializes its changes."""
 
     _CPU: str = "cpu"
     _GPU: str = "gpu"
@@ -113,7 +115,7 @@ class PresetService:
             dropped: list[str] = [folder for folder in folders if folder not in existing]
             if dropped:
                 logger.info("Dropped missing game folders: {}", ", ".join(dropped))
-            self._store.save(settings=replace(saved, game_folders=existing))
+            self._store.update(change=lambda settings: replace(settings, game_folders=existing))
         return existing
 
     def save_game_folders(self, *, folders: Sequence[str]) -> None:
@@ -123,7 +125,7 @@ class PresetService:
         :param folders: folders in the user's order
         :return: None
         """
-        self._store.save(settings=replace(self._store.load(), game_folders=tuple(folders)))
+        self._store.update(change=lambda settings: replace(settings, game_folders=tuple(folders)))
 
     def saved_game_choice(self) -> GameChoice:
         """
@@ -140,7 +142,7 @@ class PresetService:
         :param choice: the choice
         :return: None
         """
-        self._store.save(settings=replace(self._store.load(), game_choice=choice))
+        self._store.update(change=lambda settings: replace(settings, game_choice=choice))
 
     def find_games(self, *, folders: Sequence[str]) -> tuple[InstalledGame, ...]:
         """
@@ -178,7 +180,7 @@ class PresetService:
         changed: bool = self._database.download()
         if changed:
             self._data = self._database.load()
-        self._store.save(settings=replace(self._store.load(), database_updated=today))
+        self._store.update(change=lambda settings: replace(settings, database_updated=today))
         return DatabaseUpdate.UPDATED if changed else DatabaseUpdate.UNCHANGED
 
     def hardware_setup(self) -> HardwareSetup:
@@ -188,12 +190,14 @@ class PresetService:
         :return: hardware and resolution to show and to choose from
         """
         system: SystemHardware = self._system
-        saved: UserSettings = self._store.load()
-        detected: UserSettings = replace(
-            saved, detected_cpu=system.cpu_name, detected_gpus=system.gpus, detected_resolution=system.resolution
+        saved: UserSettings = self._store.update(
+            change=lambda settings: replace(
+                settings,
+                detected_cpu=system.cpu_name,
+                detected_gpus=system.gpus,
+                detected_resolution=system.resolution,
+            )
         )
-        if detected != saved:
-            self._store.save(settings=detected)
         gpu: Gpu | None = self._default_gpu
         if saved.chosen_gpu is not None:
             # A chosen card that is installed is taken as detected: that one knows its video memory.
@@ -243,24 +247,23 @@ class PresetService:
         :return: READY with the hardware, or why presets can't be requested
         """
         check: HardwareCheck = self.check_hardware(choice=choice)
-        saved: UserSettings = self._store.load()
-        settings: UserSettings = replace(
-            saved,
-            chosen_cpu=self._to_save(
-                chosen=choice.cpu_name,
-                in_use=saved.chosen_cpu or self._system.cpu_name,
-                accepted=self._accepted(check=check, component=self._CPU),
-                saved=saved.chosen_cpu,
-            ),
-            chosen_gpu=self._to_save(
-                chosen=choice.gpu,
-                in_use=saved.chosen_gpu or self._default_gpu,
-                accepted=self._accepted(check=check, component=self._GPU),
-                saved=saved.chosen_gpu,
-            ),
+        self._store.update(
+            change=lambda saved: replace(
+                saved,
+                chosen_cpu=self._to_save(
+                    chosen=choice.cpu_name,
+                    in_use=saved.chosen_cpu or self._system.cpu_name,
+                    accepted=self._accepted(check=check, component=self._CPU),
+                    saved=saved.chosen_cpu,
+                ),
+                chosen_gpu=self._to_save(
+                    chosen=choice.gpu,
+                    in_use=saved.chosen_gpu or self._default_gpu,
+                    accepted=self._accepted(check=check, component=self._GPU),
+                    saved=saved.chosen_gpu,
+                ),
+            )
         )
-        if settings != saved:
-            self._store.save(settings=settings)
         return check
 
     def save_resolution(self, *, resolution: str) -> None:
@@ -270,7 +273,7 @@ class PresetService:
         :param resolution: resolution as NVIDIA writes it, e.g. "2560x1600"
         :return: None
         """
-        self._store.save(settings=replace(self._store.load(), chosen_resolution=resolution))
+        self._store.update(change=lambda settings: replace(settings, chosen_resolution=resolution))
 
     def saved_language(self) -> str | None:
         """
@@ -287,7 +290,7 @@ class PresetService:
         :param language: language code, e.g. "ru"
         :return: None
         """
-        self._store.save(settings=replace(self._store.load(), language=language))
+        self._store.update(change=lambda settings: replace(settings, language=language))
 
     def saved_theme(self) -> ThemeMode:
         """
@@ -304,7 +307,7 @@ class PresetService:
         :param theme: theme mode
         :return: None
         """
-        self._store.save(settings=replace(self._store.load(), theme=theme))
+        self._store.update(change=lambda settings: replace(settings, theme=theme))
 
     def saved_auto_update(self) -> bool:
         """
@@ -321,7 +324,7 @@ class PresetService:
         :param enabled: True to update it
         :return: None
         """
-        self._store.save(settings=replace(self._store.load(), auto_update=enabled))
+        self._store.update(change=lambda settings: replace(settings, auto_update=enabled))
 
     def game_presets(self, *, game_id: str, hardware: Hardware) -> GamePresets:
         """
@@ -345,8 +348,10 @@ class PresetService:
         cached: _GameFiles | None = self._files
         if cached is not None and cached.key == key:
             return cached.settings
+        presets_file: PresetsFile = self._api.presets_file(file=presets.presets_file)
+        self._check_indexes(presets=presets, count=len(presets_file.presets))
         settings: GameSettings = GameSettings(
-            presets=self._api.presets_file(file=presets.presets_file),
+            presets=presets_file,
             translations=self._api.translations(
                 file=self._api.translation_file(game_id=game_id, profile=presets.profile)
             ),
@@ -377,6 +382,23 @@ class PresetService:
         :return: the GPU, None when no NVIDIA GPU is detected
         """
         return self._system.gpus[0] if self._system.gpus else None
+
+    @staticmethod
+    def _check_indexes(*, presets: GamePresets, count: int) -> None:
+        """
+        Make sure the preset of every resolution is one of the presets file.
+
+        :param presets: presets of the game from game_presets()
+        :param count: number of presets in the presets file
+        :return: None
+        """
+        wrong: list[str] = [
+            f"{item.resolution}: {item.preset_index}"
+            for item in presets.resolutions
+            if not 1 <= item.preset_index <= count
+        ]
+        if wrong:
+            raise OpsFormatError(f"preset indexes out of 1..{count}: {', '.join(wrong)}")
 
     @staticmethod
     def _accepted(*, check: HardwareCheck, component: str) -> bool:
