@@ -4,8 +4,9 @@
 
 ## How tested
 
-- [ ] Tests pass locally
-- [ ] Manually checked on Windows (GPU / resolution: ...)
+- [ ] `black src tests`, `mypy src tests`, `pylint src tests` (10.00, no messages) and `pytest` pass
+- [ ] UI texts changed: `messages.pot` and every `.po` updated, `.mo` recompiled
+- [ ] Manually checked on Windows (game / GPU / resolution: ...)
 
 ## Notes
 
