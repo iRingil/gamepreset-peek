@@ -1,6 +1,6 @@
 name: Build
 
-# Builds the Nuitka standalone folder on demand and for every version tag.
+# Builds the installer and the portable zip on demand and for every version tag (vX.Y.Z, equal to app.__version__).
 on:
   workflow_dispatch:
   push:
@@ -20,6 +20,12 @@ jobs:
         uses: actions/setup-python@v7
         with:
           python-version: "3.13"
+      - name: Check the tag against the app version
+        if: github.ref_type == 'tag'
+        shell: pwsh
+        run: |
+          $version = python -c "import sys; sys.path.insert(0, 'src'); import app; print(app.__version__)"
+          if ("v$version" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} does not match app version $version" }
       # The build script runs the Python of the project's .venv.
       - name: Create the virtualenv
         run: |
@@ -38,9 +44,17 @@ jobs:
       - name: Build with Nuitka
         shell: cmd
         run: infrastructure\nuitka\build.cmd
-      - name: Upload the app folder
+      - name: Install Inno Setup
+        shell: pwsh
+        run: if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+      - name: Build the installer and the portable zip
+        shell: cmd
+        run: infrastructure\inno\build.cmd
+      - name: Upload the installer and the portable zip
         uses: actions/upload-artifact@v7
         with:
           name: GamePresetPeek
-          path: build/GamePresetPeek.dist
+          path: |
+            build/GamePresetPeek-*-setup.exe
+            build/GamePresetPeek-*-portable.zip
           if-no-files-found: error
