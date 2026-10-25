@@ -26,6 +26,8 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.13"]
+    outputs:
+      coverage: ${{ steps.coverage.outputs.total }}
     steps:
       - uses: actions/checkout@v7
       - name: Set up Python ${{ matrix.python-version }}
@@ -37,4 +39,37 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r src/requirements.txt -r src/requirements-dev.txt
       - name: Test with pytest
-        run: pytest
+        run: coverage run --source=src/app --omit="*/vendor/*" -m pytest
+      # The total goes to the badge first, so a drop below fail_under (pyproject.toml) is shown before the run fails.
+      - name: Read the total coverage
+        id: coverage
+        shell: bash
+        run: echo "total=$(coverage report --format=total --fail-under=0)" >> "$GITHUB_OUTPUT"
+      - name: Report the coverage
+        run: coverage report --skip-covered
+
+  # The README badge reads coverage.json from the badges branch: one commit, replaced on every push to master.
+  badge:
+    needs: build
+    # Also after a failed coverage report, but not when the tests themselves failed and gave no total.
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.build.outputs.coverage != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Publish the coverage badge
+        env:
+          TOTAL: ${{ needs.build.outputs.coverage }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$TOTAL" -ge 100 ]; then color=brightgreen
+          elif [ "$TOTAL" -ge 90 ]; then color=green
+          elif [ "$TOTAL" -ge 75 ]; then color=yellow
+          else color=red; fi
+          mkdir badges && cd badges
+          git init -q -b badges
+          printf '{"schemaVersion": 1, "label": "coverage", "message": "%s%%", "color": "%s"}\n' "$TOTAL" "$color" > coverage.json
+          git add coverage.json
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Coverage $TOTAL%"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" badges
