@@ -264,8 +264,9 @@ in the commits.
 - `release.yml` (manual): takes the latest successful Build run of master and publishes its files as they were
   tested; fails when that run has no files, when tag `v<app.__version__>` exists, or when the latest release is that
   commit. It creates the tag itself (a tag pushed by `GITHUB_TOKEN` starts no workflow). Notes: `header.md` plus
-  `.github/release-notes/<version>.md` when that file exists, else the commit subjects since the previous tag without
-  bot commits and `[skip changelog]` ones.
+  `.github/release-notes/<version>.md` when that file exists, else the commit subjects since the previous tag (up to
+  the build's commit) without bot commits and `[skip changelog]` ones. Both texts are read from the current master,
+  not the build's commit, so fixing them needs no new build.
 
 ## Repository
 

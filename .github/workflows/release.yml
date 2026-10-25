@@ -56,16 +56,17 @@ jobs:
           for file in "GamePresetPeek-$VERSION-setup.exe" "GamePresetPeek-$VERSION-portable.zip"; do
             if [ ! -f "dist/$file" ]; then echo "::error::Build run $RUN_ID has no $file"; exit 1; fi
           done
+      # The texts come from master as it is now: a fix to them needs no new build.
       - name: Write the release notes
         env:
           SHA: ${{ steps.build.outputs.sha }}
           VERSION: ${{ steps.version.outputs.version }}
           PREVIOUS: ${{ steps.version.outputs.previous }}
         run: |
-          sed "s/{version}/$VERSION/g" .github/release-notes/header.md > notes.md
+          git show origin/master:.github/release-notes/header.md | sed "s/{version}/$VERSION/g" > notes.md
           echo >> notes.md
-          if [ -f ".github/release-notes/$VERSION.md" ]; then
-            cat ".github/release-notes/$VERSION.md" >> notes.md
+          if git cat-file -e "origin/master:.github/release-notes/$VERSION.md" 2> /dev/null; then
+            git show "origin/master:.github/release-notes/$VERSION.md" >> notes.md
           elif [ -n "$PREVIOUS" ]; then
             # Commits of people only, without the ones marked [skip changelog].
             changes=$(git log --no-merges --reverse --format='%an%x09%s' "$PREVIOUS..$SHA" \
