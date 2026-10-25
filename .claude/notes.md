@@ -251,6 +251,8 @@ in the commits.
   picks it for a silent run. A silent run calls `NextButtonClick` too, so the type page swaps only the other type's
   suggested folder, never one from `/DIR`. The uninstaller asks before deleting the settings (default "No") and
   deletes the cache.
+- No update path, by the user's choice (2026-10-25): a new version is installed after uninstalling the old one.
+  Installing over an old one also works (same `AppId`), but files the new version dropped stay in the folder.
 - The installer reads the version back from the exe as three numbers: with the four-number `PRODUCT_VERSION`
   Inno took `.0-setup` of the output name for an extension. Wizard: `modern dynamic` (light or dark like Windows),
   Welcome page on (the left image shows only on Welcome and Finished), images per display scale.
