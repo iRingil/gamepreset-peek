@@ -23,11 +23,20 @@
     </a>
 </p>
 <p align="center">
+    <a href="https://github.com/iRingil/gamepreset-peek/releases/latest">
+        <img src="https://img.shields.io/github/v/release/iRingil/gamepreset-peek" alt="Latest release">
+    </a>
+    <a href="LICENSE">
+        <img src="https://img.shields.io/github/license/iRingil/gamepreset-peek" alt="License">
+    </a>
     <a href="https://github.com/psf/black">
         <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-black.svg">
     </a>
     <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/dependabot/dependabot-updates">
         <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/dependabot/dependabot-updates/badge.svg" alt="Dependabot Updates">
+    </a>
+    <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/github-code-scanning/codeql">
+        <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/github-code-scanning/codeql/badge.svg" alt="CodeQL">
     </a>
     <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/mypy.yml">
         <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/mypy.yml/badge.svg" alt="Mypy">
@@ -37,6 +46,9 @@
     </a>
     <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/pytest.yml">
         <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/pytest.yml/badge.svg" alt="Pytest">
+    </a>
+    <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/pytest.yml">
+        <img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FiRingil%2Fgamepreset-peek%2Fbadges%2Fcoverage.json" alt="Coverage">
     </a>
 </p>
 
