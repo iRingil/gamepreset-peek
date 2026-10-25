@@ -80,12 +80,12 @@ The app is not code-signed yet, so Windows SmartScreen may warn about it: click 
 
 ### Where the app keeps its files
 
-| | Normal installation | Portable copy |
-|---|---|---|
-| Settings | `%LOCALAPPDATA%\GamePresetPeek\settings.json` | `userdata\settings.json` in the app's folder |
-| Log | `%LOCALAPPDATA%\GamePresetPeek\logs\` | `userdata\logs\` in the app's folder |
-| Box art and icon cache | `%TEMP%\GamePresetPeek\` | `userdata\cache\` in the app's folder |
-| Database (games, processors, graphics cards) | `app\data\app.db` in the app's folder | the same |
+|                                              | Normal installation                           | Portable copy                                |
+|----------------------------------------------|-----------------------------------------------|----------------------------------------------|
+| Settings                                     | `%LOCALAPPDATA%\GamePresetPeek\settings.json` | `userdata\settings.json` in the app's folder |
+| Log                                          | `%LOCALAPPDATA%\GamePresetPeek\logs\`         | `userdata\logs\` in the app's folder         |
+| Box art and icon cache                       | `%TEMP%\GamePresetPeek\`                      | `userdata\cache\` in the app's folder        |
+| Database (games, processors, graphics cards) | `app\data\app.db` in the app's folder         | the same                                     |
 
 A portable copy is a folder with `portable.txt` next to `GamePresetPeek.exe`: delete that file, and the copy keeps its
 data in the user profile instead. To remove a portable copy, delete its folder. Uninstalling a normal installation
