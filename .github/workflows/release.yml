@@ -1,0 +1,86 @@
+name: Release
+
+# Publishes the files of the latest successful Build run of master, as they were tested, as release vX.Y.Z.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Find the latest successful build
+        id: build
+        run: |
+          run=$(gh run list -R "$GITHUB_REPOSITORY" --workflow build.yml --branch master --status success --limit 1 \
+            --json databaseId,headSha --jq '.[0] // empty')
+          if [ -z "$run" ]; then echo "::error::No successful Build run of master"; exit 1; fi
+          echo "id=$(jq -r .databaseId <<< "$run")" >> "$GITHUB_OUTPUT"
+          echo "sha=$(jq -r .headSha <<< "$run")" >> "$GITHUB_OUTPUT"
+      # The full history: the tags and the commits since the previous release.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.build.outputs.sha }}
+          fetch-depth: 0
+      - name: Check that this version and this build are not released yet
+        id: version
+        env:
+          SHA: ${{ steps.build.outputs.sha }}
+        run: |
+          version=$(python3 -c "import sys; sys.path.insert(0, 'src'); import app; print(app.__version__)")
+          tag="v$version"
+          if git rev-parse -q --verify "refs/tags/$tag" > /dev/null; then
+            echo "::error::$tag is released already: raise app.__version__ and build again"; exit 1
+          fi
+          latest=$(gh release view -R "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2> /dev/null || true)
+          if [ -n "$latest" ] && [ "$(git rev-list -n 1 "$latest")" = "$SHA" ]; then
+            echo "::error::The latest release $latest is this build's commit already"; exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "previous=$(git describe --tags --abbrev=0 --match 'v*' "$SHA" 2> /dev/null || true)" >> "$GITHUB_OUTPUT"
+      # Artifacts are kept for 90 days: an older build has to be made again.
+      - name: Download the build's files
+        env:
+          RUN_ID: ${{ steps.build.outputs.id }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if ! gh run download "$RUN_ID" -R "$GITHUB_REPOSITORY" -n GamePresetPeek -D dist; then
+            echo "::error::Build run $RUN_ID has no files (expired?): run Build again"; exit 1
+          fi
+          for file in "GamePresetPeek-$VERSION-setup.exe" "GamePresetPeek-$VERSION-portable.zip"; do
+            if [ ! -f "dist/$file" ]; then echo "::error::Build run $RUN_ID has no $file"; exit 1; fi
+          done
+      - name: Write the release notes
+        env:
+          SHA: ${{ steps.build.outputs.sha }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PREVIOUS: ${{ steps.version.outputs.previous }}
+        run: |
+          sed "s/{version}/$VERSION/g" .github/release-notes/header.md > notes.md
+          echo >> notes.md
+          if [ -f ".github/release-notes/$VERSION.md" ]; then
+            cat ".github/release-notes/$VERSION.md" >> notes.md
+          elif [ -n "$PREVIOUS" ]; then
+            # Commits of people only, without the ones marked [skip changelog].
+            changes=$(git log --no-merges --reverse --format='%an%x09%s' "$PREVIOUS..$SHA" \
+              | awk -F '\t' '$1 !~ /\[bot\]$/ && $2 !~ /\[skip changelog\]/ { print "- " $2 }')
+            printf '## Changes\n\n%s\n' "${changes:-- Small internal changes}" >> notes.md
+          else
+            echo "::error::The first release needs .github/release-notes/$VERSION.md"; exit 1
+          fi
+          cat notes.md
+      - name: Publish the release
+        env:
+          SHA: ${{ steps.build.outputs.sha }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$SHA" --title "GamePreset Peek $VERSION" \
+            --notes-file notes.md --latest \
+            "dist/GamePresetPeek-$VERSION-setup.exe" "dist/GamePresetPeek-$VERSION-portable.zip"
