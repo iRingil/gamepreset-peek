@@ -16,7 +16,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QStackedWidget,
-    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTreeWidget,
@@ -32,6 +31,7 @@ from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 from app.ui.choice_popup import ChoicePopup
 from app.ui.cover_view import CoverView
+from app.ui.focus import MouseFocus
 from app.ui.games_panel import GamesPanel
 from app.ui.icons import IconButton
 from app.ui.log_panel import LogPanel
@@ -68,8 +68,6 @@ class _ChangedDelegate(QStyledItemDelegate):
         :return: None
         """
         super().initStyleOption(option, index)
-        # Nothing is selectable: the focused table shows its focus on the frame, not on a row.
-        option.state &= ~QStyle.StateFlag.State_HasFocus
         if index.data(_CHANGED_ROLE):
             option.font.setBold(True)
             option.palette.setColor(QPalette.ColorRole.Text, option.palette.color(QPalette.ColorRole.Link))
@@ -183,13 +181,12 @@ class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
         :return: the table
         """
         table: QTreeWidget = QTreeWidget(parent=self)
-        table.setObjectName("settings")
         table.setColumnCount(2)
         table.setRootIsDecorated(False)
         table.setUniformRowHeights(True)
         table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        # Reached with Tab, so a long list scrolls with the arrow and page keys; the theme marks its focus.
-        table.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+        # Scrolled with the wheel; nothing in it to focus, as no row can be selected.
+        table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         table.setItemDelegate(_ChangedDelegate(table))
         header: QHeaderView = table.header()
@@ -345,11 +342,9 @@ class _HardwareBlock(QWidget):
         """
         label: QLabel = self._value()
         label.setTextFormat(Qt.TextFormat.RichText)
-        # Combined as ints: PyCharm misreads the operand types of Flag.__or__.
-        flags: Qt.TextInteractionFlag = Qt.TextInteractionFlag(
-            Qt.TextInteractionFlag.LinksAccessibleByMouse.value | Qt.TextInteractionFlag.LinksAccessibleByKeyboard.value
-        )
-        label.setTextInteractionFlags(flags)
+        # Mouse only: a focused link draws a dotted focus frame, which stayed after a click and at start.
+        label.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         label.linkActivated.connect(lambda _: on_click())
         return label
 
@@ -546,6 +541,7 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
             log_panel.hide()
             layout.addWidget(log_panel)
             self._logs_button, self._log_panel = logs_button, log_panel
+        MouseFocus.apply(root=self)
 
     def _body(self) -> QHBoxLayout:
         """

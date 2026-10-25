@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QListView,
     QPushButton,
     QSlider,
-    QStyle,
     QStyledItemDelegate,
     QStyleOptionViewItem,
     QTreeWidget,
@@ -267,6 +266,28 @@ class TestMainWindow:
         # Assert
         method.assert_called_once_with(window.presenter)
 
+    def test_mouse_focus(self, window: _Window) -> None:
+        """
+        Opens with nothing focused; the links and the settings table never take focus, the search field takes clicks.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        window.widget.show_settings(settings=_SETTINGS)
+        window.widget.show_hardware(
+            hardware=HardwareView(cpu="CPU", gpu="GPU", resolution="1920x1080", memory="", video_memory="")
+        )
+        # Act
+        links: list[QLabel] = [label for label in window.widget.findChildren(QLabel) if "href" in label.text()]
+        # Assert
+        assert window.widget.focusWidget() is None
+        assert len(links) == 3
+        assert all(link.focusPolicy() == Qt.FocusPolicy.NoFocus for link in links)
+        assert all(link.textInteractionFlags() == Qt.TextInteractionFlag.LinksAccessibleByMouse for link in links)
+        assert window.table().focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert window.child(parent=window.widget, kind=QLineEdit).focusPolicy() == Qt.FocusPolicy.ClickFocus
+
     def test_offer_opens_choice(self, window: _Window) -> None:
         """
         Opens a choice with a search hint in the UI language; a pick goes to the presenter as a GPU.
@@ -459,24 +480,6 @@ class TestMainWindow:
             QPalette.ColorRole.Link
         )
         window.presenter.move_slider.assert_called_once_with(index=3)
-
-    def test_settings_by_keyboard(self, window: _Window) -> None:
-        """
-        Lets the settings table take the focus by Tab, so it scrolls with the keys, without a focus mark on a row.
-
-        :param window: the window
-        :return: None
-        """
-        # Arrange
-        window.widget.show_settings(settings=_SETTINGS)
-        table: QTreeWidget = window.table()
-        option: QStyleOptionViewItem = QStyleOptionViewItem()
-        option.state = QStyle.StateFlag.State_HasFocus
-        # Act
-        window.delegate(view=table).initStyleOption(option, table.model().index(0, 0))
-        # Assert
-        assert table.focusPolicy() == Qt.FocusPolicy.TabFocus
-        assert not option.state & QStyle.StateFlag.State_HasFocus
 
     def test_hints(self, window: _Window) -> None:
         """

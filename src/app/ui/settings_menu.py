@@ -9,6 +9,7 @@ from app.config import LANGUAGE_NAMES
 from app.core.models import ThemeMode
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
+from app.ui.focus import MouseFocus
 from app.ui.icons import ICON_SIZE, IconButton, Icons
 from app.ui.typography import GAP, Typography
 
@@ -79,6 +80,7 @@ class SettingsMenu(QFrame):
         self._auto_update.setChecked(auto_update)
         self._auto_update.toggled.connect(on_auto_update)
         grid.addWidget(self._auto_update, 2, 0, 1, 2)
+        MouseFocus.apply(root=self)
 
     def _theme_buttons(
         self, *, translator: Translator, theme: ThemeMode, on_theme: Callable[[ThemeMode], None]

@@ -117,6 +117,19 @@ class TestSettingsMenu:
         assert (update.text(), update.isChecked()) == ("Автообновление", True)
         assert update.toolTip() == "Раз в неделю загружает свежие списки процессоров, видеокарт и игр."
 
+    def test_no_focus(self, menu: _Menu) -> None:
+        """
+        Opens with nothing focused, and no part of it takes focus: the language list kept a focus frame.
+
+        :param menu: the menu
+        :return: None
+        """
+        # Arrange & Act
+        parts: list[QWidget] = [*menu.themes(), menu.languages(), menu.update()]
+        # Assert
+        assert menu.widget.focusWidget() is None
+        assert all(part.focusPolicy() == Qt.FocusPolicy.NoFocus for part in parts)
+
     def test_theme_picked(self, menu: _Menu) -> None:
         """
         Passes the theme picked on, checks its button only and keeps the menu open.

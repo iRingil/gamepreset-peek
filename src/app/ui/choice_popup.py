@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.ui.focus import MouseFocus
 from app.ui.icons import Icons
 from app.ui.theme import Theme
 from app.ui.typography import Typography
@@ -176,6 +177,7 @@ class ChoicePopup(QFrame):
             Typography.px(ems=_POPUP_SIZE[0]),
             Typography.px(ems=_POPUP_SIZE[1]) if choice.groups else self.sizeHint().height(),
         )
+        MouseFocus.apply(root=self)
         if focus is not None:
             focus.setFocus()
 

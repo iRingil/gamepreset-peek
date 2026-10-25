@@ -146,11 +146,12 @@ in the commits.
 - PySide6 (LGPL), `PySide6-Essentials` only. PySide6 takes keyword arguments only for optional parameters, so
   required arguments of Qt calls are passed by position.
 - Style: our own package `src/app/ui/flat_theme`, reworked from PyQtDarkTheme 2.3.6 (`pyqtdarktheme-fork`; the
-  original 2.1.0 requires Python < 3.12). Self-contained so another app can copy it with its tests: imports only PySide6,
-  shiboken6 and the stdlib (checked by a test); the app's colors, extra QSS and icon folder (`THEME_ICONS_DIR`) come in through
-  `FlatTheme(...)`; `ui/theme.py` is the app's wrapper. Windows and PySide6 only: the upstream `{{...|env(...)}}`
-  branches were resolved once for Qt >= 6.4.1 on Windows, `corner` fixed to rounded; `style.qss` (one rule per line)
-  and `icons/*.svg` are package data (Nuitka `--include-package-data`). On the switch its stylesheet and palette
+  original 2.1.0 requires Python < 3.12). Self-contained so another app can copy it with its tests: imports only
+  PySide6, shiboken6 and the stdlib (checked by a test); the app's colors, extra QSS and icon folder
+  (`THEME_ICONS_DIR`) come in through `FlatTheme(...)`; `ui/theme.py` is the app's wrapper. Windows and PySide6
+  only: the upstream `{{...|env(...)}}` branches were resolved once for Qt >= 6.4.1 on Windows, `corner` fixed to
+  rounded; `style.qss` (one rule per line, `property: value` spaced) and `icons/*.svg` are package data (Nuitka
+  `--include-package-data`). On the switch its stylesheet and palette
   were identical to the vendored ones for both modes (colors to the byte, incl. the `round(x * 1000) / 1000`
   rounding and darken-then-lighten from the kept HSLA form). The default `border>input` `{"transparent": 0}` was a
   no-op upstream (a falsy factor was skipped), so it is `{}` now.
@@ -170,6 +171,15 @@ in the commits.
 - A style sheet `color` makes Qt derive `PlaceholderText` at alpha 128, so muted labels use `Theme.mute`
   (`QLabel[muted="true"]` with an opaque color) and the status line its own `color:` at full strength. A widget with
   its own style sheet stops getting palette changes: `MainWindow.changeEvent` recolors the status line.
+- No keyboard navigation, by the user's choice (a mouse-driven game app, like Telegram Desktop or PyCharm, where Tab
+  does nothing): `MouseFocus.apply` (`ui/focus.py`) at the end of `MainWindow`, `ChoicePopup` and `SettingsMenu`
+  gives text fields and scroll areas (lists, logs) that took clicks `ClickFocus`, everything else `NoFocus`: a focused
+  combo box, button or check box keeps a frame (`QComboBox:focus` is drawn in the accent color). Nothing is
+  reachable by Tab, so Qt also focuses nothing when the window opens: before, the CPU link got the focus at start and
+  showed its dotted frame. The hardware links (mouse-only flags) and the settings table (nothing selectable) are
+  `NoFocus`. Setting a policy on a widget with a focus proxy (a list's viewport, a QTabWidget) overwrites the
+  proxy's, so those are set first. The popup still focuses its search field itself and keeps Down / Enter. Widgets
+  created after `apply` aren't covered.
 - Status levels: info = loading only; warning = no recommendation, resolution fallback, too demanding resolution;
   error = hardware problems and failed requests. Colors by background lightness in `Theme`.
 - Font: bundled Golos Text (OFL, variable weight), base 10 pt everywhere, one heading size (1.4x, semibold). Sizes
