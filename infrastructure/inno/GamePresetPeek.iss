@@ -36,7 +36,15 @@ OutputDir=..\..\build
 OutputBaseFilename=GamePresetPeek-{#AppVersion}-setup
 Compression=lzma2/max
 SolidCompression=yes
-WizardStyle=modern
+; Light or dark as Windows is set, like the program itself.
+WizardStyle=modern dynamic
+; The logo is shown on the Welcome and Finished pages only, so the Welcome page stays on.
+DisableWelcomePage=no
+; One file per display scale (100, 125, 150, 200 %); Setup picks the one closest to the image area.
+WizardImageFile=wizard-image-100.png,wizard-image-125.png,wizard-image-150.png,wizard-image-200.png
+WizardImageFileDynamicDark=wizard-image-100.png,wizard-image-125.png,wizard-image-150.png,wizard-image-200.png
+WizardSmallImageFile=wizard-small-100.png,wizard-small-125.png,wizard-small-150.png,wizard-small-200.png,wizard-small-250.png
+WizardSmallImageFileDynamicDark=wizard-small-100.png,wizard-small-125.png,wizard-small-150.png,wizard-small-200.png,wizard-small-250.png
 ShowLanguageDialog=auto
 
 [Languages]
