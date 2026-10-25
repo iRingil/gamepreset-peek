@@ -279,3 +279,7 @@ in the commits.
   runs pytest under coverage, reads the total first (`--fail-under=0`) so a drop still reaches the badge, then fails
   below 100 %; on master its `badge` job (the only job with `contents: write`) force-pushes a one-commit branch
   `badges` with a shields.io endpoint `coverage.json`. No Build / Release badges: their manual runs say nothing.
+- Landing page: GitHub Pages from `master` `/docs` (`https://iringil.github.io/gamepreset-peek/`), made 2026-10-25
+  because Google hadn't indexed the repository (no backlinks; `github.com` can't be verified in Search Console, a
+  Pages URL-prefix property can). `docs/index.html` is self-contained; `icon.png` is the 256 px PNG from `app.ico`;
+  `.nojekyll` skips the Jekyll build. Keep its feature list in step with the README.

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GamePreset Peek: NVIDIA's optimal game settings without NVIDIA App</title>
+    <meta name="description" content="Free Windows app that shows the optimal game settings NVIDIA recommends for your CPU, GPU and screen resolution, without NVIDIA App, an account or background services.">
+    <link rel="canonical" href="https://iringil.github.io/gamepreset-peek/">
+    <link rel="icon" type="image/png" href="icon.png">
+    <meta name="theme-color" content="#0b1120">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="GamePreset Peek">
+    <meta property="og:description" content="See the game settings NVIDIA recommends for your GPU and resolution: no NVIDIA App, no account, no background services.">
+    <meta property="og:url" content="https://iringil.github.io/gamepreset-peek/">
+    <meta property="og:image" content="https://iringil.github.io/gamepreset-peek/main-window.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "GamePreset Peek",
+        "description": "Shows the optimal game settings NVIDIA recommends for your CPU, GPU and screen resolution, without NVIDIA App.",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Windows 10, Windows 11",
+        "license": "https://opensource.org/licenses/MIT",
+        "url": "https://iringil.github.io/gamepreset-peek/",
+        "downloadUrl": "https://github.com/iRingil/gamepreset-peek/releases/latest",
+        "image": "https://iringil.github.io/gamepreset-peek/main-window.png",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+    }
+    </script>
+    <style>
+        :root {
+            --bg: #0b1120;
+            --surface: #121a2c;
+            --border: #223049;
+            --text: #e6ebf3;
+            --muted: #9aa6b8;
+            --blue: #2fa4ff;
+            --orange: #ff8a3d;
+            --gradient: linear-gradient(90deg, #2fa4ff, #8b5cf6 55%, #ff8a3d);
+        }
+        * { box-sizing: border-box; }
+        html { color-scheme: dark; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 17px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+        }
+        a { color: var(--blue); }
+        .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+        header.wrap { padding-top: 56px; padding-bottom: 32px; text-align: center; }
+        .logo { width: 96px; height: 96px; border-radius: 20px; }
+        h1 { margin: 12px 0 8px; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.15; }
+        .tagline { margin: 0 auto; max-width: 640px; font-size: 1.2rem; color: var(--muted); }
+        .tagline strong { color: var(--text); font-weight: 600; }
+        .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin: 28px 0 8px; }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .button.primary { background: var(--gradient); border: 0; color: #fff; }
+        .button:hover { filter: brightness(1.12); }
+        .small { font-size: 0.9rem; color: var(--muted); }
+        .shot {
+            display: block;
+            width: 100%;
+            height: auto;
+            margin: 24px 0 8px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        h2 { margin: 56px 0 16px; font-size: 1.6rem; }
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+        .card { padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+        .card h3 { margin: 0 0 6px; font-size: 1.1rem; }
+        .card p { margin: 0; color: var(--muted); }
+        ol, ul { padding-left: 1.3em; }
+        li { margin: 6px 0; }
+        code { padding: 1px 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; font-size: 0.9em; }
+        footer.wrap { margin-top: 64px; padding-top: 24px; padding-bottom: 40px; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+<header class="wrap">
+    <img class="logo" src="icon.png" alt="" width="256" height="256">
+    <h1>GamePreset Peek</h1>
+    <p class="tagline">See the game settings NVIDIA recommends for <strong>your CPU, GPU and screen resolution</strong>
+        without NVIDIA App, an account or background services.</p>
+    <div class="actions">
+        <a class="button primary" href="https://github.com/iRingil/gamepreset-peek/releases/latest">Download for Windows</a>
+        <a class="button" href="https://github.com/iRingil/gamepreset-peek">Source on GitHub</a>
+    </div>
+    <p class="small">Free and open source (MIT) · Windows 10 and 11, 64-bit · installer or portable</p>
+</header>
+
+<main class="wrap">
+    <img class="shot" src="main-window.png" width="1900" height="1007"
+         alt="The main window: installed games, box art, the preset slider and the settings of Baldur's Gate 3">
+
+    <h2>What it does</h2>
+    <p>Pick a game, and the app shows its recommended graphics settings for your processor, graphics card and screen
+        resolution, along with every other preset NVIDIA has for that game, from performance to quality.</p>
+
+    <div class="features">
+        <div class="card">
+            <h3>Your games and all games</h3>
+            <p>"My games" lists the games installed on this PC; "All games" lists every game NVIDIA has
+                recommendations for, with box art and search.</p>
+        </div>
+        <div class="card">
+            <h3>Your hardware, or any other</h3>
+            <p>The processor, graphics card, memory and resolution are detected; change them to see the settings for
+                another PC.</p>
+        </div>
+        <div class="card">
+            <h3>Every preset</h3>
+            <p>The recommended preset comes first; a slider goes through the others and marks the values that
+                differ.</p>
+        </div>
+        <div class="card">
+            <h3>Five languages</h3>
+            <p>English, Russian, German, French and Spanish, setting names included. Light and dark themes.</p>
+        </div>
+        <div class="card">
+            <h3>Weekly updates</h3>
+            <p>The lists of processors, graphics cards and games update every week without a new version of the
+                app.</p>
+        </div>
+        <div class="card">
+            <h3>Private</h3>
+            <p>No accounts, telemetry, ads or analytics. It sends only what NVIDIA needs to return the presets.</p>
+        </div>
+    </div>
+
+    <h2>Installation</h2>
+    <ol>
+        <li>Download <code>GamePresetPeek-&lt;version&gt;-setup.exe</code> or the portable zip from
+            <a href="https://github.com/iRingil/gamepreset-peek/releases/latest">the latest release</a>.</li>
+        <li>Run the installer (no administrator rights needed) and choose a normal or a portable installation, or
+            unpack the zip anywhere and run <code>GamePresetPeek.exe</code>.</li>
+        <li>The app is not code-signed yet, so Windows SmartScreen may warn about it: click
+            <strong>More info → Run anyway</strong>.</li>
+    </ol>
+    <p>An internet connection is needed. Details on the files the app keeps and everything it sends are in the
+        <a href="https://github.com/iRingil/gamepreset-peek#readme">README</a>.</p>
+</main>
+
+<footer class="wrap">
+    GamePreset Peek is an unofficial tool and is not affiliated with or endorsed by NVIDIA. The presets come from
+    NVIDIA as NVIDIA publishes them. Released under the
+    <a href="https://github.com/iRingil/gamepreset-peek/blob/master/LICENSE">MIT License</a>.
+</footer>
+</body>
+</html>
