@@ -244,3 +244,6 @@ cython_debug/
 # Portable mode when run from source
 src/portable.txt
 src/userdata/
+
+# Claude Code: personal permissions
+.claude/settings.local.json
