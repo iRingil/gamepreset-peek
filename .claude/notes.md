@@ -283,3 +283,5 @@ in the commits.
   because Google hadn't indexed the repository (no backlinks; `github.com` can't be verified in Search Console, a
   Pages URL-prefix property can). `docs/index.html` is self-contained; `icon.png` is the 256 px PNG from `app.ico`;
   `.nojekyll` skips the Jekyll build. Keep its feature list in step with the README.
+- `docs/sitemap.xml` lists the one page; it is submitted in Search Console by hand. No `robots.txt`: crawlers read it
+  only at a host's root (`iringil.github.io/robots.txt`), which a project site can't serve.
