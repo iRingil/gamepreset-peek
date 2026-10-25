@@ -114,13 +114,7 @@ GamePreset Peek has no accounts, telemetry, ads or analytics. It sends only what
 The games list of "My games" is built on this PC from the chosen folders and the Windows registry and is never sent
 anywhere. The settings, the log and the cache stay on this PC, in the folders listed above.
 
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
-[SignPath Foundation](https://signpath.org).
-
-- Committers and reviewers: [iRingil](https://github.com/iRingil)
-- Approvers: [iRingil](https://github.com/iRingil)
+## How releases are built
 
 Every release is built from this repository by [GitHub Actions](.github/workflows/build.yml) and published by the
 [Release workflow](.github/workflows/release.yml) from the files of a tested build. The app's network use is described

@@ -269,10 +269,9 @@ in the commits.
 
 ## Repository
 
-- README sections required for code signing by SignPath Foundation: the functionality on the download page, a
-  section named exactly "Code signing policy" (attribution line, team roles) on the home and release pages, and the
-  privacy statement (the app sends hardware names, GPU device id, memory size and Windows version to NVIDIA, asks
-  NVIDIA's servers for box art, and downloads the database from GitHub weekly).
+- Releases are not code-signed: the README and the release notes header tell how to pass Windows SmartScreen. The
+  README's Privacy section lists everything the app sends (hardware names, GPU device id, memory size and Windows
+  version to NVIDIA, box art requests to NVIDIA's servers, the weekly database download from GitHub).
 - Badges: CodeQL is GitHub's default setup (no workflow file). Coverage without a coverage service: `pytest.yml`
   runs pytest under coverage, reads the total first (`--fail-under=0`) so a drop still reaches the badge, then fails
   below 100 %; on master its `badge` job (the only job with `contents: write`) force-pushes a one-commit branch
