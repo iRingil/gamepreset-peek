@@ -1,8 +1,9 @@
 """Application constants: names, paths, HTTP settings and NVIDIA endpoints."""
 
 import os
-import tempfile
 from pathlib import Path
+
+from app.infra.app_dirs import AppDirs
 
 __all__: tuple[str, ...] = (
     "APP_NAME",
@@ -44,6 +45,7 @@ __all__: tuple[str, ...] = (
     "OPS_COMMON_FILES_URL",
     "OPS_COMPATIBILITY_URL",
     "OPS_PRESETS_URL",
+    "PORTABLE",
     "REQUEST_DELAY_MS",
     "SAVE_WAIT_SECONDS",
     "SCREEN_RESOLUTIONS",
@@ -60,11 +62,14 @@ APP_NAME: str = "GamePresetPeek"
 APP_TITLE: str = "GamePreset Peek"
 # Own taskbar identity, so the window shows its icon instead of python.exe's when run from source.
 APP_USER_MODEL_ID: str = "GamePresetPeek.App"
-APP_DATA_DIR: Path = Path(os.environ["LOCALAPPDATA"]) / APP_NAME
+# The executable's folder in the build, src when run from source; a portable marker there keeps the data in it.
+_APP_DIRS: AppDirs = AppDirs.detect(app_dir=Path(__file__).parent.parent, app_name=APP_NAME)
+PORTABLE: bool = _APP_DIRS.portable
+APP_DATA_DIR: Path = _APP_DIRS.data
 LOG_FILE: Path = APP_DATA_DIR / "logs" / "gamepreset-peek.log"
 SETTINGS_FILE: Path = APP_DATA_DIR / "settings.json"
 # Pictures downloaded or extracted again when a cleanup tool deletes them.
-CACHE_DIR: Path = Path(tempfile.gettempdir()) / APP_NAME
+CACHE_DIR: Path = _APP_DIRS.cache
 COVERS_DIR: Path = CACHE_DIR / "covers"
 EXE_ICONS_DIR: Path = CACHE_DIR / "icons"
 # Side of an extracted executable icon in pixels: more than the list's icons need at 200 % scale.

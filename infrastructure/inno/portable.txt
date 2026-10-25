@@ -1,0 +1,2 @@
+This file makes GamePreset Peek portable: its settings, log and cache are kept in the "userdata" folder next to it.
+Delete this file to keep them in %LOCALAPPDATA%\GamePresetPeek and the temporary folder instead.

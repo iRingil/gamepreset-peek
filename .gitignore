@@ -240,3 +240,7 @@ cython_debug/
 .run/
 
 /src/logs/
+
+# Portable mode when run from source
+src/portable.txt
+src/userdata/

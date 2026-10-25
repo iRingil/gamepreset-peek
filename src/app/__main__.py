@@ -8,7 +8,7 @@ from loguru import logger
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
-from app.config import APP_ICON_FILE, APP_USER_MODEL_ID, SAVE_WAIT_SECONDS
+from app.config import APP_ICON_FILE, APP_USER_MODEL_ID, PORTABLE, SAVE_WAIT_SECONDS
 from app.core.covers import CoverCache
 from app.core.database import AppDatabase
 from app.core.game_finder import GameFinder
@@ -128,7 +128,7 @@ class _Application:  # pylint: disable=too-few-public-methods
 
 if __name__ == "__main__":  # pragma: no cover
     _logging: LoggingManager = LoggingManager(debug=False)
-    logger.info("Starting")
+    logger.info("Starting (portable)" if PORTABLE else "Starting")
     try:
         _Application(logging_manager=_logging).run()
     except KeyboardInterrupt:
