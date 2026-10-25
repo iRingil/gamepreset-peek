@@ -50,7 +50,7 @@
         <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-black.svg">
     </a>
     <a href="https://deepwiki.com/iRingil/gamepreset-peek">
-        <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
+        <img src="https://img.shields.io/badge/Ask-DeepWiki-informational" alt="Ask DeepWiki">
     </a>
 </p>
 
