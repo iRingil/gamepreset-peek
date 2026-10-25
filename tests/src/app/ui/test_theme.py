@@ -80,7 +80,7 @@ class TestTheme:
 
     def test_apply(self, themed: QApplication, monkeypatch: pytest.MonkeyPatch) -> None:
         """
-        Sets the color scheme of the mode and a style sheet: list rows up to the frame, a detected item's hover.
+        Sets the color scheme of the mode and a style sheet: roomier tree rows, a detected item's hover.
 
         :param themed: Qt application, restored after the test
         :param monkeypatch: pytest monkeypatch
@@ -94,8 +94,8 @@ class TestTheme:
         Theme.apply(mode=ThemeMode.DARK)
         # Assert
         hints.setColorScheme.assert_called_once_with(Qt.ColorScheme.Dark)
-        assert "QListView, QTreeView {padding:0}" in themed.styleSheet()
-        assert "QListView#detected::item:selected:hover {background:" in themed.styleSheet()
+        assert "QTreeView::item {padding: 0.1em 0}" in themed.styleSheet()
+        assert "QListView#detected::item:selected:hover {background: " in themed.styleSheet()
 
     def test_tab_colors_of_theme(self, themed: QApplication) -> None:
         """
@@ -126,7 +126,7 @@ class TestTheme:
         sheet: str = themed.styleSheet().lower()
         # Assert
         assert themed.palette().color(QPalette.ColorRole.Link).name() == "#0b6b8a"
-        assert "qwidget {background:rgba(217, 224, 232, 1.000)" in sheet
+        assert "qwidget {background: rgba(217, 224, 232, 1.000)" in sheet
         assert "rgba(247, 249, 251, 1.000)" in sheet
 
     @pytest.mark.parametrize(

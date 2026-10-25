@@ -9,9 +9,6 @@
     <a href="https://pypi.org/project/PySide6-Essentials/6.12.0/">
         <img src="https://img.shields.io/badge/PySide6--Essentials-v6.12.0-informational" alt="PySide6-Essentials version">
     </a>
-    <a href="https://pypi.org/project/darkdetect/0.8.0/">
-        <img src="https://img.shields.io/badge/darkdetect-v0.8.0-informational" alt="darkdetect version">
-    </a>
     <a href="https://pypi.org/project/requests/2.34.2/">
         <img src="https://img.shields.io/badge/requests-v2.34.2-informational" alt="requests version">
     </a>
@@ -148,13 +145,14 @@ infrastructure\inno\build.cmd                         # installer and portable z
 GamePreset Peek is released under the [MIT License](LICENSE). It is built with these third-party components:
 
 - [Qt for Python (PySide6)](https://www.qt.io/qt-for-python) and Qt: LGPL-3.0
-- [PyQtDarkTheme](https://github.com/5yutan5/PyQtDarkTheme) (vendored in `src/app/ui/vendor`): MIT
+- [PyQtDarkTheme](https://github.com/5yutan5/PyQtDarkTheme), reworked in `src/app/ui/flat_theme`: MIT; its style sheet
+  comes from [QDarkStyleSheet](https://github.com/ColinDuquesnoy/QDarkStyleSheet): MIT
+- [Material design icons](https://github.com/google/material-design-icons) of the theme: Apache-2.0
 - [requests](https://github.com/psf/requests), [urllib3](https://github.com/urllib3/urllib3),
   [idna](https://github.com/kjd/idna), [charset-normalizer](https://github.com/jawah/charset_normalizer),
   [certifi](https://github.com/certifi/python-certifi): Apache-2.0, MIT, BSD-3-Clause, MIT, MPL-2.0
 - [fake-useragent](https://github.com/fake-useragent/fake-useragent): Apache-2.0
 - [loguru](https://github.com/Delgan/loguru): MIT
-- [darkdetect](https://github.com/albertosottile/darkdetect): BSD-3-Clause
 - [Lucide](https://lucide.dev) icons: ISC
 - [flag-icons](https://github.com/lipis/flag-icons): MIT
 - [Golos Text](https://github.com/googlefonts/golos-text) font: SIL Open Font License 1.1

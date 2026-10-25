@@ -145,13 +145,28 @@ in the commits.
 
 - PySide6 (LGPL), `PySide6-Essentials` only. PySide6 takes keyword arguments only for optional parameters, so
   required arguments of Qt calls are passed by position.
-- Style: PyQtDarkTheme vendored from `pyqtdarktheme-fork` 2.3.6 in `src/app/ui/vendor/qdarktheme` (the original
-  2.1.0 requires Python < 3.12, and pip silently installs ancient 0.1.7 on 3.13). Left as is for clean diffs
-  against upstream (black, mypy and pylint skip it); two edits: imports rewritten to `app.ui.vendor.qdarktheme.`,
-  and `load_stylesheet(additional_qss=)` renders our extra QSS with the theme template, so `{{border|color}}` works
-  and follows "auto" switches.
+- Style: our own package `src/app/ui/flat_theme`, reworked from PyQtDarkTheme 2.3.6 (`pyqtdarktheme-fork`; the
+  original 2.1.0 requires Python < 3.12). Self-contained so another app can copy it with its tests: imports only PySide6,
+  shiboken6 and the stdlib (checked by a test); the app's colors, extra QSS and icon folder (`THEME_ICONS_DIR`) come in through
+  `FlatTheme(...)`; `ui/theme.py` is the app's wrapper. Windows and PySide6 only: the upstream `{{...|env(...)}}`
+  branches were resolved once for Qt >= 6.4.1 on Windows, `corner` fixed to rounded; `style.qss` (one rule per line)
+  and `icons/*.svg` are package data (Nuitka `--include-package-data`). On the switch its stylesheet and palette
+  were identical to the vendored ones for both modes (colors to the byte, incl. the `round(x * 1000) / 1000`
+  rounding and darken-then-lighten from the kept HSLA form). The default `border>input` `{"transparent": 0}` was a
+  no-op upstream (a falsy factor was skipped), so it is `{}` now.
+- Since then `style.qss` carries our own look, merged into its rules (widget grabs identical before and after the
+  move): folder tabs, lists and trees with no padding (rows up to the frame), a list in a tab page leaving the frame
+  to the pane, and no hover underline on check boxes and radio buttons (it looked like a link). The app's
+  `ui/theme.py` keeps only rules tied to its widgets (`#detected`, `#settings`, `muted`, tree row padding).
+- Auto mode: `Qt.ColorScheme.Unknown` plus `QStyleHints.colorSchemeChanged` (no `darkdetect`, no listener thread);
+  signals sent while `apply()` itself sets the scheme are ignored (`_requested` is None meanwhile). Offscreen Qt
+  reports `Unknown`, which falls back to dark.
+- `QIconEngine.clone()` from Python: PySide6 frees the returned engine when Python drops it, so Qt crashed on a
+  changed copy of a standard icon (upstream had the same bug). Clones are kept in a list and pruned with
+  `shiboken6.isValid` once Qt deletes them with their icon.
 - Accent: the theme sets no `Accent` (Windows would give blue), so the app uses `Link`. Light palette:
-  `Theme._LIGHT_COLORS` as `custom_colors={"[light]": ...}` (steel window, lighter lists); dark is the theme's.
+  `Theme._LIGHT_COLORS` as `FlatTheme(colors={Qt.ColorScheme.Light: ...})` (steel window, lighter lists); dark is
+  the theme's.
 - A style sheet `color` makes Qt derive `PlaceholderText` at alpha 128, so muted labels use `Theme.mute`
   (`QLabel[muted="true"]` with an opaque color) and the status line its own `color:` at full strength. A widget with
   its own style sheet stops getting palette changes: `MainWindow.changeEvent` recolors the status line.
@@ -160,10 +175,12 @@ in the commits.
 - Font: bundled Golos Text (OFL, variable weight), base 10 pt everywhere, one heading size (1.4x, semibold). Sizes
   are in ems (`ui/typography.py`: point size at the logical DPI; `QFontInfo` gives -1 on the off-screen platform).
   Still in pixels: `WINDOW_MIN_SIZE` (fits a 1067x600 logical screen, never change it), `COVER_WIDTH`, 1 px borders.
-- Font order matters: `__main__` applies the saved theme (qdarktheme's first `setup_theme` calls `setStyle`, which
+- Font order matters: `__main__` applies the saved theme (the theme's first `apply` calls `setStyle`, which
   refills per-class fonts), then installs the font, then builds the window.
 - Folder tabs: the selected tab framed in the theme's border color over the pane's top line; the first tab starts
-  0.6 em in, so the pane keeps its rounded corners.
+  and the last one ends 0.6 em in, so the pane keeps its rounded top corners. Without the right margin a last tab
+  that fits exactly ends 0.15 em from the edge, squeezing the 4 px corner; with too many tabs the scroll arrows
+  take the right end anyway.
 - Lists: the theme pads every frame and scroll area by 1 px, so `QListView, QTreeView {padding:0}`; rows touch the
   antialiased inner edge of the rounded frame (a clean cut would need an overlay, left as is).
 - `PresetSlider` is fully painted: one stop per preset (first at the track start, last at its end), the recommended
@@ -215,7 +232,7 @@ in the commits.
   `app.__version__` (in cmd `for /f` with usebackq, a command starting with a quote loses its outer quotes, so
   `%PYTHON_EXE%` stays unquoted there).
 - Qt plugins kept: `qwindows`, `qjpeg` (covers), `qico` (window icon), `qsvg` (the theme's QSS draws check boxes and
-  arrows from SVG), `qsvgicon`, `qmodernwindowsstyle` (the base under qdarktheme's proxy style). `tls` is dropped:
+  arrows from SVG), `qsvgicon`, `qmodernwindowsstyle` (the base under the theme's proxy style). `tls` is dropped:
   HTTPS goes through `requests`. The folder carries the VC++ runtime DLLs; checked on a clean Windows (Sandbox).
 - The first start of a new exe waits for the Windows firewall prompt and a Defender scan.
 - Installer (`infrastructure/inno/GamePresetPeek.iss`, UTF-8 with BOM for the translated messages): type "Normal"

@@ -39,7 +39,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r src/requirements.txt -r src/requirements-dev.txt
       - name: Test with pytest
-        run: coverage run --source=src/app --omit="*/vendor/*" -m pytest
+        run: coverage run --source=src/app -m pytest
       # The total goes to the badge first, so a drop below fail_under (pyproject.toml) is shown before the run fails.
       - name: Read the total coverage
         id: coverage

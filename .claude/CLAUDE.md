@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 GamePreset Peek: a Windows Qt application (`src/app`) that shows the optimal game settings NVIDIA recommends for the
-user's hardware, with tests in `tests/`. Python 3.13; runtime deps are `requests`, `fake-useragent`, `loguru`,
-`PySide6-Essentials` (Qt UI) and `darkdetect` (for PyQtDarkTheme, vendored in `src/app/ui/vendor`).
+user's hardware, with tests in `tests/`. Python 3.13; runtime deps are `requests`, `fake-useragent`, `loguru`
+and `PySide6-Essentials` (Qt UI); the theme is our own package `src/app/ui/flat_theme` (reworked from PyQtDarkTheme).
 The project is a public GitHub repository (`iRingil/gamepreset-peek`), MIT-licensed.
 
 ## Repository rules
@@ -28,7 +28,7 @@ mypy src tests
 pylint -j 2 src tests                                             # must score 10 with no messages at all
 pytest                                                            # all tests
 pytest tests/src/<pkg>/test_x.py::TestClass::test_name            # single test
-coverage run --source=src/app --omit="*/vendor/*" -m pytest; coverage report -m --skip-covered   # must be 100 %
+coverage run --source=src/app -m pytest; coverage report -m --skip-covered   # must be 100 %
 $env:PYTHONPATH="src"; python -m app                               # run the app (needs compiled .mo)
 infrastructure\nuitka\build.cmd                                    # Nuitka standalone build -> build\GamePresetPeek.dist
 infrastructure\inno\build.cmd                                      # installer + portable zip (needs Inno Setup 6)

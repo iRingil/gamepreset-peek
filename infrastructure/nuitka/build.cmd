@@ -46,7 +46,7 @@ echo Python found. Running Nuitka...
 --windows-icon-from-ico=src/app/data/app.ico ^
 --include-data-dir=src/app/data=app/data ^
 --include-data-files=src/app/i18n/locale=app/i18n/locale/=**/*.mo ^
---include-data-files=src/app/ui/vendor/qdarktheme/LICENSE.txt=app/ui/vendor/qdarktheme/LICENSE.txt ^
+--include-package-data=app.ui.flat_theme ^
 --include-data-files=LICENSE=LICENSE.txt ^
 --include-package-data=fake_useragent ^
 --output-dir=build ^

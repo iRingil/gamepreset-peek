@@ -1,43 +1,31 @@
-"""Light and dark mode of the window on the PyQtDarkTheme style."""
+"""Light and dark mode of the window: the flat theme in the app's colors."""
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QGuiApplication
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QLabel
 
+from app.config import THEME_ICONS_DIR
 from app.core.models import ThemeMode
-from app.ui.vendor import qdarktheme
+from app.ui.flat_theme import FlatTheme
 from app.ui.views import StatusLevel
 
 __all__: tuple[str, ...] = ("Theme",)
 
-# Lists and tables run their rows up to the frame; a list in a tab page leaves the frame to the tab pane.
 # Table rows get a little air, still fitting a long settings list in the smallest window.
-# A checkbox gets no underline on hover: it looked like a link.
-# Tabs are folder tabs: the selected one is framed on top and at the sides and opens into the pane below it.
-# The first tab starts a little in from the pane edge, so the pane keeps its rounded top-left corner.
 # The detected item of a choice, mostly the one in use, still answers the mouse with a stronger selection color.
 # The settings table, reached with Tab to scroll by keys, shows its focus in the frame: its rows can't be selected.
 # Dimmed labels get an opaque color: Qt draws the placeholder text role at half the opacity of the text color.
 # The {{name|color}} placeholders take the colors of the theme in use.
 _QSS: str = """
-QListView, QTreeView {padding:0}
-QTreeView::item {padding:0.1em 0}
-QTabWidget > QStackedWidget > QAbstractItemView[frameShape=NoFrame] {margin:0;border:none}
-QCheckBox:hover {border-bottom:2px solid transparent}
-QTabWidget::tab-bar {left:0.6em}
-QTabBar::tab:top {margin:0 0.15em 0 0;padding:0.45em 1.1em;border:1px solid transparent;border-bottom:none;
-border-top-left-radius:4px;border-top-right-radius:4px}
-QTabBar::tab:top:first, QTabBar::tab:top:only-one {margin-left:0}
-QTabBar::tab:top:selected, QTabBar::tab:top:selected:hover:enabled {margin-bottom:-1px;
-border-color:{{border|color}};background:{{background|color}}}
-QListView#detected::item:selected:hover {background:{{primary|color(state="table.selectionBackground")}}}
-QTreeView#settings:focus {border-color:{{primary|color}}}
-QLabel[muted="true"] {color:{{foreground|color(state="input.placeholder")}}}
+QTreeView::item {padding: 0.1em 0}
+QListView#detected::item:selected:hover {background: {{primary|color(state="table.selectionBackground")}}}
+QTreeView#settings:focus {border-color: {{primary|color}}}
+QLabel[muted="true"] {color: {{foreground|color(state="input.placeholder")}}}
 """
 
 
 class Theme:
-    """Applies the PyQtDarkTheme style; with AUTO it follows the Windows app mode, also when it changes."""
+    """Applies the flat theme in the app's colors; with AUTO it follows the Windows app mode, also when it changes."""
 
     _SCHEMES: dict[ThemeMode, Qt.ColorScheme] = {
         ThemeMode.AUTO: Qt.ColorScheme.Unknown,
@@ -67,6 +55,13 @@ class Theme:
     }
     # Dimmed text of the dark mode: the theme's text at half opacity on its window, as it always looked.
     _DARK_COLORS: dict[str, str] = {"foreground>input.placeholder": "#828488"}
+
+    # The theme of the whole application; Qt is touched only by apply().
+    _FLAT: FlatTheme = FlatTheme(
+        colors={Qt.ColorScheme.Light: _LIGHT_COLORS, Qt.ColorScheme.Dark: _DARK_COLORS},
+        extra_qss=_QSS,
+        icon_dir=THEME_ICONS_DIR,
+    )
 
     # Status line colors on a dark and a light background; an informing line keeps the dimmed text color.
     _STATUS_COLORS: dict[tuple[StatusLevel, bool], str] = {
@@ -128,8 +123,4 @@ class Theme:
         :param mode: theme mode
         :return: None
         """
-        # The Qt color scheme still drives the window title bar, which the style sheet can't reach.
-        QGuiApplication.styleHints().setColorScheme(cls.scheme(mode=mode))
-        # ThemeMode values are the theme names of PyQtDarkTheme.
-        colors: dict[str, str | dict[str, str]] = {"[light]": cls._LIGHT_COLORS, "[dark]": cls._DARK_COLORS}
-        qdarktheme.setup_theme(theme=mode.value, custom_colors=colors, additional_qss=_QSS)
+        cls._FLAT.apply(scheme=cls.scheme(mode=mode))

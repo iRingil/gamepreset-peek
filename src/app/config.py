@@ -51,6 +51,7 @@ __all__: tuple[str, ...] = (
     "SCREEN_RESOLUTIONS",
     "SEARCH_DELAY_MS",
     "SETTINGS_FILE",
+    "THEME_ICONS_DIR",
     "TRANSLATION_LANGUAGES",
     "UI_LANGUAGES",
     "USER_AGENT_OS",
@@ -72,6 +73,8 @@ SETTINGS_FILE: Path = APP_DATA_DIR / "settings.json"
 CACHE_DIR: Path = _APP_DIRS.cache
 COVERS_DIR: Path = CACHE_DIR / "covers"
 EXE_ICONS_DIR: Path = CACHE_DIR / "icons"
+# Icons of the style sheet, written in the colors of the theme.
+THEME_ICONS_DIR: Path = CACHE_DIR / "theme"
 # Side of an extracted executable icon in pixels: more than the list's icons need at 200 % scale.
 EXE_ICON_SIZE: int = 48
 # Name of the local socket a running copy listens on; a second copy started by the same user brings it to the front.
