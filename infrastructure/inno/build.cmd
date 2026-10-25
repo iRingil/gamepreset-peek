@@ -45,7 +45,8 @@ if %errorlevel% geq 8 (
 )
 copy /y "infrastructure\inno\portable.txt" "%PORTABLE_DIR%\" >nul
 if exist "%PORTABLE_ZIP%" del "%PORTABLE_ZIP%"
-powershell -NoProfile -Command "Compress-Archive -Path 'build\portable\GamePresetPeek' -DestinationPath '%PORTABLE_ZIP%'"
+:: Windows' own tar, not Git's GNU tar from PATH: zip paths with forward slashes (Compress-Archive writes backslashes).
+"%SystemRoot%\System32\tar.exe" -a -c -f "%PORTABLE_ZIP%" -C "build\portable" GamePresetPeek
 if %errorlevel% neq 0 (
     echo ERROR: creating %PORTABLE_ZIP% failed.
     exit /b 1

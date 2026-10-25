@@ -94,7 +94,6 @@ Type: filesandordirs; Name: "{%TEMP}\GamePresetPeek"
 [Code]
 var
   ModePage: TInputOptionWizardPage;
-  SuggestedDir: String;
 
 function IsPortable: Boolean;
 begin
@@ -113,21 +112,18 @@ end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
-  Suggestion: String;
+  NormalDir, PortableDir: String;
 begin
   Result := True;
   if CurPageID = ModePage.ID then
   begin
-    if IsPortable then
-      Suggestion := ExpandConstant('{userdesktop}\GamePresetPeek')
-    else
-      Suggestion := ExpandConstant('{autopf}\GamePresetPeek');
-    // A folder the user typed is kept; only the suggestion follows the installation type.
-    if (SuggestedDir = '') or (CompareText(WizardForm.DirEdit.Text, SuggestedDir) = 0) then
-    begin
-      WizardForm.DirEdit.Text := Suggestion;
-      SuggestedDir := Suggestion;
-    end;
+    NormalDir := ExpandConstant('{autopf}\GamePresetPeek');
+    PortableDir := ExpandConstant('{userdesktop}\GamePresetPeek');
+    // Only the other type's suggestion is swapped: a folder from /DIR, a previous installation or the user stays.
+    if IsPortable and SameText(WizardForm.DirEdit.Text, NormalDir) then
+      WizardForm.DirEdit.Text := PortableDir
+    else if not IsPortable and SameText(WizardForm.DirEdit.Text, PortableDir) then
+      WizardForm.DirEdit.Text := NormalDir;
   end;
 end;
 
