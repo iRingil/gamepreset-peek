@@ -55,7 +55,7 @@ Pick a game, and the app shows its recommended graphics settings for your proces
 resolution, along with every other preset NVIDIA has for that game.
 
 <p align="center">
-    <img src="docs/main-window.png" alt="The main window: installed games, box art, the preset slider and the settings of Baldur's Gate 3" width="880">
+    <img src="docs/main-window.webp" alt="The main window: installed games, box art, the preset slider and the settings of Baldur's Gate 3" width="880">
 </p>
 
 GamePreset Peek is an unofficial tool and is not affiliated with or endorsed by NVIDIA. The presets come from NVIDIA

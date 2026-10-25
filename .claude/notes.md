@@ -280,8 +280,10 @@ in the commits.
   below 100 %; on master its `badge` job (the only job with `contents: write`) force-pushes a one-commit branch
   `badges` with a shields.io endpoint `coverage.json`. No Build / Release badges: their manual runs say nothing.
 - Landing page: GitHub Pages from `master` `/docs` (`https://iringil.github.io/gamepreset-peek/`), made 2026-10-25
-  because Google hadn't indexed the repository (no backlinks; `github.com` can't be verified in Search Console, a
-  Pages URL-prefix property can). `docs/index.html` is self-contained; `icon.png` is the 256 px PNG from `app.ico`;
-  `.nojekyll` skips the Jekyll build. Keep its feature list in step with the README.
+  because Google hadn't indexed the repository (no backlinks; `github.com` can't be verified in Search Console, a Pages
+  URL-prefix property can). `docs/index.html` is self-contained; `logo.webp` (192 px) and `favicon.png` (48 px) are made
+  from the 256 px PNG in `app.ico`, the screenshot is WebP quality 88 (no visible loss, 128 KB vs 424 KB PNG);
+  `og:image` is the repository social preview PNG, as WebP previews aren't read everywhere; `.nojekyll` skips the Jekyll
+  build. Keep its feature list in step with the README.
 - `docs/sitemap.xml` lists the one page; it is submitted in Search Console by hand. No `robots.txt`: crawlers read it
   only at a host's root (`iringil.github.io/robots.txt`), which a project site can't serve.
