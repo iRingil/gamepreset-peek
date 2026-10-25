@@ -2,4 +2,6 @@
 
 The program is not code-signed yet, so Windows SmartScreen may warn about it: click **More info → Run anyway**.
 
+**Code signing:** free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
 [Privacy](https://github.com/iRingil/gamepreset-peek#privacy) · [Code signing policy](https://github.com/iRingil/gamepreset-peek#code-signing-policy)
