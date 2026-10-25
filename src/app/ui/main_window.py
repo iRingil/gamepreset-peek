@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app import __version__
 from app.config import APP_TITLE, WINDOW_MIN_SIZE, WINDOW_SIZE
 from app.core.models import GamesTab, ThemeMode
 from app.i18n.translator import Translator
@@ -485,7 +486,7 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         self._translator: Translator | None = None
         self._theme: ThemeMode = ThemeMode.AUTO
         self._auto_update: bool = True
-        self.setWindowTitle(APP_TITLE)
+        self.setWindowTitle(f"{APP_TITLE} {__version__}")
         self.setMinimumSize(*WINDOW_MIN_SIZE)
         # A screen too small for the initial size gets a window as large as it, down to the smallest size.
         self.resize(QSize(*WINDOW_SIZE).boundedTo(QGuiApplication.primaryScreen().availableSize()))

@@ -8,14 +8,22 @@ echo Current working directory is: %cd%
 
 :: Define the path to the virtualenv's Python relative to the project root.
 set "PYTHON_EXE=.\.venv\Scripts\python.exe"
-:: The version written into the executable's properties: up to four numbers.
-set "APP_VERSION=0.1.0"
 
 :: Check if the Python executable exists.
 if not exist "%PYTHON_EXE%" (
     echo ERROR: python.exe not found in %cd%\.venv\Scripts\
     exit /b 1
 )
+
+:: The version written into the executable's properties comes from the app package (app.__version__).
+:: PYTHON_EXE stays unquoted here: for /f drops the outer quotes of a command that starts with one.
+set "APP_VERSION="
+for /f "usebackq delims=" %%v in (`%PYTHON_EXE% -c "import sys; sys.path.insert(0, 'src'); import app; print(app.__version__)"`) do set "APP_VERSION=%%v"
+if not defined APP_VERSION (
+    echo ERROR: could not read the version from src\app\__init__.py
+    exit /b 1
+)
+echo App version: %APP_VERSION%
 
 echo Python found. Running Nuitka...
 

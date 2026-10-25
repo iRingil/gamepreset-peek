@@ -12,8 +12,8 @@ body:
     id: version
     attributes:
       label: App version
-      description: "Right-click GamePresetPeek.exe → Properties → Details → Product version."
-      placeholder: 0.1.0
+      description: Shown in the window title.
+      placeholder: 1.0.0
     validations:
       required: true
   - type: input
