@@ -266,7 +266,9 @@ in the commits.
   commit. It creates the tag itself (a tag pushed by `GITHUB_TOKEN` starts no workflow). Notes: `header.md` plus
   `.github/release-notes/<version>.md` when that file exists, else the commit subjects since the previous tag (up to
   the build's commit) without bot commits and `[skip changelog]` ones. Both texts are read from the current master,
-  not the build's commit, so fixing them needs no new build.
+  not the build's commit, so fixing them needs no new build. A change to any file in `.github/workflows` does need
+  one: `GITHUB_TOKEN` may not create the tag on a commit whose workflows differ from master's (HTTP 403 "Resource
+  not accessible by integration", hit with 1.1.0 on 2026-10-25).
 
 ## Repository
 
