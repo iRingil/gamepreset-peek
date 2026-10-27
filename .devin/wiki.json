@@ -1,0 +1,163 @@
+{
+  "repo_notes": [
+    {
+      "content": "GamePreset Peek is a Windows desktop application in Python 3.13 with a Qt user interface (PySide6-Essentials). It shows the optimal game settings NVIDIA recommends for the user's processor, graphics card, memory and screen resolution, without NVIDIA App. Runtime dependencies are requests, fake-useragent, loguru and PySide6-Essentials; the theme is the project's own package src/app/ui/flat_theme (reworked from PyQtDarkTheme). The source of truth is the code under src/app and tests: cite code files first and use .claude/notes.md and README.md only for the reasons behind a design."
+    },
+    {
+      "content": "Module names, to be used exactly as they are: src/app/core holds app_db.py (read-only SQLite connections), database.py (AppDatabase: loading and updating the bundled database), game_catalog.py (GameCatalog), game_finder.py (GameFinder and WindowsRegistry: installed games), covers.py (CoverCache: box art), hardware.py (hardware detection, CpuList, GpuList, GpuRanks), screen_shape.py, models.py, ops_api.py (OpsApi), service.py (PresetService) and user_settings.py. src/app/infra holds app_dirs.py, elevation.py, http_client.py and logger.py. src/app/i18n holds translator.py and ui_text.py. Everything else of the UI is in src/app/ui. There are no modules named game_names.py or cover_cache.py."
+    },
+    {
+      "content": "Network use: the recommended presets, the presets files and the translations are requested from NVIDIA's servers when the user picks a game, so the main feature needs an internet connection. Only the game list, the CPU and GPU lists and the GPU ranks come from the bundled database and are available offline. Describe the app as needing no NVIDIA account and no NVIDIA App, not as offline-first."
+    },
+    {
+      "content": "Box art: the URL of each game's cover is stored in the bundled database and downloaded with ;f=jpg;w=COVER_WIDTH, then cached on disk under the sha256 of the URL. NVIDIA's GraphQL service (NV_GAME_ART_URL) is asked only as a fallback, when downloading the stored URL fails with an HTTP error; the picture found then is cached under the failed URL's file name."
+    },
+    {
+      "content": "The bundled database src/app/data/app.db is written by a separate private project that owns its schema and updates it weekly; this repository only reads it. After each weekly run that project commits the manifest data/app.db.json (sha256 of the database and the time of the check). The app reads the manifest from DB_MANIFEST_URL when its last check is older than the last Monday 03:00 UTC (DB_CHECK_WEEKDAY, DB_CHECK_TIME) and downloads DB_UPDATE_URL only when the sha256 differs. The download goes to app.download beside the file, must match the manifest's sha256, is validated by loading every list from it and then replaces app.db with os.replace."
+    },
+    {
+      "content": "Running from source on Windows, from the repository root: create and activate the .venv virtualenv, run pip install -r src/requirements.txt -r src/requirements-dev.txt (the dev file only constrains, so both are installed), compile the translations with infrastructure\\localization\\3.compile_translations.cmd (the app needs the compiled .mo files), then set PYTHONPATH to src and run python -m app (PowerShell: $env:PYTHONPATH=\"src\"; python -m app). Checks: black src tests, mypy src tests, pylint -j 2 src tests (score 10), pytest, and coverage run --source=src/app -m pytest with 100 % line coverage required."
+    },
+    {
+      "content": "Mermaid diagrams must render: put every node label and every message text in double quotes, keep labels on one line, and use no parentheses, slashes, dots or colons in node identifiers (use short ids like svc, ops, db and put the file path in the quoted label)."
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "What the app does for the user, the feature set from README.md, what needs a network connection and what is bundled, and the repository layout (src/app, tests, infrastructure, docs, data, .github)"
+    },
+    {
+      "title": "Architecture and Threading",
+      "purpose": "The core, infra, i18n and ui layers, the presenter talking to the MainView protocol, the synchronous PresetService, and the four Worker threads of Runners in ui/worker.py with Qt signals bringing results back to the UI thread",
+      "parent": "Overview"
+    },
+    {
+      "title": "Running from Source and Development Setup",
+      "purpose": "Installing the requirements, compiling the translations, running the app with PYTHONPATH=src, and running black, mypy, pylint, pytest and coverage",
+      "parent": "Overview"
+    },
+    {
+      "title": "Configuration Constants",
+      "purpose": "The constants in src/app/config.py: folders, NVIDIA and database URLs, HTTP timeouts and retries, languages, window sizes and UI delays",
+      "parent": "Overview"
+    },
+    {
+      "title": "Application Startup",
+      "purpose": "The start sequence in src/app/__main__.py: logging, the writable database check and UAC elevation, the single instance claim, theme and font, the main window and shutdown with the settings writes finished",
+      "parent": "Overview"
+    },
+    {
+      "title": "Core Domain Layer",
+      "purpose": "The modules of src/app/core and how PresetService ties them together"
+    },
+    {
+      "title": "Data Models",
+      "purpose": "The frozen dataclasses and enums of core/models.py and where each is produced and used",
+      "parent": "Core Domain Layer"
+    },
+    {
+      "title": "PresetService",
+      "purpose": "core/service.py: hardware setup, game lists, folder search, presets and settings for a game, the in-memory cache of the last games' files and the weekly database check",
+      "parent": "Core Domain Layer"
+    },
+    {
+      "title": "NVIDIA OPS API Client",
+      "purpose": "core/ops_api.py: the compatibility check, the presets request, the presets file and the translation file, the sha256 check of downloads and how parsing errors become OpsFormatError",
+      "parent": "Core Domain Layer"
+    },
+    {
+      "title": "Hardware Detection and GPU Ranking",
+      "purpose": "core/hardware.py and core/screen_shape.py: reading the CPU, GPUs, VRAM, memory, Windows version and screen resolution, ordering several NVIDIA cards by gpu_ranks, and marking resolutions that fit the screen",
+      "parent": "Core Domain Layer"
+    },
+    {
+      "title": "Bundled Database and Weekly Updates",
+      "purpose": "core/app_db.py and core/database.py: the tables of app.db, the read-only immutable connection, the manifest data/app.db.json and the checked, validated replacement of the file",
+      "parent": "Core Domain Layer"
+    },
+    {
+      "title": "Installed Game Finder",
+      "purpose": "core/game_catalog.py and core/game_finder.py: the game copies in the database, registry entries, the folder walk to GAME_SEARCH_DEPTH, file rules and scoring",
+      "parent": "Core Domain Layer"
+    },
+    {
+      "title": "Box Art Covers",
+      "purpose": "core/covers.py and ui/cover_view.py: covers from the database URL, the disk cache and the GraphQL fallback",
+      "parent": "Core Domain Layer"
+    },
+    {
+      "title": "User Settings and Portable Mode",
+      "purpose": "core/user_settings.py and infra/app_dirs.py: the fields of settings.json, detected versus chosen hardware, atomic writes, and the folders used with and without portable.txt",
+      "parent": "Core Domain Layer"
+    },
+    {
+      "title": "User Interface Layer",
+      "purpose": "The modules of src/app/ui and how the main window is put together"
+    },
+    {
+      "title": "Presenters and View Contracts",
+      "purpose": "ui/presenter.py, ui/games_presenter.py, ui/views.py and ui/status.py: user actions, request numbering against stale answers, debouncing and status texts",
+      "parent": "User Interface Layer"
+    },
+    {
+      "title": "Main Window and Widgets",
+      "purpose": "ui/main_window.py and its widgets: game lists and tabs, choice popups, the resolution choice, the preset slider, the settings menu, the notice and the log panel",
+      "parent": "User Interface Layer"
+    },
+    {
+      "title": "Theme and Typography",
+      "purpose": "The flat_theme package, ui/theme.py with light, dark and system modes, icons, the bundled font and sizes in ems in ui/typography.py",
+      "parent": "User Interface Layer"
+    },
+    {
+      "title": "Workers, Debouncer and Single Instance",
+      "purpose": "ui/worker.py, ui/debouncer.py and ui/single_instance.py",
+      "parent": "User Interface Layer"
+    },
+    {
+      "title": "HTTP Client",
+      "purpose": "infra/http_client.py: GET only, timeouts, retries with backoff, the User-Agent and the errors raised"
+    },
+    {
+      "title": "Logging",
+      "purpose": "infra/logger.py: loguru sinks, rotation, the debug log panel and how stdlib logging and thread errors are caught"
+    },
+    {
+      "title": "Localization",
+      "purpose": "i18n/ui_text.py and i18n/translator.py, the _msg marks, the .pot and .po files of en, ru, de, fr and es, and the scripts in infrastructure/localization"
+    },
+    {
+      "title": "Build, Installer and Releases",
+      "purpose": "How a version is built on GitHub, tested and released as v<app.__version__>"
+    },
+    {
+      "title": "Nuitka and Inno Setup Packaging",
+      "purpose": "infrastructure/nuitka/build.cmd and infrastructure/inno: the standalone folder, kept Qt plugins, the Normal and Portable install types and the portable zip",
+      "parent": "Build, Installer and Releases"
+    },
+    {
+      "title": "CI Workflows and Release Notes",
+      "purpose": "The workflows in .github/workflows (build, release, pytest with the coverage badge, mypy, pylint), Dependabot and how release notes are built from commit subjects without [skip changelog] ones",
+      "parent": "Build, Installer and Releases"
+    },
+    {
+      "title": "Landing Page",
+      "purpose": "The GitHub Pages site in docs/",
+      "parent": "Build, Installer and Releases"
+    },
+    {
+      "title": "Testing",
+      "purpose": "The tests/ tree mirroring src, fixtures and fakes, the offscreen Qt platform, translation catalogs compiled in tests, and the 100 % coverage rule"
+    },
+    {
+      "title": "Code Style and Contribution",
+      "purpose": "The rules in .claude/rules/code-style.md and CLAUDE.md: named arguments, full typing, __all__, reST docstrings, comments, test layout, and commits with [skip changelog]",
+      "parent": "Testing"
+    },
+    {
+      "title": "Glossary",
+      "purpose": "Terms used in the code and NVIDIA's data: OPS, profile, preset, pops, belowMinSpec, presets file, translation file, game copy, device id, GPU rank, manifest, portable mode"
+    }
+  ]
+}
