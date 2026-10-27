@@ -1,6 +1,6 @@
 """Fixtures shared by the core tests."""
 
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Iterator
 from unittest.mock import MagicMock, create_autospec
@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 import responses
 
-from app.core.database import AppData, AppDatabase
+from app.core.database import AppData, AppDatabase, DatabaseManifest
 from app.core.covers import CoverCache
 from app.core.game_catalog import GameCatalog
 from app.core.game_finder import GameFinder
@@ -19,7 +19,12 @@ from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
 from app.infra.http_client import HttpClient
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ("CHECKED_MANIFEST",)
+
+# The check of Monday 2026-10-19, started by GitHub at 08:40 UTC instead of 03:00.
+CHECKED_MANIFEST: DatabaseManifest = DatabaseManifest(
+    sha256="0" * 64, checked=datetime(year=2026, month=10, day=19, hour=8, minute=40, tzinfo=UTC)
+)
 
 
 @pytest.fixture(name="mock")
@@ -105,12 +110,14 @@ def _data() -> AppData:
 @pytest.fixture(name="database")
 def _database(data: AppData) -> MagicMock:
     """
-    Stand in for the database file whose download changes nothing and whose load gives the same contents.
+    Stand in for the database file whose manifest tells of this week's check, whose download changes nothing and whose
+    load gives the same contents.
 
     :param data: database contents
     :return: mock with the interface of AppDatabase
     """
     database: MagicMock = create_autospec(spec=AppDatabase, instance=True)
+    database.manifest.return_value = CHECKED_MANIFEST
     database.download.return_value = False
     database.load.return_value = data
     return database
@@ -119,11 +126,11 @@ def _database(data: AppData) -> MagicMock:
 @pytest.fixture(name="clock")
 def _clock() -> MagicMock:
     """
-    Fix the current date to 2026-10-23.
+    Fix the current moment to Friday 2026-10-23 10:00 UTC, the week of the check on Monday 2026-10-19 03:00 UTC.
 
-    :return: callable giving the date
+    :return: callable giving the moment
     """
-    return MagicMock(return_value=date(2026, 10, 23))
+    return MagicMock(return_value=datetime(year=2026, month=10, day=23, hour=10, tzinfo=UTC))
 
 
 @pytest.fixture(name="finder")
@@ -169,7 +176,7 @@ def _service(
     :param store: settings store
     :param finder: game search mock
     :param covers: box art cache mock
-    :param clock: gives the current date
+    :param clock: gives the current moment
     :return: service under test
     """
     return PresetService(
@@ -180,5 +187,5 @@ def _service(
         store=store,
         finder=finder,
         covers=covers,
-        today=clock,
+        now=clock,
     )

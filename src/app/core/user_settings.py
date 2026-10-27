@@ -3,7 +3,7 @@
 import json
 import os
 import threading
-from datetime import date
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
@@ -78,7 +78,7 @@ class UserSettingsStore:
             "chosen_gpu": None if settings.chosen_gpu is None else self._gpu_document(gpu=settings.chosen_gpu),
             "chosen_resolution": settings.chosen_resolution,
             "auto_update": settings.auto_update,
-            "database_updated": None if settings.database_updated is None else settings.database_updated.isoformat(),
+            "database_checked": None if settings.database_checked is None else settings.database_checked.isoformat(),
             "game_folders": None if settings.game_folders is None else list(settings.game_folders),
             "games_tab": settings.game_choice.tab.value,
             "installed_game_id": settings.game_choice.installed_game_id,
@@ -117,7 +117,7 @@ class UserSettingsStore:
             chosen_gpu=None if chosen_gpu is None else cls._gpu(document=chosen_gpu),
             chosen_resolution=cls._optional_str(value=document.get("chosen_resolution")),
             auto_update=cls._bool(value=document.get("auto_update", True)),
-            database_updated=cls._optional_date(value=document.get("database_updated")),
+            database_checked=cls._optional_moment(value=document.get("database_checked")),
             game_folders=(
                 None if game_folders is None else tuple(cls._required_str(value=folder) for folder in game_folders)
             ),
@@ -187,11 +187,16 @@ class UserSettingsStore:
         return value
 
     @classmethod
-    def _optional_date(cls, *, value: Any) -> date | None:
+    def _optional_moment(cls, *, value: Any) -> datetime | None:
         """
-        Read a date written as "2026-10-23", or null.
+        Read a moment with its UTC offset written as "2026-10-26T08:42:17+00:00", or null.
 
         :param value: parsed JSON value
-        :return: the date
+        :return: the moment
         """
-        return None if value is None else date.fromisoformat(cls._required_str(value=value))
+        if value is None:
+            return None
+        moment: datetime = datetime.fromisoformat(cls._required_str(value=value))
+        if moment.tzinfo is None:
+            raise ValueError(f"expected a UTC offset, got {value!r}")
+        return moment

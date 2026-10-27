@@ -1,7 +1,7 @@
 """Data classes of the NVIDIA presets data, of the user's hardware and of the saved user settings."""
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
@@ -443,11 +443,14 @@ class GameSettings:
 
 @dataclass(frozen=True, slots=True)
 class UserSettings:
-    """Settings kept between runs: language, theme, detected and chosen hardware, the database update choice and date.
+    """Settings kept between runs: language, theme, detected and chosen hardware, the database update choice and time.
 
     The detected CPU, NVIDIA GPUs (the most powerful first) and screen resolution are written at every start. The
     chosen CPU, GPU and resolution are the ones the user picked in the lists, None when not picked: the detected ones
-    are used then. The database update date is the day of the last download, None before the first one.
+    are used then.
+
+    The database check time comes from the manifest of the database in use: when its source data were last checked;
+    None before the first update.
 
     The game folders are where installed games are searched for; None until the list is first saved. The game choice
     keeps the tab in use and the game chosen in each tab."""
@@ -461,6 +464,6 @@ class UserSettings:
     chosen_resolution: str | None = None
     theme: ThemeMode = ThemeMode.AUTO
     auto_update: bool = True
-    database_updated: date | None = None
+    database_checked: datetime | None = None
     game_folders: tuple[str, ...] | None = None
     game_choice: GameChoice = GameChoice()

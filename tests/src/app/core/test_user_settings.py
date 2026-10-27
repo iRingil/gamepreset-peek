@@ -2,7 +2,7 @@
 
 import threading
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -54,7 +54,7 @@ class TestUserSettingsStore:
                 chosen_resolution="1920x1080",
                 theme=ThemeMode.DARK,
                 auto_update=False,
-                database_updated=date(2026, 10, 23),
+                database_checked=datetime(year=2026, month=10, day=26, hour=8, minute=40, second=45, tzinfo=UTC),
                 game_folders=(r"D:\Games", r"E:\SteamLibrary"),
                 game_choice=GameChoice(
                     tab=GamesTab.ALL, installed_game_id="baldurs_gate_3", catalog_game_id="forza_horizon_5"
@@ -100,8 +100,9 @@ class TestUserSettingsStore:
             '{"theme": "sepia"}',
             '{"theme": 1}',
             '{"auto_update": "yes"}',
-            '{"database_updated": "yesterday"}',
-            '{"database_updated": 20261023}',
+            '{"database_checked": "yesterday"}',
+            '{"database_checked": 20261023}',
+            '{"database_checked": "2026-10-26T08:40:45"}',
             '{"game_folders": "D:\\\\Games"}',
             '{"game_folders": [1]}',
             '{"games_tab": "favorites"}',
@@ -124,8 +125,9 @@ class TestUserSettingsStore:
             "unknown theme",
             "theme not a string",
             "auto update not a boolean",
-            "update date not a date",
-            "update date not a string",
+            "check time not a time",
+            "check time not a string",
+            "check time without offset",
             "game folders not a list",
             "game folder not a string",
             "unknown games tab",
@@ -166,10 +168,25 @@ class TestUserSettingsStore:
             language="de",
             theme=ThemeMode.AUTO,
             auto_update=True,
-            database_updated=None,
+            database_checked=None,
             game_folders=None,
             game_choice=GameChoice(tab=GamesTab.INSTALLED, installed_game_id=None, catalog_game_id=None),
         )
+
+    def test_update_day_of_old_version(self, path: Path) -> None:
+        """
+        Ignores the update day saved by version 1.1, so the first start of a newer one checks the manifest.
+
+        :param path: settings file path
+        :return: None
+        """
+        # Arrange
+        path.parent.mkdir(parents=True)
+        path.write_text(data='{"language": "ru", "database_updated": "2026-10-25"}', encoding="utf-8")
+        # Act
+        settings: UserSettings = UserSettingsStore(path=path).load()
+        # Assert
+        assert settings == UserSettings(language="ru", database_checked=None)
 
     def test_save_leaves_one_file(self, path: Path) -> None:
         """

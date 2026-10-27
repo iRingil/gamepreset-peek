@@ -1,7 +1,7 @@
 """Tests of the service the UI calls."""
 
 from dataclasses import replace
-from datetime import date
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -39,9 +39,17 @@ from app.config import DEFAULT_GAME_FOLDERS, GAME_FILES_CACHED, SCREEN_RESOLUTIO
 from app.core.ops_api import OpsFormatError
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
+from tests.src.app.core.conftest import CHECKED_MANIFEST
 from tests.src.app.core.hardware_fakes import DETECTED_CPU, FakeHardware
 
 __all__: tuple = ()
+
+# The moment the clock fixture gives, the scheduled check of its week and the next one.
+_FRIDAY: datetime = datetime(year=2026, month=10, day=23, hour=10, tzinfo=UTC)
+_MONDAY_CHECK: datetime = datetime(year=2026, month=10, day=19, hour=3, tzinfo=UTC)
+_NEXT_CHECK: datetime = _MONDAY_CHECK + timedelta(days=7)
+_CHECKED: UserSettings = UserSettings(database_checked=CHECKED_MANIFEST.checked)
+_AT_CHECK: UserSettings = UserSettings(database_checked=_MONDAY_CHECK)
 
 _LAPTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4060 Laptop GPU", device_id="28e0")
 _DESKTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4090", device_id="2684")
@@ -246,52 +254,94 @@ class TestDatabaseUpdate:
     """Tests of PresetService.update_database_if_due."""
 
     @pytest.mark.parametrize(
-        argnames=("settings", "result"),
+        argnames=("now", "settings", "due"),
         argvalues=[
-            (UserSettings(auto_update=False), DatabaseUpdate.SKIPPED),
-            (UserSettings(database_updated=date(2026, 10, 16)), DatabaseUpdate.SKIPPED),
-            (UserSettings(database_updated=date(2026, 10, 30)), DatabaseUpdate.SKIPPED),
-            (UserSettings(database_updated=date(2026, 10, 15)), DatabaseUpdate.UNCHANGED),
-            (UserSettings(), DatabaseUpdate.UNCHANGED),
+            (_FRIDAY, UserSettings(auto_update=False), False),
+            (_FRIDAY, _CHECKED, False),
+            (_FRIDAY, UserSettings(database_checked=_MONDAY_CHECK - timedelta(seconds=1)), True),
+            (_NEXT_CHECK.astimezone(tz=timezone(offset=timedelta(hours=3))) - timedelta(minutes=1), _AT_CHECK, False),
+            (_NEXT_CHECK.astimezone(tz=timezone(offset=timedelta(hours=-5))), _CHECKED, True),
         ],
-        ids=["switched off", "7 days ago", "in the future", "8 days ago", "never updated"],
+        ids=[
+            "switched off",
+            "after the check",
+            "before the check",
+            "at the check, just before the next one in Moscow",
+            "at the next check in New York, still Sunday there",
+        ],
     )
-    def test_due(
+    def test_due(  # pylint: disable=too-many-arguments
         self,
         database: MagicMock,
         store: UserSettingsStore,
         service: PresetService,
+        clock: MagicMock,
+        now: datetime,
         settings: UserSettings,
-        result: DatabaseUpdate,
+        due: bool,
     ) -> None:
         """
-        Downloads only when updates are on and the last one is more than 7 days old or missing; records the day.
+        Asks for the manifest only when updates are on and the database in use predates the last Monday 03:00 UTC.
 
         :param database: database mock
         :param store: settings store
         :param service: service under test
+        :param clock: gives the current moment
+        :param now: the current moment, in any time zone
         :param settings: saved settings
-        :param result: expected outcome
+        :param due: whether the manifest is asked for
         :return: None
         """
         # Arrange
+        clock.return_value = now
         store.save(settings=settings)
         # Act
         outcome: DatabaseUpdate = service.update_database_if_due()
         # Assert
-        assert outcome is result
-        if result is DatabaseUpdate.SKIPPED:
-            database.download.assert_not_called()
-            assert store.load() == settings
-        else:
-            database.download.assert_called_once_with()
-            assert store.load() == replace(settings, database_updated=date(2026, 10, 23))
+        assert database.manifest.called is due
+        if not due:
+            assert (outcome, store.load()) == (DatabaseUpdate.SKIPPED, settings)
+
+    @pytest.mark.parametrize(
+        argnames=("checked", "result", "saved"),
+        argvalues=[
+            (CHECKED_MANIFEST.checked, DatabaseUpdate.UNCHANGED, _CHECKED),
+            (_MONDAY_CHECK - timedelta(days=7), DatabaseUpdate.SKIPPED, UserSettings()),
+        ],
+        ids=["this week's check", "check not published yet"],
+    )
+    def test_manifest_checked(  # pylint: disable=too-many-arguments
+        self,
+        database: MagicMock,
+        store: UserSettingsStore,
+        service: PresetService,
+        checked: datetime,
+        result: DatabaseUpdate,
+        saved: UserSettings,
+    ) -> None:
+        """
+        Brings the database of a manifest of this week's check and records its time; else waits for the next start.
+
+        :param database: database mock
+        :param store: settings store
+        :param service: service under test
+        :param checked: check time in the manifest
+        :param result: expected outcome
+        :param saved: expected settings Вafterwards
+        :return: None
+        """
+        # Arrange
+        database.manifest.return_value = replace(CHECKED_MANIFEST, checked=checked)
+        # Act
+        outcome: DatabaseUpdate = service.update_database_if_due()
+        # Assert
+        assert (outcome, store.load(), database.download.called) == (result, saved, result is DatabaseUpdate.UNCHANGED)
 
     def test_new_database_loaded(
         self, database: MagicMock, store: UserSettingsStore, service: PresetService, ops: MagicMock
     ) -> None:
         """
-        Reads the lists again from a new database, keeping the other settings when recording the day.
+        Reads the lists again from a new database, keeping the other settings when recording the check time.
 
         :param database: database mock
         :param store: settings store
@@ -313,7 +363,7 @@ class TestDatabaseUpdate:
         saved: UserSettings = store.load()
         # Assert
         assert outcome is DatabaseUpdate.UPDATED
-        assert saved == UserSettings(language="ru", chosen_gpu=_LISTED_GPU, database_updated=date(2026, 10, 23))
+        assert saved == UserSettings(language="ru", chosen_gpu=_LISTED_GPU, database_checked=CHECKED_MANIFEST.checked)
         assert service.games() == (Game(game_id="mordhau", name="Mordhau II"),)
         assert service.hardware_setup().amd_cpus == ()
 

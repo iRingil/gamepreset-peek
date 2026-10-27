@@ -1,6 +1,7 @@
 """Application constants: names, paths, HTTP settings and NVIDIA endpoints."""
 
 import os
+from datetime import UTC, time
 from pathlib import Path
 
 from app.infra.app_dirs import AppDirs
@@ -16,7 +17,9 @@ __all__: tuple[str, ...] = (
     "APP_USER_MODEL_ID",
     "CACHE_DIR",
     "ASPECT_TOLERANCE",
-    "DB_UPDATE_DAYS",
+    "DB_CHECK_TIME",
+    "DB_CHECK_WEEKDAY",
+    "DB_MANIFEST_URL",
     "DB_UPDATE_URL",
     "DEFAULT_GAME_FOLDERS",
     "DEFAULT_LANGUAGE",
@@ -94,8 +97,11 @@ LOCALE_DIR: Path = Path(__file__).parent / "i18n" / "locale"
 GETTEXT_DOMAIN: str = "messages"
 # The latest database; a download replaces APP_DB in place (the build is a folder, so the file is writable).
 DB_UPDATE_URL: str = "https://raw.githubusercontent.com/iRingil/gamepreset-peek/master/src/app/data/app.db"
-# Days after a database update before the next one is downloaded.
-DB_UPDATE_DAYS: int = 7
+# The sha256 of the latest database and when its source data were last checked; rewritten by every weekly check.
+DB_MANIFEST_URL: str = "https://raw.githubusercontent.com/iRingil/gamepreset-peek/master/data/app.db.json"
+# The weekly check is scheduled for Mondays (weekday 0) at 03:00 UTC; GitHub often starts it hours later.
+DB_CHECK_WEEKDAY: int = 0
+DB_CHECK_TIME: time = time(hour=3, tzinfo=UTC)
 # Games whose presets and translations stay in memory, the last shown ones; their files never change, a new
 # version of a file has another address.
 GAME_FILES_CACHED: int = 4

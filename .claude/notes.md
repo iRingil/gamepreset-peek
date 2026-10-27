@@ -71,11 +71,22 @@ in the commits.
 - `src/app/data/app.db`, stdlib `sqlite3`, opened as `file:...?mode=ro&immutable=1` and closed again after reading,
   so the update can replace the file. Tables: `cpus`, `gpus`, `gpu_ranks`, `games`, `game_sources`,
   `game_source_files`, `game_source_registry`. Only the games NVIDIA has presets for are listed.
-- Weekly update (`AppDatabase`, `core/database.py`): downloads `DB_UPDATE_URL` (the file on `master`) when auto-update
-  is on and the last update is more than `DB_UPDATE_DAYS` days ago, or never happened. Same sha256 → nothing
-  written; else the download goes to `app.download` beside the file, is validated by loading every list from it
-  (`sqlite3.Error`, `ValueError`, `TypeError`, or no games / CPUs / GPUs -> dropped), and `os.replace`s the file.
-  A failed download records nothing and is tried at the next start.
+- Weekly update (`AppDatabase`, `core/database.py`): the private updater runs on Mondays 03:00 UTC (GitHub started
+  it at 08:40 on 2026-10-26) and, after committing a changed `app.db`, commits `data/app.db.json` (`sha256` of the
+  file, `checked` = the run's start) on every run, changed or not. Outside `src` on purpose: it's not bundled
+  in builds and doesn't trigger the checks workflows.
+- The app saves the manifest's `checked` as `database_checked`. An update is due when auto-update is on and
+  `database_checked` is missing or before the last Monday 03:00 UTC (`DB_CHECK_WEEKDAY`, `DB_CHECK_TIME`). Then only
+  the manifest (`DB_MANIFEST_URL`) is fetched. Its `checked` still older → nothing recorded, asked again at the next
+  start (GitHub's late start). Same sha256 as the local file → no download, `checked` recorded.
+- Else `DB_UPDATE_URL` is downloaded and must match the manifest's sha256 (the two commits and raw's cache can
+  briefly disagree). It goes to `app.download` beside the file and is validated by loading every list from it
+  (`sqlite3.Error`, `ValueError`, `TypeError`, or no games / CPUs / GPUs -> dropped). Then it `os.replace`s the
+  file. A failure records nothing.
+- Version 1.1 (in users' hands) knows nothing of the manifest: it downloads `src/app/data/app.db` from `master`
+  when its `database_updated` date is more than 7 days old. Keep that file's path and schema readable by 1.1. Newer
+  versions ignore `database_updated` (first start checks the manifest) and save `database_checked` instead, which
+  1.1 ignores in turn.
 - The update is submitted once per start, after the first hardware answer: queued earlier it would delay the
   compatibility check. On `UPDATED` the hardware setup and the game lists are reloaded without a restart.
 - The app replaces its own `app/data/app.db`, which is why the build is a folder, not onefile. Run from source this
@@ -110,7 +121,7 @@ in the commits.
   start; `chosen_cpu`, `chosen_gpu`, `chosen_resolution` are the user's picks, `null` until then. In use: chosen,
   else detected (the first GPU), else `DEFAULT_RESOLUTION` for the screen.
 - A CPU / GPU pick is saved only when NVIDIA accepts it; a resolution pick is saved without a check.
-- Also saved: language, theme, `auto_update`, `database_updated` (ISO date), `game_folders` (`null` until first
+- Also saved: language, theme, `auto_update`, `database_checked` (ISO time with offset), `game_folders` (`null` until first
   changed -> `DEFAULT_GAME_FOLDERS`; missing folders are dropped at every start), the tab in use and the game chosen
   in each tab (a saved game missing from its list -> the first one; an empty list keeps the saved id).
 - `update(change)` reads, changes and writes under a lock (several threads write); `save` writes `settings.tmp` and

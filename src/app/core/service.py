@@ -2,16 +2,23 @@
 
 from collections import OrderedDict
 from dataclasses import replace
-from datetime import date
-from functools import cached_property
+from datetime import UTC, datetime, timedelta
+from functools import cached_property, partial
 from pathlib import Path
 from typing import Callable, Sequence
 
 from loguru import logger
 
-from app.config import DB_UPDATE_DAYS, DEFAULT_GAME_FOLDERS, DEFAULT_RESOLUTION, GAME_FILES_CACHED, SCREEN_RESOLUTIONS
+from app.config import (
+    DB_CHECK_TIME,
+    DB_CHECK_WEEKDAY,
+    DEFAULT_GAME_FOLDERS,
+    DEFAULT_RESOLUTION,
+    GAME_FILES_CACHED,
+    SCREEN_RESOLUTIONS,
+)
 from app.core.covers import CoverCache
-from app.core.database import AppData, AppDatabase
+from app.core.database import AppData, AppDatabase, DatabaseManifest
 from app.core.game_finder import GameFinder
 from app.core.hardware import HardwareDetector
 from app.core.models import (
@@ -61,7 +68,7 @@ class PresetService:
         store: UserSettingsStore,
         finder: GameFinder,
         covers: CoverCache,
-        today: Callable[[], date] = date.today,
+        now: Callable[[], datetime] = partial(datetime.now, tz=UTC),
     ) -> None:
         """
         Use the given data sources.
@@ -73,7 +80,7 @@ class PresetService:
         :param store: saved user settings
         :param finder: search for installed games
         :param covers: box art cache
-        :param today: gives the current date, for the database update schedule
+        :param now: gives the current moment, for the database update schedule
         """
         self._api: OpsApi = api
         self._database: AppDatabase = database
@@ -82,7 +89,7 @@ class PresetService:
         self._store: UserSettingsStore = store
         self._finder: GameFinder = finder
         self._covers: CoverCache = covers
-        self._today: Callable[[], date] = today
+        self._now: Callable[[], datetime] = now
         self._files: OrderedDict[tuple[str, str, RemoteFile], GameSettings] = OrderedDict()
 
     def games(self) -> tuple[Game, ...]:
@@ -157,24 +164,39 @@ class PresetService:
 
     def update_database_if_due(self) -> DatabaseUpdate:
         """
-        Download the latest database when automatic updates are on and the last one is older than the update interval.
+        Bring the latest database when automatic updates are on and the one in use predates the last weekly check.
 
-        A download is recorded as an update whether or not it changed anything.
+        Only the manifest is downloaded until it tells of a database checked since then: a check started late is
+        looked for again at the next start. The database itself is downloaded only when its hash differs.
 
-        :return: SKIPPED when no update is due, UNCHANGED when the download equals the database in use, UPDATED when
-            a new database is in use
+        :return: SKIPPED when no update is due or published yet, UNCHANGED when the database in use is the latest,
+            UPDATED when a new database is in use
         """
         saved: UserSettings = self._store.load()
-        today: date = self._today()
-        if not saved.auto_update or (
-            saved.database_updated is not None and (today - saved.database_updated).days <= DB_UPDATE_DAYS
-        ):
+        due: datetime = self._last_check(now=self._now())
+        if not saved.auto_update or (saved.database_checked is not None and saved.database_checked >= due):
             return DatabaseUpdate.SKIPPED
-        changed: bool = self._database.download()
+        manifest: DatabaseManifest = self._database.manifest()
+        if manifest.checked < due:
+            logger.info("Database check of {} is not published yet, latest is of {}", due, manifest.checked)
+            return DatabaseUpdate.SKIPPED
+        changed: bool = self._database.download(manifest=manifest)
         if changed:
             self._data = self._database.load()
-        self._store.update(change=lambda settings: replace(settings, database_updated=today))
+        self._store.update(change=lambda settings: replace(settings, database_checked=manifest.checked))
         return DatabaseUpdate.UPDATED if changed else DatabaseUpdate.UNCHANGED
+
+    @staticmethod
+    def _last_check(*, now: datetime) -> datetime:
+        """
+        Find the latest scheduled weekly check of the database's source data that is not in the future.
+
+        :param now: the current moment
+        :return: the moment of that check
+        """
+        moment: datetime = datetime.combine(date=now.astimezone(tz=UTC).date(), time=DB_CHECK_TIME)
+        moment -= timedelta(days=(moment.weekday() - DB_CHECK_WEEKDAY) % 7)
+        return moment if moment <= now else moment - timedelta(days=7)
 
     def hardware_setup(self) -> HardwareSetup:
         """

@@ -1,19 +1,22 @@
 """Tests of the database file and its download."""
 
+import hashlib
 import stat
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Iterator, Sequence
 
 import pytest
 import responses
 
-from app.core.database import AppData, AppDatabase
+from app.core.database import AppData, AppDatabase, DatabaseManifest
 from app.infra.http_client import HttpClient, HttpClientError
 from tests.src.app.core.db_files import DbFiles
 
 __all__: tuple = ()
 
 _URL: str = "https://downloads.example.test/app.db"
+_MANIFEST_URL: str = "https://downloads.example.test/app.db.json"
 
 
 class TestAppDatabase:
@@ -48,7 +51,20 @@ class TestAppDatabase:
         :param path: database file
         :return: database under test
         """
-        return AppDatabase(http=http, path=path, url=_URL)
+        return AppDatabase(http=http, path=path, url=_URL, manifest_url=_MANIFEST_URL)
+
+    @staticmethod
+    def _manifest(*, content: bytes) -> DatabaseManifest:
+        """
+        Make the manifest of a database file checked on Monday 2026-10-26.
+
+        :param content: the file's content
+        :return: its manifest
+        """
+        return DatabaseManifest(
+            sha256=hashlib.sha256(content).hexdigest(),
+            checked=datetime(year=2026, month=10, day=26, hour=3, tzinfo=UTC),
+        )
 
     @staticmethod
     def _database(*, path: Path, name: str, extra: Sequence[tuple[str, tuple[object, ...]]] = ()) -> Path:
@@ -127,22 +143,95 @@ class TestAppDatabase:
         # Assert
         assert not writable
 
-    def test_same_download_dropped(self, mock: responses.RequestsMock, database: AppDatabase, path: Path) -> None:
+    def test_manifest(self, mock: responses.RequestsMock, database: AppDatabase) -> None:
         """
-        Leaves the file alone when the download equals it.
+        Reads the hash and the check time of the latest database.
 
         :param mock: HTTP mock
+        :param database: database under test
+        :return: None
+        """
+        # Arrange
+        mock.add(
+            method=responses.GET,
+            url=_MANIFEST_URL,
+            body='{"sha256": "' + "ab" * 32 + '", "checked": "2026-10-26T08:40:45+00:00"}',
+        )
+        # Act
+        manifest: DatabaseManifest = database.manifest()
+        # Assert
+        assert manifest == DatabaseManifest(
+            sha256="ab" * 32, checked=datetime(year=2026, month=10, day=26, hour=8, minute=40, second=45, tzinfo=UTC)
+        )
+
+    @pytest.mark.parametrize(
+        argnames=("body", "error"),
+        argvalues=[
+            ("<html>not found</html>", ValueError),
+            ("[]", TypeError),
+            ('{"checked": "2026-10-26T08:40:45+00:00"}', ValueError),
+            ('{"sha256": "' + "AB" * 32 + '", "checked": "2026-10-26T08:40:45+00:00"}', ValueError),
+            ('{"sha256": "' + "ab" * 32 + '"}', TypeError),
+            ('{"sha256": "' + "ab" * 32 + '", "checked": "yesterday"}', ValueError),
+            ('{"sha256": "' + "ab" * 32 + '", "checked": "2026-10-26T08:40:45"}', ValueError),
+        ],
+        ids=["not json", "not an object", "no hash", "hash not lowercase hex", "no time", "not a time", "no offset"],
+    )
+    def test_broken_manifest(
+        self, mock: responses.RequestsMock, database: AppDatabase, body: str, error: type[Exception]
+    ) -> None:
+        """
+        Fails on a manifest that doesn't give a sha256 and a check time with its UTC offset.
+
+        :param mock: HTTP mock
+        :param database: database under test
+        :param body: content of the manifest
+        :param error: expected error
+        :return: None
+        """
+        # Arrange
+        mock.add(method=responses.GET, url=_MANIFEST_URL, body=body)
+        # Act & Assert
+        with pytest.raises(error):
+            database.manifest()
+
+    def test_up_to_date(self, database: AppDatabase, path: Path) -> None:
+        """
+        Downloads nothing and leaves the file alone when it matches the manifest.
+
         :param database: database under test
         :param path: database file
         :return: None
         """
         # Arrange
         before: bytes = path.read_bytes()
-        mock.add(method=responses.GET, url=_URL, body=before)
+        manifest: DatabaseManifest = self._manifest(content=before)
         # Act
-        changed: bool = database.download()
+        changed: bool = database.download(manifest=manifest)
         # Assert
         assert (changed, path.read_bytes() == before, list(path.parent.iterdir())) == (False, True, [path])
+
+    def test_download_not_matching_manifest(
+        self, mock: responses.RequestsMock, tmp_path: Path, database: AppDatabase, path: Path
+    ) -> None:
+        """
+        Drops a download whose hash differs from the manifest, keeping the file and leaving nothing behind.
+
+        :param mock: HTTP mock
+        :param tmp_path: temporary directory
+        :param database: database under test
+        :param path: database file
+        :return: None
+        """
+        # Arrange
+        newer: Path = self._database(path=tmp_path / "newer.db", name="Mordhau II")
+        mock.add(method=responses.GET, url=_URL, body=newer.read_bytes())
+        manifest: DatabaseManifest = self._manifest(content=b"another database")
+        # Act & Assert
+        with pytest.raises(ValueError, match="doesn't match its manifest"):
+            database.download(manifest=manifest)
+        assert list(path.parent.iterdir()) == [path]
+        assert database.load().catalog.games[0].name == "MORDHAU"
 
     def test_new_download_in_place(
         self, mock: responses.RequestsMock, tmp_path: Path, database: AppDatabase, path: Path
@@ -159,8 +248,9 @@ class TestAppDatabase:
         # Arrange
         newer: Path = self._database(path=tmp_path / "newer.db", name="Mordhau II")
         mock.add(method=responses.GET, url=_URL, body=newer.read_bytes())
+        manifest: DatabaseManifest = self._manifest(content=newer.read_bytes())
         # Act
-        changed: bool = database.download()
+        changed: bool = database.download(manifest=manifest)
         # Assert
         assert (changed, path.read_bytes() == newer.read_bytes(), list(path.parent.iterdir())) == (True, True, [path])
         assert database.load().catalog.games[0].name == "Mordhau II"
@@ -176,9 +266,10 @@ class TestAppDatabase:
         """
         # Arrange
         mock.add(method=responses.GET, url=_URL, body=b"<html>not found</html>")
+        manifest: DatabaseManifest = self._manifest(content=b"<html>not found</html>")
         # Act & Assert
         with pytest.raises(ValueError, match="not a usable database"):
-            database.download()
+            database.download(manifest=manifest)
         assert list(path.parent.iterdir()) == [path]
         assert database.load().catalog.games[0].name == "MORDHAU"
 
@@ -212,9 +303,10 @@ class TestAppDatabase:
             path=tmp_path / "empty.db", name="Mordhau II", extra=[(f"DELETE FROM {table}", ())]
         )
         mock.add(method=responses.GET, url=_URL, body=empty.read_bytes())
+        manifest: DatabaseManifest = self._manifest(content=empty.read_bytes())
         # Act & Assert
         with pytest.raises(ValueError, match=f"no {missing}"):
-            database.download()
+            database.download(manifest=manifest)
         assert list(path.parent.iterdir()) == [path]
         assert database.load().catalog.games[0].name == "MORDHAU"
 
@@ -243,9 +335,10 @@ class TestAppDatabase:
             ],
         )
         mock.add(method=responses.GET, url=_URL, body=unknown.read_bytes())
+        manifest: DatabaseManifest = self._manifest(content=unknown.read_bytes())
         # Act & Assert
         with pytest.raises(ValueError, match="not a usable database"):
-            database.download()
+            database.download(manifest=manifest)
         assert list(path.parent.iterdir()) == [path]
         assert database.load().catalog.games[0].name == "MORDHAU"
 
@@ -260,7 +353,8 @@ class TestAppDatabase:
         """
         # Arrange
         mock.add(method=responses.GET, url=_URL, status=404)
+        manifest: DatabaseManifest = self._manifest(content=b"another database")
         # Act & Assert
         with pytest.raises(HttpClientError):
-            database.download()
+            database.download(manifest=manifest)
         assert list(path.parent.iterdir()) == [path]
