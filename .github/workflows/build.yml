@@ -23,7 +23,7 @@ jobs:
         run: |
           python -m venv .venv
           .venv\Scripts\python.exe -m pip install --upgrade pip
-          .venv\Scripts\python.exe -m pip install -r src/requirements.txt -r src/requirements-dev.txt
+          .venv\Scripts\python.exe -m pip install -r src/requirements-dev.txt
       - name: Test with pytest
         run: .venv\Scripts\python.exe -m pytest
       # Compiled C objects and Nuitka's downloads make a rebuild much faster.

@@ -22,10 +22,10 @@ The project is a public GitHub repository (`iRingil/gamepreset-peek`), MIT-licen
 Run from the repository root with the `.venv` virtualenv active (`.venv\Scripts\activate`).
 
 ```shell
-pip install -r src/requirements.txt -r src/requirements-dev.txt   # dev file only constrains (-c), so install both
-black src tests                                                   # format first (config in pyproject.toml)
-mypy src tests
-pylint -j 2 src tests                                             # must score 10 with no messages at all
+pip install -r src/requirements-dev.txt                           # includes src/requirements.txt (-r)
+ruff format src tests                                             # format first (config in pyproject.toml)
+ruff check src tests                                              # no findings
+basedpyright                                                      # 0 errors; reads the packages from .venv
 pytest                                                            # all tests
 pytest tests/src/<pkg>/test_x.py::TestClass::test_name            # single test
 coverage run --source=src/app -m pytest; coverage report -m --skip-covered   # must be 100 %
@@ -34,7 +34,14 @@ infrastructure\nuitka\build.cmd                                    # Nuitka stan
 infrastructure\inno\build.cmd                                      # installer + portable zip (needs Inno Setup 6)
 ```
 
-Run black, mypy, pylint and pytest one at a time, never chained in one command.
+Run Ruff, basedpyright and pytest one at a time, never chained in one command.
+
+Ruff and basedpyright are installed globally (PyCharm External Tools, `%APPDATA%\Python\Scripts`), not in `.venv`;
+`.github/workflows/lint.yml` pins their versions (and pip-audit's): bump them there together. Lint rules: Ruff
+`select = ["ALL"]` minus the few global ignores commented in `pyproject.toml`; test-only rules are silenced per file by
+a `# ruff: noqa: ...` line, everything else locally with a reason (`.claude/rules/code-style.md`). basedpyright relaxes
+only the Any/unknown/private-access rules for `tests/` (mocks); `pythonPlatform = "Windows"`, as the code uses
+`winreg` and the Windows API while the lint job runs on Ubuntu.
 
 The bundled database (`src/app/data/app.db`, committed) is written only by the private `gamepreset-peek-update`
 project: it owns the schema and pushes the file here weekly; this repository only reads it.
@@ -50,7 +57,7 @@ infrastructure\localization\3.compile_translations.cmd           # .mo, needed t
 - A UI text is a `UiText` member whose value is wrapped in `_msg(...)`: extraction finds only those calls.
 - `2.init_translations.cmd` overwrites existing `.po` files: only for a new language (`update_translations.cmd` has
   `--init-missing` anyway).
-- `src` is on the import path for pytest (`pythonpath`), pylint (`init-hook`) and mypy (`mypy_path`); import
+- `src` is on the import path for pytest (`pythonpath`) and basedpyright (`extraPaths` of `tests`); import
   modules as top-level packages (`app.xxx`), not `src.xxx`.
 - Every test folder is a package (`__init__.py`); shared test helpers are imported by their full name
   (`from tests.src.app.core.hardware_fakes import FakeHardware`).

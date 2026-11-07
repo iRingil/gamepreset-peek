@@ -7,14 +7,15 @@ New code is written this way from the start; a deviation found in existing code 
 
 The tools are configured in `pyproject.toml`; the code must pass them clean.
 
-| Tool   | Purpose           | Requirement                               |
-|--------|-------------------|-------------------------------------------|
-| Black  | Python formatting | line length 120                           |
-| mypy   | type checking     | no errors; `disallow_untyped_defs = true` |
-| pylint | linting           | score 10 (`fail-under = 10`)              |
-| pytest | tests             | all green                                 |
+| Tool         | Purpose                | Requirement                                  |
+|--------------|------------------------|----------------------------------------------|
+| Ruff         | linting and formatting | no findings; `select = ["ALL"]`, line 120    |
+| basedpyright | type checking          | 0 errors; `typeCheckingMode = "all"`         |
+| pytest       | tests                  | all green, 100 % coverage                    |
 
-- Format first (Black), then run mypy and pylint.
+- Format first (`ruff format`), then run `ruff check` and `basedpyright`.
+- A finding is fixed, not silenced. Where it can't be, the suppression is local and gives its reason:
+  `# noqa: CODE - reason`, `# pyright: ignore[rule] - reason`. A new global ignore only with the user's consent.
 - The IDE's inspections count too: the code leaves no warnings there.
 
 ## Python
@@ -46,9 +47,12 @@ Logging goes through loguru only (`from loguru import logger`); the stdlib `logg
 - Every function and method: all parameters and the return type (`-> None` included).
 - Local variables, module constants and class attributes: `total: Decimal = ...`, `_CENT: Decimal = Decimal("0.01")`.
 - An attribute overriding a base class attribute is annotated the way the base class (or its stubs) declares it:
-  `ClassVar[...]` where the base has a `ClassVar`, a plain annotation otherwise. mypy tells which one is wrong.
+  `ClassVar[...]` where the base has a `ClassVar`, a plain annotation otherwise. basedpyright tells which one is wrong.
 - Enum members stay unannotated: the typing spec forbids it.
-- Imports needed only for typing go under `if TYPE_CHECKING:  # pragma: no cover`.
+- Imports needed only for typing go under `if TYPE_CHECKING:` (coverage skips the block by itself).
+- A method overriding a base class method, a Qt event handler included, is marked `@override` (`typing.override`).
+- `Any` stays out of `src`: parsed JSON is `JsonValue` (`app.infra.http_client`), untyped library values are
+  narrowed with `isinstance` or given their type with `cast(...)`.
 
 ### `__all__` in every module
 
@@ -59,7 +63,7 @@ __all__: tuple[str, ...] = ("PresetLoader", "Translations")
 ```
 
 A module that exports nothing (every test module, an entry-point script, an empty package `__init__.py`) has
-`__all__: tuple = ()`.
+`__all__: tuple[str, ...] = ()`.
 
 ### Classes over loose functions
 
@@ -75,16 +79,19 @@ A module that exports nothing (every test module, an entry-point script, an empt
   doesn't make clear what the module, class or function does; a function that returns A + B gets the summary alone.
   The description follows after one blank line, in paragraphs of at most 35 words separated by blank lines.
 - No `:rtype:` or `:type:` fields: the types live in the annotations.
-- **Module and class** docstrings start on the opening `"""` line and close on the last text line:
+- A one-line docstring stays on one line: `"""Reads the presets of a game."""`.
+- A multi-line docstring (module, class or function) puts both `"""` on their own lines, the summary on the second:
 
   ```python
   class PresetLoader:
-      """Reads the optimal settings presets of a game from NVIDIA's presets service.
+      """
+      Reads the optimal settings presets of a game from NVIDIA's presets service.
 
-      A preset's values are keyed by the 1-based position of a setting in the file's settings list."""
+      A preset's values are keyed by the 1-based position of a setting in the file's settings list.
+      """
   ```
 
-- **Function and method** docstrings put `"""` on their own lines; after the summary (and optional details) come
+- **Function and method** docstrings are always multi-line; after the summary (and optional details) come
   `:param name:` for every parameter and always `:return:` (`:return: None` too), except `__init__`, which never has
   `:return:`:
 
@@ -145,4 +152,9 @@ Tests follow every rule above (docstrings, full typing, named arguments), plus:
 
 - Tests are written from a module's behavior: list its contracts and test them first; the coverage report only finds
   what's left. Code no meaningful test can reach gets `# pragma: no cover`.
-- `pytest.mark.parametrize` takes named arguments too (`argnames=`, `argvalues=`, `ids=`).
+- `pytest.mark.parametrize` takes named arguments too (`argnames=`, `argvalues=` as a list, `ids=`).
+- Test-only Ruff rules are silenced by one line at the top of a test file, listing only the codes that file needs:
+  `# ruff: noqa: S101, PLR2004` (from S101, SLF001, PLR2004, ARG001, ARG002, S105, S106, TID252); never per
+  directory in the config.
+- A test taking many fixtures and parameters makes them keyword-only (`def test_x(self, *, a: A, b: B)`).
+- A fixture needed only for its side effect goes to `@pytest.mark.usefixtures("qt_app")`, not into the parameters.

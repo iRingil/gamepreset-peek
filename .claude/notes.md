@@ -15,7 +15,7 @@ in the commits.
   replaced as a whole on a database update).
 - The presenter has no Qt widgets: it talks to the `MainView` protocol (`ui/views.py`); tests use a fake view and a
   runner that runs tasks in place. The game tabs have their own `GamesPresenter` (`presenter.games`).
-- Modules were split when they reached pylint's 1000-line limit: `ui/games_presenter.py`, `ui/game_lists.py`,
+- Modules were split when they reached 1000 lines: `ui/games_presenter.py`, `ui/game_lists.py`,
   `ui/resolution_choice.py`, `ui/choice_popup.py`, `ui/status.py`, `ui/views.py`.
 - Every presets request gets a number; choosing another game or resolution makes earlier answers stale. Preset
   requests are debounced by `REQUEST_DELAY_MS` after a game selection (arrow keys through the list send no burst),
@@ -155,7 +155,12 @@ in the commits.
 ## UI (Qt)
 
 - PySide6 (LGPL), `PySide6-Essentials` only. PySide6 takes keyword arguments only for optional parameters, so
-  required arguments of Qt calls are passed by position.
+  required arguments of Qt calls are passed by position (Ruff FBT003 is silenced on those lines).
+- A signal connected to a callable with fewer parameters than it emits passes only the first ones, so
+  `linkActivated.connect(on_click)` needs no lambda. Slots that use the emitted values are typed private methods
+  bound with `functools.partial`: a lambda's parameters are unknown to basedpyright.
+- The PySide6 stubs omit `None` from some returns Qt can give (`currentItem()`, `nextPendingConnection()`,
+  `QStyleOptionViewItem.widget`): the `None` checks stay, with `# pyright: ignore[reportUnnecessaryComparison]`.
 - Style: our own package `src/app/ui/flat_theme`, reworked from PyQtDarkTheme 2.3.6 (`pyqtdarktheme-fork`; the
   original 2.1.0 requires Python < 3.12). Self-contained so another app can copy it with its tests: imports only
   PySide6, shiboken6 and the stdlib (checked by a test); the app's colors, extra QSS and icon folder
@@ -245,6 +250,17 @@ in the commits.
 - `MainWindow` passes some actions on as unbound `Presenter.<method>`, so window tests replace the method on the
   class (`_Window.spy`) and expect the mock as `self`. The autospec presenter mock gets its `games` mock by hand.
 - `tests/src/app/conftest.py` compiles the `.po` into a temp folder, so tests don't depend on local `.mo` files.
+
+## Lint and types
+
+- Ruff + basedpyright since 2026-11-07 (they replaced black, pylint and mypy). The lint job runs on Ubuntu with
+  `pythonPlatform = "Windows"`, so `winreg` and `ctypes.WinDLL` are checked as on Windows.
+- No `Any` in `src`: parsed JSON is `JsonValue`; `OpsApi` checks each value with `_object`/`_array`/`_typed`, so a
+  wrong shape is still an `OpsFormatError`. SQLite rows get their types from `fetchall()` annotations, registry
+  values are `cast` to `object` and narrowed with `isinstance`, Windows API functions are `cast` to a `Callable`.
+- ctypes structures declare the fields the app reads (`ullTotalPhys`, `dmPelsWidth`, ...) for the type checker;
+  ctypes creates them from `_fields_`.
+- `Worker` queues a `partial` that runs the task and returns the bound callback, so the job keeps the task's type.
 
 ## Build, installer, releases
 

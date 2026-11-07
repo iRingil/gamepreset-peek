@@ -26,11 +26,8 @@
     <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/github-code-scanning/codeql">
         <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/github-code-scanning/codeql/badge.svg" alt="CodeQL">
     </a>
-    <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/mypy.yml">
-        <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/mypy.yml/badge.svg" alt="Mypy">
-    </a>
-    <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/pylint.yml">
-        <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/pylint.yml/badge.svg" alt="Pylint">
+    <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/lint.yml">
+        <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/lint.yml/badge.svg" alt="Lint">
     </a>
     <a href="https://github.com/iRingil/gamepreset-peek/actions/workflows/pytest.yml">
         <img src="https://github.com/iRingil/gamepreset-peek/actions/workflows/pytest.yml/badge.svg" alt="Pytest">
@@ -46,8 +43,8 @@
     <a href="LICENSE">
         <img src="https://img.shields.io/github/license/iRingil/gamepreset-peek" alt="License">
     </a>
-    <a href="https://github.com/psf/black">
-        <img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-black.svg">
+    <a href="https://github.com/astral-sh/ruff">
+        <img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json">
     </a>
     <a href="https://deepwiki.com/iRingil/gamepreset-peek">
         <img src="https://img.shields.io/badge/Ask-DeepWiki-informational" alt="Ask DeepWiki">
@@ -132,8 +129,11 @@ With Python 3.13 on Windows, from the repository root:
 ```shell
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r src/requirements.txt -r src/requirements-dev.txt
+pip install -r src/requirements-dev.txt
 $env:PYTHONPATH="src"; python -m app                  # run from source
+ruff check src tests                                  # lint (Ruff, installed globally; version pinned in lint.yml)
+ruff format src tests                                 # format
+basedpyright                                          # type check (installed globally, reads the packages from .venv)
 pytest                                                # tests
 infrastructure\nuitka\build.cmd                       # standalone folder: build\GamePresetPeek.dist
 infrastructure\inno\build.cmd                         # installer and portable zip (needs Inno Setup 6)

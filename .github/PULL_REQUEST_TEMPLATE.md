@@ -4,7 +4,7 @@
 
 ## How tested
 
-- [ ] `black src tests`, `mypy src tests`, `pylint src tests` (10.00, no messages) and `pytest` pass
+- [ ] `ruff format src tests`, `ruff check src tests`, `basedpyright` and `pytest` pass
 - [ ] UI texts changed: `messages.pot` and every `.po` updated, `.mo` recompiled
 - [ ] Manually checked on Windows (game / GPU / resolution: ...)
 
