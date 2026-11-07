@@ -244,5 +244,5 @@ cython_debug/
 src/portable.txt
 src/userdata/
 
-# Claude Code: personal permissions
-.claude/settings.local.json
+# Claude Code
+.claude/
