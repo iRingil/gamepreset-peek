@@ -80,6 +80,9 @@ class _SettingsPanel(QWidget):
     The game title, the quality slider and the settings table.
 
     Rows whose value differs from the recommended preset are emphasized: that is what the slider trades.
+
+    One row can be chosen by a click or the arrow keys, a cursor marking where the user is in the game's own settings.
+    It stays on its setting while the table shows other presets of the game and is gone with the next game.
     """
 
     def __init__(
@@ -142,6 +145,7 @@ class _SettingsPanel(QWidget):
         self._caption.setText(settings.caption)
         self.slider.set_presets(count=settings.count, index=settings.index, recommended=settings.recommended)
         self._optimal.setEnabled(not settings.optimal)
+        chosen: str | None = self._chosen_setting()
         self._table.clear()
         items: list[QTreeWidgetItem] = []
         for row in settings.rows:
@@ -151,6 +155,9 @@ class _SettingsPanel(QWidget):
                 item.setToolTip(column, row.hint)
             items.append(item)
         self._table.addTopLevelItems(items)
+        again: QTreeWidgetItem | None = next((item for item in items if item.text(0) == chosen), None)
+        if again is not None:
+            self._table.setCurrentItem(again)
         self._slider_row.show()
         self._table.show()
 
@@ -165,6 +172,15 @@ class _SettingsPanel(QWidget):
         self._table.clear()
         self._slider_row.hide()
         self._table.hide()
+
+    def _chosen_setting(self) -> str | None:
+        """
+        Tell which setting the cursor of the table is on.
+
+        :return: name of the setting, None when no row is chosen
+        """
+        chosen: list[QTreeWidgetItem] = self._table.selectedItems()
+        return chosen[0].text(0) if chosen else None
 
     @staticmethod
     def _muted(*, parent: QWidget) -> QLabel:
@@ -185,12 +201,15 @@ class _SettingsPanel(QWidget):
         :return: the table
         """
         table: QTreeWidget = QTreeWidget(parent=self)
+        # The theme gives the chosen row of this table its own color.
+        table.setObjectName("settings")
         table.setColumnCount(2)
         table.setRootIsDecorated(False)
         table.setUniformRowHeights(True)
-        table.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        # Scrolled with the wheel; nothing in it to focus, as no row can be selected.
-        table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        table.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        # A click focuses the table, so the arrow keys move the chosen row on.
+        table.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         table.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
         table.setItemDelegate(_ChangedDelegate(table))
         header: QHeaderView = table.header()

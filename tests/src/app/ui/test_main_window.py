@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, create_autospec
 import pytest
 from PySide6.QtCore import QModelIndex, QObject, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QGuiApplication, QPalette
+from PySide6.QtTest import QTest
 from PySide6.QtWidgets import (
     QAbstractItemDelegate,
     QAbstractItemView,
@@ -159,6 +160,14 @@ class _Window:
         """
         return self.child(parent=self.widget, kind=QTreeWidget)
 
+    def chosen(self) -> list[str]:
+        """
+        Get the settings of the chosen rows of the settings table.
+
+        :return: their names
+        """
+        return [item.text(0) for item in self.table().selectedItems()]
+
     def popup(self) -> ChoicePopup | None:
         """
         Get the open CPU, GPU or resolution choice.
@@ -269,7 +278,7 @@ class TestMainWindow:
 
     def test_mouse_focus(self, window: _Window) -> None:
         """
-        Opens with nothing focused; the links and the settings table never take focus, the search field takes clicks.
+        Opens with nothing focused; the links never take focus, the search field and the settings table take clicks.
 
         :param window: the window
         :return: None
@@ -286,7 +295,7 @@ class TestMainWindow:
         assert len(links) == 3
         assert all(link.focusPolicy() == Qt.FocusPolicy.NoFocus for link in links)
         assert all(link.textInteractionFlags() == Qt.TextInteractionFlag.LinksAccessibleByMouse for link in links)
-        assert window.table().focusPolicy() == Qt.FocusPolicy.NoFocus
+        assert window.table().focusPolicy() == Qt.FocusPolicy.ClickFocus
         assert window.child(parent=window.widget, kind=QLineEdit).focusPolicy() == Qt.FocusPolicy.ClickFocus
 
     def test_offer_opens_choice(self, window: _Window) -> None:
@@ -532,6 +541,49 @@ class TestMainWindow:
         window.delegate(view=table).initStyleOption(option, table.model().index(0, 1))
         # Assert
         assert not option.font.bold()
+
+    def test_setting_cursor(self, window: _Window) -> None:
+        """
+        Chooses no row at first, then the one row clicked; the arrow keys move the choice on, one row at a time.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        window.widget.show_settings(settings=_SETTINGS)
+        table: QTreeWidget = window.table()
+        before: list[str] = window.chosen()
+        # Act
+        QTest.mouseClick(
+            table.viewport(),
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier,
+            table.visualItemRect(table.findItems("Shadows", Qt.MatchFlag.MatchExactly)[0]).center(),
+        )
+        clicked: list[str] = window.chosen()
+        QTest.keyClick(table, Qt.Key.Key_Down)
+        moved: list[str] = window.chosen()
+        # Assert
+        assert table.selectionMode() == QAbstractItemView.SelectionMode.SingleSelection
+        assert (before, clicked, moved) == ([], ["Shadows"], ["Textures"])
+
+    def test_setting_cursor_across_presets(self, window: _Window) -> None:
+        """
+        Keeps the chosen row on its setting while other presets of the game are shown; the next game starts with none.
+
+        :param window: the window
+        :return: None
+        """
+        # Arrange
+        window.widget.show_settings(settings=_SETTINGS)
+        window.table().setCurrentItem(window.table().findItems("Textures", Qt.MatchFlag.MatchExactly)[0])
+        # Act
+        window.widget.show_settings(settings=replace(_SETTINGS, index=3, optimal=False))
+        kept: list[str] = window.chosen()
+        window.widget.clear_settings(loading=True)
+        window.widget.show_settings(settings=_SETTINGS)
+        # Assert
+        assert (kept, window.chosen()) == (["Textures"], [])
 
     @pytest.mark.parametrize(argnames="loading", argvalues=[True, False], ids=["loading", "nothing to wait for"])
     def test_settings_cleared(self, *, window: _Window, loading: bool) -> None:

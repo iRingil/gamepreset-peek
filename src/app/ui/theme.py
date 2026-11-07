@@ -16,11 +16,13 @@ __all__: tuple[str, ...] = ("Theme",)
 # Table rows get a little air, still fitting a long settings list in the smallest window.
 # The detected item of a choice, mostly the one in use, still answers the mouse with a stronger selection color.
 # Dimmed labels get an opaque color: Qt draws the placeholder text role at half the opacity of the text color.
+# The chosen row of the settings table keeps its strong color while the user is in the game, unlike the mouse hover.
 # The {{name|color}} placeholders take the colors of the theme in use.
 _QSS: str = """
 QTreeView::item {padding: 0.1em 0}
 QListView#detected::item:selected:hover {background: {{primary|color(state="table.selectionBackground")}}}
 QLabel[muted="true"] {color: {{foreground|color(state="input.placeholder")}}}
+QTreeView#settings::item:selected {background: {{primary|color(state="table.selectionBackground")}}}
 """
 
 

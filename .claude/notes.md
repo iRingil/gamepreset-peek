@@ -192,10 +192,15 @@ in the commits.
   gives text fields and scroll areas (lists, logs) that took clicks `ClickFocus`, everything else `NoFocus`: a focused
   combo box, button or check box keeps a frame (`QComboBox:focus` is drawn in the accent color). Nothing is
   reachable by Tab, so Qt also focuses nothing when the window opens: before, the CPU link got the focus at start and
-  showed its dotted frame. The hardware links (mouse-only flags) and the settings table (nothing selectable) are
-  `NoFocus`. Setting a policy on a widget with a focus proxy (a list's viewport, a QTabWidget) overwrites the
+  showed its dotted frame. The hardware links (mouse-only flags) are `NoFocus`; the settings table takes clicks,
+  so the arrow keys move its cursor. Setting a policy on a widget with a focus proxy (a list's viewport, a QTabWidget) overwrites the
   proxy's, so those are set first. The popup still focuses its search field itself and keeps Down / Enter. Widgets
   created after `apply` aren't covered.
+- Settings table cursor, at the user's request: one row at a time, chosen by a click or the arrow keys, marks where
+  the user is while changing the game's own settings by hand; nothing is chosen at first and nothing is saved. It
+  stays on its setting (by name) while other presets of the game are shown and is gone with the next game, whose
+  loading clears the table. Its color is the table selection color, active or not (`QTreeView#settings` in
+  `ui/theme.py`), so it stays strong while the user is in the game and differs from the gray mouse hover.
 - Status levels: info = loading only; warning = no recommendation, resolution fallback, too demanding resolution;
   error = hardware problems and failed requests. Colors by background lightness in `Theme`.
 - Font: bundled Golos Text (OFL, variable weight), base 10 pt everywhere, one heading size (1.4x, semibold). Sizes
