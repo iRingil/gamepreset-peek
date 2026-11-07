@@ -1,3 +1,4 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the data classes."""
 
 import pytest
@@ -13,7 +14,7 @@ from app.core.models import (
     Translations,
 )
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestPresetsFile:
@@ -79,12 +80,12 @@ class TestTranslations:
 
     @pytest.mark.parametrize(
         argnames=("language", "setting", "expected"),
-        argvalues=(
+        argvalues=[
             ("ru_RU", "Shadows", "Тени"),
             ("ru_RU", "Scale", "Scale"),
             ("ru_RU", "Missing", "Missing"),
             ("de_DE", "Shadows", "Shadows"),
-        ),
+        ],
         ids=("translated", "empty-translation", "unknown-setting", "unknown-language"),
     )
     def test_setting_name(self, translations: Translations, language: str, setting: str, expected: str) -> None:
@@ -104,13 +105,13 @@ class TestTranslations:
 
     @pytest.mark.parametrize(
         argnames=("language", "setting", "value", "expected"),
-        argvalues=(
+        argvalues=[
             ("ru_RU", "Shadows", "Low", "Низкое"),
             ("ru_RU", "Shadows", "High", "High"),
             ("ru_RU", "Scale", "0.750", "0.750"),
             ("ru_RU", "Missing", "Low", "Low"),
             ("de_DE", "Shadows", "Low", "Low"),
-        ),
+        ],
         ids=("translated", "empty-translation", "numeric", "unknown-setting", "unknown-language"),
     )
     def test_value_name(

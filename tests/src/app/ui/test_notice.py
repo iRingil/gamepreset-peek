@@ -1,3 +1,4 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the big notice shown in an empty area."""
 
 from PySide6.QtGui import QColor, QImage, QPalette
@@ -5,7 +6,7 @@ from PySide6.QtWidgets import QApplication
 
 from app.ui.notice import Notice
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestNotice:
@@ -30,8 +31,10 @@ class TestNotice:
             (x, y) for x in range(0, 600, 4) for y in range(0, 400, 4) if image.pixelColor(x, y) != background
         ]
         assert notice.text == "No recommendations"
-        assert min(x for x, _ in drawn) < 600 * 0.2 and max(x for x, _ in drawn) > 600 * 0.8
+        assert min(x for x, _ in drawn) < 600 * 0.2
+        assert max(x for x, _ in drawn) > 600 * 0.8
         assert all(40 <= y <= 360 for _, y in drawn)
         link: str = notice.palette().color(QPalette.ColorRole.Link).name()
-        assert drawn and all(image.pixelColor(x, y).name() != link for x, y in drawn)
+        assert drawn
+        assert all(image.pixelColor(x, y).name() != link for x, y in drawn)
         qt_app.processEvents()

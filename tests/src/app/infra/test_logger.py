@@ -1,11 +1,13 @@
+# ruff: noqa: S101
 """Tests of the logging setup."""
 
 import logging
 import sys
 import threading
+from collections.abc import Iterator
 from pathlib import Path
 from queue import Empty
-from typing import Iterator, NoReturn
+from typing import NoReturn
 
 import pytest
 from loguru import logger
@@ -13,7 +15,7 @@ from loguru import logger
 from app.infra import logger as logger_module
 from app.infra.logger import LoggingManager
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestLoggingManager:
@@ -68,7 +70,7 @@ class TestLoggingManager:
 
         :return: never returns
         """
-        raise SystemExit()
+        raise SystemExit
 
     def test_panel_line(self) -> None:
         """
@@ -102,7 +104,7 @@ class TestLoggingManager:
     @pytest.mark.parametrize(
         argnames=("debug", "expected"), argvalues=[(True, 1), (False, 0)], ids=["debug", "release"]
     )
-    def test_debug_level(self, debug: bool, expected: int) -> None:
+    def test_debug_level(self, *, debug: bool, expected: int) -> None:
         """
         Passes DEBUG records only in debug mode.
 

@@ -1,7 +1,7 @@
 """One running copy per user: a second copy hands over to the first one, which comes to the front."""
 
 import ctypes
-from typing import Any
+from typing import TYPE_CHECKING, cast
 
 from loguru import logger
 from PySide6.QtCore import QObject, Signal
@@ -9,15 +9,20 @@ from PySide6.QtNetwork import QLocalServer, QLocalSocket
 
 from app.config import INSTANCE_NAME
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 __all__: tuple[str, ...] = ("SingleInstance",)
 
 
 class SingleInstance(QObject):
-    """Claims a local socket name for this copy; a copy started later connects to it and quits.
+    """
+    Claims a local socket name for this copy; a copy started later connects to it and quits.
 
     Windows lets only the foreground process raise a window, so the later copy, which the user has just started and
     which is in the foreground, allows any process to take the foreground; the running copy comes to the front when
-    the later one hangs up after that."""
+    the later one hangs up after that.
+    """
 
     activated: Signal = Signal()
 
@@ -46,7 +51,9 @@ class SingleInstance(QObject):
         socket.connectToServer(self._name)
         if socket.waitForConnected(self._WAIT_MS):
             # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
-            allow_foreground: Any = ctypes.WinDLL(name="user32")["AllowSetForegroundWindow"]
+            allow_foreground: Callable[[int], int] = cast(
+                "Callable[[int], int]", ctypes.WinDLL(name="user32")["AllowSetForegroundWindow"]
+            )
             allow_foreground(self._ANY_PROCESS)
             socket.disconnectFromServer()
             # The pipe is mostly closed at once; waiting is for the rare write still in flight.
@@ -67,8 +74,8 @@ class SingleInstance(QObject):
         :return: None
         """
         connection: QLocalSocket | None = self._server.nextPendingConnection()
-        if connection is None:  # pragma: no cover
-            return
+        if connection is None:  # pragma: no cover  # pyright: ignore[reportUnnecessaryComparison] - Qt may return None
+            return  # pyright: ignore[reportUnreachable] - the stubs omit the None Qt may return
         if connection.state() == QLocalSocket.LocalSocketState.UnconnectedState:  # pragma: no cover
             connection.deleteLater()
             self.activated.emit()

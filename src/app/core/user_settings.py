@@ -1,25 +1,28 @@
 """Settings kept between runs: language, theme, hardware, resolution, updates, games; JSON in app data."""
 
 import json
-import os
 import threading
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import cast
 
 from loguru import logger
 
 from app.config import SETTINGS_FILE
 from app.core.models import GameChoice, GamesTab, Gpu, ThemeMode, UserSettings
+from app.infra.http_client import JsonValue
 
 __all__: tuple[str, ...] = ("UserSettingsStore",)
 
 
 class UserSettingsStore:
-    """Loads and saves the user settings; a missing or broken file gives the defaults instead of an error.
+    """
+    Loads and saves the user settings; a missing or broken file gives the defaults instead of an error.
 
     A save writes a file beside the settings file and puts it in place, so a run ended mid-write leaves the old file.
-    update() reads, changes and writes under a lock: changes made from several threads don't overwrite each other."""
+    update() reads, changes and writes under a lock: changes made from several threads don't overwrite each other.
+    """
 
     def __init__(self, *, path: Path = SETTINGS_FILE) -> None:
         """
@@ -40,7 +43,9 @@ class UserSettingsStore:
             logger.debug("No settings file {}", self._path)
             return UserSettings()
         try:
-            settings: UserSettings = self._parse(document=json.loads(s=self._path.read_text(encoding="utf-8")))
+            settings: UserSettings = self._parse(
+                document=cast("JsonValue", json.loads(s=self._path.read_text(encoding="utf-8")))
+            )
         except (OSError, ValueError, TypeError, KeyError) as error:
             logger.warning("Ignored broken settings file {}: {!r}", self._path, error)
             return UserSettings()
@@ -68,7 +73,7 @@ class UserSettingsStore:
         :param settings: settings to save
         :return: None
         """
-        document: dict[str, Any] = {
+        document: dict[str, JsonValue] = {
             "language": settings.language,
             "theme": settings.theme.value,
             "detected_cpu": settings.detected_cpu,
@@ -87,11 +92,11 @@ class UserSettingsStore:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         temp: Path = self._path.with_suffix(".tmp")
         temp.write_text(data=json.dumps(obj=document, ensure_ascii=False, indent=2), encoding="utf-8")
-        os.replace(src=temp, dst=self._path)
+        temp.replace(target=self._path)
         logger.debug("Saved settings: {}", settings)
 
     @classmethod
-    def _parse(cls, *, document: Any) -> UserSettings:
+    def _parse(cls, *, document: JsonValue) -> UserSettings:
         """
         Build the settings from the JSON document of the file.
 
@@ -100,11 +105,11 @@ class UserSettingsStore:
         """
         if not isinstance(document, dict):
             raise TypeError(f"expected an object, got {document!r}")
-        detected_gpus: Any = document.get("detected_gpus", [])
+        detected_gpus: JsonValue = document.get("detected_gpus", [])
         if not isinstance(detected_gpus, list):
             raise TypeError(f"expected a list, got {detected_gpus!r}")
-        chosen_gpu: Any = document.get("chosen_gpu")
-        game_folders: Any = document.get("game_folders")
+        chosen_gpu: JsonValue = document.get("chosen_gpu")
+        game_folders: JsonValue = document.get("game_folders")
         if game_folders is not None and not isinstance(game_folders, list):
             raise TypeError(f"expected a list, got {game_folders!r}")
         return UserSettings(
@@ -129,7 +134,7 @@ class UserSettingsStore:
         )
 
     @staticmethod
-    def _gpu_document(*, gpu: Gpu) -> dict[str, str]:
+    def _gpu_document(*, gpu: Gpu) -> dict[str, JsonValue]:
         """
         Make the JSON object of a GPU; its video memory is not saved.
 
@@ -139,7 +144,7 @@ class UserSettingsStore:
         return {"name": gpu.name, "device_id": gpu.device_id}
 
     @classmethod
-    def _gpu(cls, *, document: Any) -> Gpu:
+    def _gpu(cls, *, document: JsonValue) -> Gpu:
         """
         Build a GPU from its JSON object.
 
@@ -153,7 +158,7 @@ class UserSettingsStore:
         )
 
     @classmethod
-    def _optional_str(cls, *, value: Any) -> str | None:
+    def _optional_str(cls, *, value: JsonValue) -> str | None:
         """
         Check that a value is a string or null.
 
@@ -163,7 +168,7 @@ class UserSettingsStore:
         return None if value is None else cls._required_str(value=value)
 
     @staticmethod
-    def _required_str(*, value: Any) -> str:
+    def _required_str(*, value: JsonValue) -> str:
         """
         Check that a value is a string.
 
@@ -175,7 +180,7 @@ class UserSettingsStore:
         return value
 
     @staticmethod
-    def _bool(*, value: Any) -> bool:
+    def _bool(*, value: JsonValue) -> bool:
         """
         Check that a value is a boolean.
 
@@ -187,7 +192,7 @@ class UserSettingsStore:
         return value
 
     @classmethod
-    def _optional_moment(cls, *, value: Any) -> datetime | None:
+    def _optional_moment(cls, *, value: JsonValue) -> datetime | None:
         """
         Read a moment with its UTC offset written as "2026-10-26T08:42:17+00:00", or null.
 

@@ -1,3 +1,3 @@
 """Infrastructure: HTTP client and logging."""
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()

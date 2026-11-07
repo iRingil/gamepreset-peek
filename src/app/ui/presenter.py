@@ -1,8 +1,8 @@
 """UI logic of the main window: user actions -> service calls in the background -> what the window shows."""
 
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable
 
 from app.config import LOCALE_DIR, REQUEST_DELAY_MS
 from app.core.models import (
@@ -41,8 +41,9 @@ from app.ui.worker import Runners
 __all__: tuple[str, ...] = ("Presenter",)
 
 
-class Presenter:  # pylint: disable=too-many-instance-attributes
-    """Drives the main window through background runners; the game tabs are driven by games, a GamesPresenter.
+class Presenter:
+    """
+    Drives the main window through background runners; the game tabs are driven by games, a GamesPresenter.
 
     A chosen game's presets are requested once the selection rests for a moment, so stepping through the list sends
     no burst of requests; the settings of the resolution in use follow at once. Each request gets a number; an answer
@@ -53,7 +54,8 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
     is reported there too.
 
     The database update runs once the first hardware check has answered; a new database refreshes the games, the
-    installed ones and the choice lists."""
+    installed ones and the choice lists.
+    """
 
     # Tabs of the bundled CPUs: vendor names, not translated.
     _AMD: str = "AMD"
@@ -61,7 +63,7 @@ class Presenter:  # pylint: disable=too-many-instance-attributes
     # Debouncer key.
     _PRESETS: str = "presets"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - the services, views and runners are injected, so tests can replace them
         self,
         *,
         view: MainView,

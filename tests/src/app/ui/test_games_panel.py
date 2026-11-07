@@ -1,8 +1,9 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the game tabs: installed games with their folders, and all games."""
 
 import sys
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,7 +16,7 @@ from app.i18n.translator import Translator
 from app.ui.games_panel import GamesPanel
 from app.ui.views import InstalledGameView
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestGamesPanel:

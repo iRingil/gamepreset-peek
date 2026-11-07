@@ -7,10 +7,12 @@ __all__: tuple[str, ...] = ("MouseFocus",)
 
 
 class MouseFocus:
-    """Takes Tab out of the focus of a window: a game app is driven by the mouse, as other desktop apps are.
+    """
+    Takes Tab out of the focus of a window: a game app is driven by the mouse, as other desktop apps are.
 
     A click still focuses where keys go on, a text field or a list; buttons, check boxes, combo boxes and tabs take no
-    focus, so none of them keeps a focus frame. With nothing reachable by Tab, a window opens with nothing focused."""
+    focus, so none of them keeps a focus frame. With nothing reachable by Tab, a window opens with nothing focused.
+    """
 
     # Widgets that keep taking focus by a click, where it took one: typing and arrow keys go there.
     _KEYED: tuple[type[QWidget], ...] = (QLineEdit, QAbstractSpinBox, QAbstractScrollArea)
@@ -33,5 +35,7 @@ class MouseFocus:
             for widget in widgets
         ]
         # A policy set on a widget with a focus proxy, e.g. a list's viewport, also lands on the proxy: those go first.
-        for widget, policy in sorted(zip(widgets, policies), key=lambda pair: pair[0].focusProxy() is None):
+        for widget, policy in sorted(
+            zip(widgets, policies, strict=True), key=lambda pair: pair[0].focusProxy() is None
+        ):
             widget.setFocusPolicy(policy)

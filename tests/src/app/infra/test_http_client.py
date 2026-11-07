@@ -1,8 +1,10 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the HTTP client."""
 
 import json
 import time
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -13,7 +15,7 @@ from responses import matchers
 from app.config import HTTP_CONNECT_TIMEOUT, HTTP_READ_TIMEOUT
 from app.infra.http_client import HttpClient, HttpClientError
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _URL: str = "https://example.test/v3/ops/game/"
 

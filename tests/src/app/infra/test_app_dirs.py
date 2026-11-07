@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the choice between the user profile folders and the portable ones."""
 
 import tempfile
@@ -7,7 +8,7 @@ import pytest
 
 from app.infra.app_dirs import AppDirs
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestAppDirs:

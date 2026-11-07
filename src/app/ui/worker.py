@@ -1,10 +1,11 @@
 """Background execution of blocking service calls, with their results handed back to the UI thread."""
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
 from queue import Queue
-from typing import Any, Callable, Protocol
+from typing import Protocol
 
 from loguru import logger
 from PySide6.QtCore import QObject, Signal
@@ -12,7 +13,7 @@ from PySide6.QtCore import QObject, Signal
 __all__: tuple[str, ...] = ("Runners", "TaskRunner", "Worker")
 
 
-class TaskRunner(Protocol):  # pylint: disable=too-few-public-methods
+class TaskRunner(Protocol):
     """Runs a task away from the UI and calls back with its result or error in the UI thread."""
 
     def submit[T](
@@ -30,10 +31,12 @@ class TaskRunner(Protocol):  # pylint: disable=too-few-public-methods
 
 @dataclass(frozen=True, slots=True)
 class Runners:
-    """The runners of the window, one per kind of work, so a slow task of one kind never holds up another.
+    """
+    The runners of the window, one per kind of work, so a slow task of one kind never holds up another.
 
     requests: hardware detection, NVIDIA requests and box art; finder: the search for installed games; updater: the
-    database update; saver: settings writes, which the app lets finish when it closes."""
+    database update; saver: settings writes, which the app lets finish when it closes.
+    """
 
     requests: TaskRunner
     finder: TaskRunner
@@ -41,20 +44,13 @@ class Runners:
     saver: TaskRunner
 
 
-@dataclass(frozen=True, slots=True)
-class _Job:
-    """A queued task with its callbacks."""
-
-    task: Callable[[], Any]
-    on_done: Callable[[Any], None]
-    on_error: Callable[[Exception], None]
-
-
 class Worker(QObject):
-    """Runs tasks one at a time in a daemon thread; their callbacks reach the UI thread through a Qt signal.
+    """
+    Runs tasks one at a time in a daemon thread; their callbacks reach the UI thread through a Qt signal.
 
     The worker object lives in the UI thread, so a signal emitted from the worker thread is queued to the UI event loop
-    and widgets are only touched there."""
+    and widgets are only touched there.
+    """
 
     _finished: Signal = Signal(object)
 
@@ -65,7 +61,8 @@ class Worker(QObject):
         :param name: name of the thread, seen in the logs
         """
         super().__init__()
-        self._jobs: Queue[_Job | None] = Queue()
+        # A job runs its task in the worker thread and gives the callback to deliver in the UI thread
+        self._jobs: Queue[Callable[[], Callable[[], None]] | None] = Queue()
         self._closed: bool = False
         self._finished.connect(self._deliver)
         self._thread: threading.Thread = threading.Thread(target=self._run, name=name, daemon=True)
@@ -82,7 +79,7 @@ class Worker(QObject):
         :param on_error: called with the error in the UI thread
         :return: None
         """
-        self._jobs.put(item=_Job(task=task, on_done=on_done, on_error=on_error))
+        self._jobs.put(item=partial(self._execute, task=task, on_done=on_done, on_error=on_error))
 
     def close(self) -> None:
         """
@@ -109,13 +106,26 @@ class Worker(QObject):
         :return: None
         """
         while (job := self._jobs.get()) is not None:
-            try:
-                result: Any = job.task()
-            except Exception as error:  # pylint: disable=broad-exception-caught
-                logger.opt(exception=error).error("Background task failed")
-                self._finished.emit(partial(job.on_error, error))
-            else:
-                self._finished.emit(partial(job.on_done, result))
+            self._finished.emit(job())
+
+    @staticmethod
+    def _execute[T](
+        *, task: Callable[[], T], on_done: Callable[[T], None], on_error: Callable[[Exception], None]
+    ) -> Callable[[], None]:
+        """
+        Run a task and bind its result or error to the callback that gets it.
+
+        :param task: blocking call
+        :param on_done: called with the result in the UI thread
+        :param on_error: called with the error in the UI thread
+        :return: the callback with its argument
+        """
+        try:
+            result: T = task()
+        except Exception as error:  # noqa: BLE001 - any failure of a task goes to its error callback, not the thread
+            logger.opt(exception=error).error("Background task failed")
+            return partial(on_error, error)
+        return partial(on_done, result)
 
     def _deliver(self, callback: Callable[[], None]) -> None:
         """

@@ -1,9 +1,10 @@
 """What the presenter shows: the view data of the window parts and the protocol of the window itself."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Protocol, Sequence
+from typing import Protocol
 
 from app.core.models import GamesTab, ThemeMode
 from app.i18n.translator import Translator
@@ -49,12 +50,14 @@ class ChoiceGroup:
 
 @dataclass(frozen=True, slots=True)
 class ChoiceView:
-    """A CPU, GPU or resolution choice: detected items above a line, bundled groups below it.
+    """
+    A CPU, GPU or resolution choice: detected items above a line, bundled groups below it.
 
     Positions run through the detected items, then through the groups in order; selected is the one in use.
 
     Fitting bundled items, e.g. resolutions of the screen's shape, carry the fit mark with the fit hint on hover;
-    warned items, e.g. resolutions too demanding for the hardware, carry the warning sign with the warn hint."""
+    warned items, e.g. resolutions too demanding for the hardware, carry the warning sign with the warn hint.
+    """
 
     detected: tuple[str, ...]
     groups: tuple[ChoiceGroup, ...]
@@ -77,9 +80,11 @@ class InstalledGameView:
 
 @dataclass(frozen=True, slots=True)
 class SettingRow:
-    """A row of the settings table; changed means the value differs from the one of the recommended preset.
+    """
+    A row of the settings table; changed means the value differs from the one of the recommended preset.
 
-    The hint, shown on hover, gives a changed row the value of the recommended preset."""
+    The hint, shown on hover, gives a changed row the value of the recommended preset.
+    """
 
     name: str
     value: str
@@ -89,10 +94,12 @@ class SettingRow:
 
 @dataclass(frozen=True, slots=True)
 class SettingsView:
-    """What the settings panel shows for one preset, translated.
+    """
+    What the settings panel shows for one preset, translated.
 
     The title is the game; position ("16 / 19") and caption name the preset the slider is on; recommended is the
-    1-based index of the recommended preset."""
+    1-based index of the recommended preset.
+    """
 
     title: str
     position: str

@@ -1,14 +1,16 @@
+# ruff: noqa: S101
 """Tests of the UI language choice and the translation of UI texts."""
 
 import locale
 from pathlib import Path
+from typing import override
 
 import pytest
 
 from app.i18n.translator import Translator
 from app.i18n.ui_text import UiText
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class _AnyLanguageId(dict[int, str]):
@@ -24,7 +26,10 @@ class _AnyLanguageId(dict[int, str]):
         self._windows_locale: str = windows_locale
 
     # noinspection PyMethodOverriding
-    def get(self, key: int, default: str | None = None) -> str | None:  # type: ignore[override]
+    @override
+    def get(  # pyright: ignore[reportIncompatibleMethodOverride] - stands in for locale.windows_locale.get only
+        self, key: int, default: str | None = None
+    ) -> str | None:
         """
         Give the locale of any language id.
 
@@ -88,7 +93,7 @@ class TestText:
         :return: None
         """
         # Act & Assert
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="unsupported UI language"):
             Translator(language="it", locale_dir=locale_dir)
 
     def test_nvidia_language(self, locale_dir: Path) -> None:

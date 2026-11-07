@@ -1,5 +1,8 @@
 """The quality slider over the presets of a game: a stop per preset, the recommended one marked."""
 
+import itertools
+from typing import override
+
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent, QPalette, QPen
 from PySide6.QtWidgets import QSlider, QWidget
@@ -24,11 +27,13 @@ _FOCUS_ALPHA: int = 70
 
 
 class PresetSlider(QSlider):
-    """A horizontal slider drawn as a track broken into segments; the presets are its stops, the handle on one of them.
+    """
+    A horizontal slider drawn as a track broken into segments; the presets are its stops, the handle on one of them.
 
     The first preset is the start of the track, the last one its end, and the others are the gaps between the
     segments. Segments up to the handle take the accent color. A dot under a stop marks the recommended preset. A click
-    or a drag moves the handle to the stop nearest to the pointer; the arrow keys step through the presets."""
+    or a drag moves the handle to the stop nearest to the pointer; the arrow keys step through the presets.
+    """
 
     def __init__(self, *, parent: QWidget | None = None) -> None:
         """
@@ -61,15 +66,16 @@ class PresetSlider(QSlider):
         :param recommended: 1-based index of the recommended preset
         :return: None
         """
-        self.blockSignals(True)
+        self.blockSignals(True)  # noqa: FBT003 - Qt takes no keyword arguments
         self.setRange(1, max(count, 1))
         self.setValue(index)
-        self.blockSignals(False)
+        self.blockSignals(False)  # noqa: FBT003 - Qt takes no keyword arguments
         self._recommended = recommended
         self.setEnabled(count > 1)
         self.update()
 
-    def sizeHint(self) -> QSize:  # pylint: disable=invalid-name
+    @override
+    def sizeHint(self) -> QSize:
         """
         Ask for a row as tall as the handle with its focus ring and the mark below.
 
@@ -77,7 +83,8 @@ class PresetSlider(QSlider):
         """
         return QSize(Typography.px(ems=_WIDTH), Typography.px(ems=_HEIGHT))
 
-    def paintEvent(self, event: QPaintEvent) -> None:  # pylint: disable=invalid-name,unused-argument
+    @override
+    def paintEvent(self, event: QPaintEvent) -> None:
         """
         Draw the segments, the recommended mark and the handle.
 
@@ -122,7 +129,8 @@ class PresetSlider(QSlider):
         painter.drawEllipse(handle, radius, radius)
         painter.end()
 
-    def mousePressEvent(self, event: QMouseEvent) -> None:  # pylint: disable=invalid-name
+    @override
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         """
         Move the handle to the segment clicked.
 
@@ -136,7 +144,8 @@ class PresetSlider(QSlider):
         self.setValue(self._value_at(x=event.position().x()))
         event.accept()
 
-    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # pylint: disable=invalid-name
+    @override
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
         """
         Move the handle with a drag.
 
@@ -147,7 +156,8 @@ class PresetSlider(QSlider):
             self.setValue(self._value_at(x=event.position().x()))
             event.accept()
 
-    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # pylint: disable=invalid-name
+    @override
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """
         End a drag; the value is set already.
 
@@ -187,7 +197,7 @@ class PresetSlider(QSlider):
                 right - left - (0 if i == 0 else gap / 2) - (0 if i == len(stops) - 2 else gap / 2),
                 track,
             )
-            for i, (left, right) in enumerate(zip(stops, stops[1:]))
+            for i, (left, right) in enumerate(itertools.pairwise(stops))
         ]
 
     def _track_top(self) -> float:

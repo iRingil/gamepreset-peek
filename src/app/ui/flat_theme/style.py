@@ -1,5 +1,7 @@
 """The proxy style of the theme: Qt's standard icons (dialog buttons, arrows, title bar) drawn as Material icons."""
 
+from typing import ClassVar, override
+
 import shiboken6
 from PySide6.QtCore import QByteArray, QPoint, QRect, QRectF, QSize, Qt
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QIconEngine, QImage, QPainter, QPalette, QPixmap
@@ -18,7 +20,7 @@ class _SvgIconEngine(QIconEngine):
     """Draws a Material icon in the text color of the application palette, at any size."""
 
     # Copies handed to Qt: Python would free one on return, while Qt deletes it only with its icon.
-    _CLONES: list[QIconEngine] = []
+    _CLONES: ClassVar[list[QIconEngine]] = []
 
     def __init__(self, *, icon_id: str, rotate: int) -> None:
         """
@@ -31,6 +33,7 @@ class _SvgIconEngine(QIconEngine):
         self._icon_id: str = icon_id
         self._rotate: int = rotate
 
+    @override
     def paint(self, painter: QPainter, rect: QRect, mode: QIcon.Mode, state: QIcon.State) -> None:
         """
         Draw the icon into a rectangle, in the disabled text color for a disabled icon.
@@ -49,6 +52,7 @@ class _SvgIconEngine(QIconEngine):
         source: str = SvgIcons.source(icon_id=self._icon_id, color=color, rotate=self._rotate)
         QSvgRenderer(QByteArray(source.encode(encoding="utf-8"))).render(painter, QRectF(rect))
 
+    @override
     def pixmap(self, size: QSize, mode: QIcon.Mode, state: QIcon.State) -> QPixmap:
         """
         Draw the icon into a square pixmap that fits the size.
@@ -67,6 +71,7 @@ class _SvgIconEngine(QIconEngine):
         painter.end()
         return pixmap
 
+    @override
     def clone(self) -> QIconEngine:
         """
         Copy the engine for a changed copy of its icon, kept referenced until Qt deletes it.
@@ -82,7 +87,7 @@ class FlatStyle(QProxyStyle):
     """Wraps the application's style, replacing its standard icons with Material ones."""
 
     # Material icon and clockwise turn of each standard icon replaced.
-    _ICONS: dict[QStyle.StandardPixmap, tuple[str, int]] = {
+    _ICONS: ClassVar[dict[QStyle.StandardPixmap, tuple[str, int]]] = {
         _Pixmap.SP_ArrowBack: ("arrow_upward", 270),
         _Pixmap.SP_ArrowDown: ("arrow_upward", 180),
         _Pixmap.SP_ArrowForward: ("arrow_upward", 90),
@@ -143,7 +148,8 @@ class FlatStyle(QProxyStyle):
         _Pixmap.SP_TrashIcon: ("delete", 0),
     }
 
-    def standardIcon(  # pylint: disable=invalid-name
+    @override
+    def standardIcon(
         self, standard_icon: QStyle.StandardPixmap, option: QStyleOption | None = None, widget: QWidget | None = None
     ) -> QIcon:
         """

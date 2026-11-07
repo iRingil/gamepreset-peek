@@ -1,7 +1,8 @@
+# ruff: noqa: S101
 """Tests of app.ui.flat_theme.theme."""
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,7 +13,7 @@ from PySide6.QtWidgets import QApplication
 from app.ui.flat_theme import FlatTheme
 from app.ui.flat_theme.style import FlatStyle
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 # The window background of each mode at the start of the style sheet.
 _DARK: str = "QWidget {background: rgba(32, 33, 36, 1.000)"
@@ -71,7 +72,7 @@ class TestFlatTheme:
         :param hints: replaced style hints
         :return: the connected callable
         """
-        return hints.colorSchemeChanged.connect.call_args.args[0]  # type: ignore[no-any-return]
+        return hints.colorSchemeChanged.connect.call_args.args[0]
 
     def test_apply(self, plain_app: QApplication, hints: MagicMock, set_style: MagicMock, theme: FlatTheme) -> None:
         """
@@ -166,7 +167,7 @@ class TestFlatTheme:
         """
         # Arrange
         theme.apply(scheme=Qt.ColorScheme.Unknown)
-        hints.setColorScheme.side_effect = lambda scheme: self._follow(hints=hints)(Qt.ColorScheme.Light)
+        hints.setColorScheme.side_effect = lambda _scheme: self._follow(hints=hints)(Qt.ColorScheme.Light)
         theme.apply(scheme=Qt.ColorScheme.Dark)
         # Act
         self._follow(hints=hints)(Qt.ColorScheme.Light)

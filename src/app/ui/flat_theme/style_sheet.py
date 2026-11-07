@@ -2,19 +2,24 @@
 
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from .color import Color
 from .color_map import ColorMap
 from .svg_icons import SvgIcons
+
+if TYPE_CHECKING:
+    from .color import Color
 
 __all__: tuple[str, ...] = ("StyleSheet",)
 
 
 class StyleSheet:
-    """Fills the placeholders of QSS text with the colors of a mode.
+    """
+    Fills the placeholders of QSS text with the colors of a mode.
 
     A placeholder is {{id|color}}, {{id|color(state="x")}} or either followed by |url(id="icon") or
-    |url(id="icon",rotate=90), which gives the url() of that icon file drawn in the color."""
+    |url(id="icon",rotate=90), which gives the url() of that icon file drawn in the color.
+    """
 
     _FILE: Path = Path(__file__).parent / "style.qss"
     _PLACEHOLDER: re.Pattern[str] = re.compile(r"\{\{.*?}}")

@@ -1,7 +1,8 @@
+# ruff: noqa: S101
 """Fakes and samples shared by the presenter tests: a window, runners, a debouncer and the data shown."""
 
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Callable, Sequence
 from unittest.mock import MagicMock, create_autospec
 
 import pytest
@@ -11,8 +12,8 @@ from app.core.models import (
     Game,
     GameChoice,
     GamePresets,
-    GamesTab,
     GameSettings,
+    GamesTab,
     Gpu,
     HardwareChoice,
     HardwareSetup,
@@ -43,10 +44,6 @@ __all__: tuple[str, ...] = (
     "DESKTOP_GPU",
     "FIT_HINT",
     "FOLDERS",
-    "FakeDebouncer",
-    "FakeHardware",
-    "FakeRunner",
-    "FakeView",
     "GAMES",
     "INSTALLED",
     "INTEL_CPU",
@@ -54,11 +51,15 @@ __all__: tuple[str, ...] = (
     "LAPTOP_VIEW",
     "PRESETS",
     "PRESETS_FILE",
-    "PresenterTests",
     "SCREEN",
     "SETTINGS",
     "SETUP",
     "SHOWN",
+    "FakeDebouncer",
+    "FakeHardware",
+    "FakeRunner",
+    "FakeView",
+    "PresenterTests",
 )
 
 LAPTOP_GPU: Gpu = Gpu(name="NVIDIA GeForce RTX 4060 Laptop GPU", device_id="28e0", memory_gb=8.0)
@@ -134,13 +135,11 @@ SHOWN: SettingsView = SettingsView(
 )
 
 
-class FakeView:  # pylint: disable=too-many-instance-attributes
+class FakeView:
     """Records what the presenter shows and the choices it offers."""
 
     def __init__(self) -> None:
-        """
-        Start with an empty window.
-        """
+        """Start with an empty window."""
         self.language: str | None = None
         self.theme: ThemeMode | None = None
         self.auto_update: bool | None = None
@@ -344,9 +343,7 @@ class FakeRunner:
     """Runs tasks at once, or keeps them until run_all() when deferred."""
 
     def __init__(self) -> None:
-        """
-        Run tasks at once until deferred is set.
-        """
+        """Run tasks at once until deferred is set."""
         self.deferred: bool = False
         self._jobs: list[Callable[[], None]] = []
 
@@ -370,7 +367,7 @@ class FakeRunner:
             """
             try:
                 result: T = task()
-            except Exception as error:  # pylint: disable=broad-exception-caught
+            except Exception as error:  # noqa: BLE001 - as Worker does
                 on_error(error)
                 return
             on_done(result)
@@ -394,9 +391,7 @@ class FakeDebouncer:
     """Runs actions at once, or keeps the last one of each key until fire() when held."""
 
     def __init__(self) -> None:
-        """
-        Run actions at once until held is set.
-        """
+        """Run actions at once until held is set."""
         self.held: bool = False
         self.pending: dict[str, Callable[[], None]] = {}
 
@@ -518,8 +513,9 @@ class PresenterTests:
         return icons
 
     @pytest.fixture(name="presenter")
-    def _presenter(  # pylint: disable=too-many-arguments
+    def _presenter(  # noqa: PLR0913 - pytest passes every fixture and parameter by name
         self,
+        *,
         view: FakeView,
         service: MagicMock,
         debouncer: FakeDebouncer,

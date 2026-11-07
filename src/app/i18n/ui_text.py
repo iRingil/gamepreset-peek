@@ -16,9 +16,11 @@ def _msg(text: str) -> str:
 
 
 class UiText(StrEnum):
-    """A UI text; the value is the English source and the gettext message id.
+    """
+    A UI text; the value is the English source and the gettext message id.
 
-    Placeholders use str.format syntax ({error}); a translation keeps every placeholder of its source."""
+    Placeholders use str.format syntax ({error}); a translation keeps every placeholder of its source.
+    """
 
     MY_GAMES = _msg("My games")
     ALL_GAMES = _msg("All games")

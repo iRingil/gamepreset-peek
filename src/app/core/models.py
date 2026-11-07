@@ -11,10 +11,10 @@ __all__: tuple[str, ...] = (
     "FileRole",
     "Game",
     "GameChoice",
-    "GamesTab",
-    "GameSource",
     "GamePresets",
     "GameSettings",
+    "GameSource",
+    "GamesTab",
     "Gpu",
     "Hardware",
     "HardwareCheck",
@@ -38,9 +38,11 @@ __all__: tuple[str, ...] = (
 
 @dataclass(frozen=True, slots=True)
 class Gpu:
-    """An NVIDIA graphics card: name as Windows shows it and PCI device id as 4 lowercase hex digits, e.g. "28e0".
+    """
+    An NVIDIA graphics card: name as Windows shows it and PCI device id as 4 lowercase hex digits, e.g. "28e0".
 
-    Video memory in GiB is known for a detected card only; it doesn't take part in comparisons."""
+    Video memory in GiB is known for a detected card only; it doesn't take part in comparisons.
+    """
 
     name: str
     device_id: str
@@ -49,9 +51,11 @@ class Gpu:
 
 @dataclass(frozen=True, slots=True)
 class SystemHardware:
-    """The hardware detected on this PC: CPU name, NVIDIA GPUs, memory, Windows version and the screen resolution.
+    """
+    The hardware detected on this PC: CPU name, NVIDIA GPUs, memory, Windows version and the screen resolution.
 
-    The CPU name and the resolution are None when not detected. The GPUs come the most powerful first."""
+    The CPU name and the resolution are None when not detected. The GPUs come the most powerful first.
+    """
 
     cpu_name: str | None
     gpus: tuple[Gpu, ...]
@@ -70,10 +74,12 @@ class HardwareChoice:
 
 @dataclass(frozen=True, slots=True)
 class HardwareSetup:
-    """What the hardware and resolution choices start from: detected values, bundled lists and what is in use.
+    """
+    What the hardware and resolution choices start from: detected values, bundled lists and what is in use.
 
     The bundled GPUs leave out the detected ones; the bundled CPUs are split by vendor; the bundled resolutions leave
-    out the detected one. The resolution in use is the chosen one, else the detected one, else the default."""
+    out the detected one. The resolution in use is the chosen one, else the detected one, else the default.
+    """
 
     system: SystemHardware
     amd_cpus: tuple[str, ...]
@@ -173,10 +179,12 @@ class HardwareState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class HardwareCheck:
-    """Hardware ready for preset requests, or why presets can't be requested with the CPU and GPU in use.
+    """
+    Hardware ready for preset requests, or why presets can't be requested with the CPU and GPU in use.
 
     READY carries the hardware; MISSING the components neither chosen nor detected ("cpu", "gpu" for an NVIDIA one);
-    REJECTED the components NVIDIA rejected, empty when NVIDIA named none."""
+    REJECTED the components NVIDIA rejected, empty when NVIDIA named none.
+    """
 
     state: HardwareState
     hardware: Hardware | None = None
@@ -202,10 +210,12 @@ class RemoteFile:
 
 @dataclass(frozen=True, slots=True)
 class Game:
-    """A game NVIDIA has presets for, with its display name and the URL of its vertical box art, if it has one.
+    """
+    A game NVIDIA has presets for, with its display name and the URL of its vertical box art, if it has one.
 
     The application id names the game in NVIDIA's image service; a box art URL that stopped working is found again
-    through it."""
+    through it.
+    """
 
     game_id: str
     name: str
@@ -223,7 +233,7 @@ class FileRole(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class SourceFile:
-    """A file or folder of a game copy, its path relative to the installation folder, e.g. "bin\bg3.exe"."""
+    r"""A file or folder of a game copy, its path relative to the installation folder, e.g. "bin\bg3.exe"."""
 
     path: str
     role: FileRole
@@ -232,11 +242,13 @@ class SourceFile:
 
 @dataclass(frozen=True, slots=True)
 class RegistryValue:
-    """A registry value holding the installation folder of a game copy, and how to get the folder from it.
+    """
+    A registry value holding the installation folder of a game copy, and how to get the folder from it.
 
     The path is the key path with the value name as its last part (empty for the default value); view is the 32- or
     64-bit registry view, None for either. The regex's first group cuts the path out of the value; then the folder
-    goes up parent_levels times and the suffix is appended."""
+    goes up parent_levels times and the suffix is appended.
+    """
 
     value_path: str
     view: int | None = None
@@ -247,9 +259,11 @@ class RegistryValue:
 
 @dataclass(frozen=True, slots=True)
 class GameSource:
-    """One copy of a game (a store or distribution), recognized by its files and found through the registry.
+    """
+    One copy of a game (a store or distribution), recognized by its files and found through the registry.
 
-    A Microsoft Store copy has its package family name: it lives in a folder the app can't search."""
+    A Microsoft Store copy has its package family name: it lives in a folder the app can't search.
+    """
 
     game_id: str
     files: tuple[SourceFile, ...]
@@ -408,9 +422,11 @@ class Translations:
 
 @dataclass(frozen=True, slots=True)
 class GameSettings:
-    """All presets of a game with its translations, to show any preset in any UI language.
+    """
+    All presets of a game with its translations, to show any preset in any UI language.
 
-    The presets go from the lowest to the highest quality."""
+    The presets go from the lowest to the highest quality.
+    """
 
     presets: PresetsFile
     translations: Translations
@@ -443,7 +459,8 @@ class GameSettings:
 
 @dataclass(frozen=True, slots=True)
 class UserSettings:
-    """Settings kept between runs: language, theme, detected and chosen hardware, the database update choice and time.
+    """
+    Settings kept between runs: language, theme, detected and chosen hardware, the database update choice and time.
 
     The detected CPU, NVIDIA GPUs (the most powerful first) and screen resolution are written at every start. The
     chosen CPU, GPU and resolution are the ones the user picked in the lists, None when not picked: the detected ones
@@ -453,7 +470,8 @@ class UserSettings:
     None before the first update.
 
     The game folders are where installed games are searched for; None until the list is first saved. The game choice
-    keeps the tab in use and the game chosen in each tab."""
+    keeps the tab in use and the game chosen in each tab.
+    """
 
     language: str | None = None
     detected_cpu: str | None = None

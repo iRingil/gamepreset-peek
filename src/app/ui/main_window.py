@@ -1,9 +1,10 @@
 """Widgets and layout of the main window and of the CPU, GPU and resolution choice drop-downs."""
 
 import html
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from queue import Queue
-from typing import Callable, Sequence
+from typing import override
 
 from PySide6.QtCore import QEvent, QModelIndex, QObject, QPersistentModelIndex, QPoint, QSize, Qt
 from PySide6.QtGui import QGuiApplication, QPalette, QResizeEvent
@@ -36,8 +37,8 @@ from app.ui.games_panel import GamesPanel
 from app.ui.icons import IconButton
 from app.ui.log_panel import LogPanel
 from app.ui.notice import Notice
-from app.ui.preset_slider import PresetSlider
 from app.ui.presenter import Presenter
+from app.ui.preset_slider import PresetSlider
 from app.ui.settings_menu import SettingsMenu
 from app.ui.skeleton import SettingsSkeleton
 from app.ui.theme import Theme
@@ -53,13 +54,14 @@ _CHANGED_ROLE: int = Qt.ItemDataRole.UserRole + 1
 
 
 class _ChangedDelegate(QStyledItemDelegate):
-    """Draws the values that differ from the recommended preset in bold and in the accent color of the theme.
+    """
+    Draws the values that differ from the recommended preset in bold and in the accent color of the theme.
 
-    The color is taken while painting, so a switch between light and dark mode reaches it at once."""
+    The color is taken while painting, so a switch between light and dark mode reaches it at once.
+    """
 
-    def initStyleOption(  # pylint: disable=invalid-name
-        self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
-    ) -> None:
+    @override
+    def initStyleOption(self, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
         """
         Style an item, emphasizing a changed value.
 
@@ -73,10 +75,12 @@ class _ChangedDelegate(QStyledItemDelegate):
             option.palette.setColor(QPalette.ColorRole.Text, option.palette.color(QPalette.ColorRole.Link))
 
 
-class _SettingsPanel(QWidget):  # pylint: disable=too-many-instance-attributes
-    """The game title, the quality slider and the settings table.
+class _SettingsPanel(QWidget):
+    """
+    The game title, the quality slider and the settings table.
 
-    Rows whose value differs from the recommended preset are emphasized: that is what the slider trades."""
+    Rows whose value differs from the recommended preset are emphasized: that is what the slider trades.
+    """
 
     def __init__(
         self, *, on_slider: Callable[[int], None], on_optimal: Callable[[], None], parent: QWidget | None = None
@@ -345,7 +349,8 @@ class _HardwareBlock(QWidget):
         # Mouse only: a focused link draws a dotted focus frame, which stayed after a click and at start.
         label.setTextInteractionFlags(Qt.TextInteractionFlag.LinksAccessibleByMouse)
         label.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        label.linkActivated.connect(lambda _: on_click())
+        # A slot with fewer parameters than the signal gets only the first of its arguments, here none
+        label.linkActivated.connect(on_click)
         return label
 
 
@@ -393,9 +398,11 @@ class _TopBar(QWidget):
 
 
 class _StatusLine(QLabel):
-    """The status line: an informing line in the dimmed text color, a warning in yellow, an error in red.
+    """
+    The status line: an informing line in the dimmed text color, a warning in yellow, an error in red.
 
-    A line wider than the window is cut with an ellipsis and shown whole in the tooltip; it never widens the window."""
+    A line wider than the window is cut with an ellipsis and shown whole in the tooltip; it never widens the window.
+    """
 
     def __init__(self, *, parent: QWidget | None = None) -> None:
         """
@@ -423,7 +430,8 @@ class _StatusLine(QLabel):
         self._fit()
         self.recolor()
 
-    def minimumSizeHint(self) -> QSize:  # pylint: disable=invalid-name
+    @override
+    def minimumSizeHint(self) -> QSize:
         """
         Let the line be as narrow as the window needs: a long line is cut, not the window widened.
 
@@ -431,7 +439,8 @@ class _StatusLine(QLabel):
         """
         return QSize(0, super().minimumSizeHint().height())
 
-    def resizeEvent(self, event: QResizeEvent) -> None:  # pylint: disable=invalid-name
+    @override
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """
         Cut the line again to the new width.
 
@@ -467,7 +476,7 @@ class _StatusLine(QLabel):
             self.setStyleSheet(sheet)
 
 
-class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
+class MainWindow(QWidget):
     """The main window; user actions go to the presenter set with attach(), which fills the widgets in turn."""
 
     def __init__(self, *, log_lines: Queue[str] | None) -> None:
@@ -550,7 +559,9 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         :return: the layout
         """
         # Keeps the cover level with the top of the tab pages: the tab bar's height is known only once styled.
-        self._cover_gap: QWidget = QWidget(parent=self)
+        self._cover_gap: QWidget = QWidget(  # pyright: ignore[reportUninitializedInstanceVariable] - __init__ calls _body()
+            parent=self
+        )
         self._games.tabBar().installEventFilter(self)
         cover: QVBoxLayout = QVBoxLayout()
         cover.addWidget(self._cover_gap)
@@ -566,7 +577,8 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         body.addWidget(self._settings_area, stretch=1)
         return body
 
-    def changeEvent(self, event: QEvent) -> None:  # pylint: disable=invalid-name
+    @override
+    def changeEvent(self, event: QEvent) -> None:
         """
         Recolor the status line when the palette changes, e.g. on a switch between the light and the dark theme.
 
@@ -577,7 +589,8 @@ class MainWindow(QWidget):  # pylint: disable=too-many-instance-attributes
         if event.type() in (QEvent.Type.PaletteChange, QEvent.Type.ApplicationPaletteChange):
             self._status.recolor()
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # pylint: disable=invalid-name
+    @override
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """
         Keep the gap above the cover as tall as the tab bar.
 

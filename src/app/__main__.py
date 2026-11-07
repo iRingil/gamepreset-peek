@@ -30,10 +30,10 @@ from app.ui.theme import Theme
 from app.ui.typography import Typography
 from app.ui.worker import Runners, Worker
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
-class _Application:  # pylint: disable=too-few-public-methods
+class _Application:
     """Builds the application and runs it until the window is closed."""
 
     def __init__(self, *, logging_manager: LoggingManager) -> None:  # pragma: no cover

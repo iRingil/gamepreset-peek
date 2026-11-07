@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the log panel."""
 
 from queue import Queue
@@ -8,7 +9,7 @@ from PySide6.QtTest import QTest
 from app.config import LOG_PANEL_MAX_LINES, LOG_POLL_MS
 from app.ui.log_panel import LogPanel
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 @pytest.mark.usefixtures("qt_app")

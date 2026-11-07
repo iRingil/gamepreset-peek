@@ -1,5 +1,7 @@
 """Placeholder shapes of content that is not there yet, with a light band sweeping over them while it loads."""
 
+from typing import cast, override
+
 from PySide6.QtCore import QAbstractAnimation, QEasingCurve, QRectF, QVariantAnimation
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPainterPath, QPaintEvent, QPalette
 from PySide6.QtWidgets import QWidget
@@ -26,9 +28,11 @@ _BAND: float = 9
 
 
 class Skeleton(QWidget):
-    """Draws the shapes a subclass lays out, in a faint text color; active, a light band sweeps across them.
+    """
+    Draws the shapes a subclass lays out, in a faint text color; active, a light band sweeps across them.
 
-    An inactive skeleton stands still: it marks the place of content nobody waits for yet."""
+    An inactive skeleton stands still: it marks the place of content nobody waits for yet.
+    """
 
     def __init__(self, *, parent: QWidget | None = None) -> None:
         """
@@ -75,7 +79,8 @@ class Skeleton(QWidget):
         """
         return []
 
-    def paintEvent(self, event: QPaintEvent) -> None:  # pylint: disable=invalid-name,unused-argument
+    @override
+    def paintEvent(self, event: QPaintEvent) -> None:
         """
         Draw the shapes, and the band over them while active.
 
@@ -104,7 +109,7 @@ class Skeleton(QWidget):
         if not self.active:
             return
         band: float = max(self.width() * 0.35, Typography.length(ems=_BAND))
-        middle: float = -band + (self.width() + band * 2) * float(self._sweep.currentValue())
+        middle: float = -band + (self.width() + band * 2) * cast("float", self._sweep.currentValue())
         gradient: QLinearGradient = QLinearGradient(middle - band, 0, middle + band, 0)
         gradient.setColorAt(0, self._faded(color=text, alpha=0))
         gradient.setColorAt(0.5, self._faded(color=text, alpha=_BAND_ALPHA))
@@ -141,6 +146,7 @@ class ListSkeleton(Skeleton):
         super().__init__(parent=parent)
         self._icons: bool = icons
 
+    @override
     def shapes(self) -> list[QRectF]:
         """
         Lay out a row per row height of the widget.
@@ -171,6 +177,7 @@ class SettingsSkeleton(Skeleton):
     _NAME_LENGTHS: tuple[float, ...] = (0.46, 0.3, 0.58, 0.38, 0.52, 0.26)
     _VALUE_LENGTHS: tuple[float, ...] = (0.5, 0.7, 0.35, 0.6)
 
+    @override
     def shapes(self) -> list[QRectF]:
         """
         Lay out the panel's parts in the widget's rectangle.

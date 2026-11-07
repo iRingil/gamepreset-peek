@@ -10,10 +10,12 @@ __all__: tuple[str, ...] = ("ResolutionChoice",)
 
 
 class ResolutionChoice:
-    """Builds the resolution choice: the detected screen above the game's resolutions, the largest first.
+    """
+    Builds the resolution choice: the detected screen above the game's resolutions, the largest first.
 
     Before a game's presets arrive, the bundled resolutions stand in for the game's. Resolutions of the screen's shape
-    are marked with its ratio, ones too demanding for the hardware with the warning sign."""
+    are marked with its ratio, ones too demanding for the hardware with the warning sign.
+    """
 
     @classmethod
     def build(

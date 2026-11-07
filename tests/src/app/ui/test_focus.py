@@ -1,4 +1,7 @@
+# ruff: noqa: S101
 """Tests of app.ui.focus."""
+
+from typing import cast
 
 import pytest
 from PySide6.QtCore import Qt
@@ -17,7 +20,7 @@ from PySide6.QtWidgets import (
 
 from app.ui.focus import MouseFocus
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestMouseFocus:
@@ -73,7 +76,7 @@ class TestMouseFocus:
         :return: None
         """
         # Arrange
-        widget: QWidget = root.findChild(kind)  # type: ignore[assignment]
+        widget: QWidget = cast("QWidget", root.findChild(kind))
         # Act
         MouseFocus.apply(root=root)
         # Assert

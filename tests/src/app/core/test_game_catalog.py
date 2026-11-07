@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the game catalog read from the database."""
 
 from pathlib import Path
@@ -9,7 +10,7 @@ from app.core.game_catalog import GameCatalog
 from app.core.models import FileRole, Game, GameSource, RegistryValue, SourceFile
 from tests.src.app.core.db_files import DbFiles
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestGames:

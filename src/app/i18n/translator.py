@@ -4,12 +4,15 @@ import ctypes
 import gettext
 import locale
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, cast
 
 from loguru import logger
 
 from app.config import DEFAULT_LANGUAGE, GETTEXT_DOMAIN, LOCALE_DIR, UI_LANGUAGES
 from app.i18n.ui_text import UiText
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 __all__: tuple[str, ...] = ("Translator",)
 
@@ -75,6 +78,8 @@ class Translator:
         :return: language part of the Windows locale, e.g. "ru" for ru_RU, or None for an unknown one
         """
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
-        get_ui_language: Any = ctypes.WinDLL(name="kernel32")["GetUserDefaultUILanguage"]
+        get_ui_language: Callable[[], int] = cast(
+            "Callable[[], int]", ctypes.WinDLL(name="kernel32")["GetUserDefaultUILanguage"]
+        )
         windows_locale: str | None = locale.windows_locale.get(get_ui_language())
         return None if windows_locale is None else windows_locale.split(sep="_")[0]

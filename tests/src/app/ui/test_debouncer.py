@@ -1,11 +1,12 @@
+# ruff: noqa: S101
 """Tests of the Qt debouncer."""
 
+import pytest
 from PySide6.QtTest import QTest
-from PySide6.QtWidgets import QApplication
 
 from app.ui.debouncer import QtDebouncer
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _DELAY_MS: int = 20
 
@@ -13,11 +14,11 @@ _DELAY_MS: int = 20
 class TestQtDebouncer:
     """Delayed actions, one per key."""
 
-    def test_last_action_of_key_runs_once(self, qt_app: QApplication) -> None:
+    @pytest.mark.usefixtures("qt_app")
+    def test_last_action_of_key_runs_once(self) -> None:
         """
         Runs only the action scheduled last under a key, once, after the delay.
 
-        :param qt_app: Qt application
         :return: None
         """
         # Arrange
@@ -31,11 +32,11 @@ class TestQtDebouncer:
         # Assert
         assert (before, runs) == ([], ["second"])
 
-    def test_keys_apart(self, qt_app: QApplication) -> None:
+    @pytest.mark.usefixtures("qt_app")
+    def test_keys_apart(self) -> None:
         """
         Runs the actions of different keys independently.
 
-        :param qt_app: Qt application
         :return: None
         """
         # Arrange

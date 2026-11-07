@@ -4,9 +4,11 @@ import os
 import re
 import winreg
 from collections import defaultdict
+from collections.abc import Callable, Iterator, Sequence
+from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
-from typing import AbstractSet, Callable, Iterator, Sequence
+from typing import ClassVar, cast
 
 from loguru import logger
 
@@ -20,15 +22,17 @@ __all__: tuple[str, ...] = ("GameFinder", "WindowsRegistry")
 class WindowsRegistry:
     """Reads string values of the Windows registry; a key part with a regex pattern matches any subkey it fits."""
 
-    _HIVES: dict[str, int] = {
+    _HIVES: ClassVar[dict[str, int]] = {
         "HKEY_LOCAL_MACHINE": winreg.HKEY_LOCAL_MACHINE,
         "HKEY_CURRENT_USER": winreg.HKEY_CURRENT_USER,
         "HKEY_CLASSES_ROOT": winreg.HKEY_CLASSES_ROOT,
         "HKEY_USERS": winreg.HKEY_USERS,
     }
-    _VIEWS: dict[int, int] = {32: winreg.KEY_WOW64_32KEY, 64: winreg.KEY_WOW64_64KEY}
+    _VIEWS: ClassVar[dict[int, int]] = {32: winreg.KEY_WOW64_32KEY, 64: winreg.KEY_WOW64_64KEY}
     # Characters that make a key part a regex pattern; a lone "." is a plain dot, as in "R20.1".
     _PATTERN: re.Pattern[str] = re.compile(r"[*+?\[\]()|^$]")
+    # A hive, at least one key and the value name
+    _MIN_PARTS: int = 3
 
     @classmethod
     def read(cls, *, value: RegistryValue) -> str | None:
@@ -40,7 +44,7 @@ class WindowsRegistry:
         """
         parts: list[str] = value.value_path.split(sep="\\")
         hive: int | None = cls._HIVES.get(parts[0].upper())
-        if hive is None or len(parts) < 3:
+        if hive is None or len(parts) < cls._MIN_PARTS:
             return None
         views: tuple[int, ...] = (value.view,) if value.view is not None and value.view in cls._VIEWS else (64, 32)
         for view in views:
@@ -90,7 +94,7 @@ class WindowsRegistry:
         """
         try:
             with winreg.OpenKey(hive, key_path, 0, winreg.KEY_READ | cls._VIEWS[view]) as key:
-                text: object = winreg.QueryValueEx(key, name)[0]
+                text: object = cast("object", winreg.QueryValueEx(key, name)[0])
         except OSError:
             return None
         return text if isinstance(text, str) and text.strip() else None
@@ -105,7 +109,8 @@ class _Candidate:
 
 
 class GameFinder:
-    """Finds the games of the catalog installed on this computer.
+    """
+    Finds the games of the catalog installed on this computer.
 
     The registry is read first: a copy whose value leads to a folder holding its executable and files is found. Then
     the game folders are walked: a file named like a copy's executable, at the end of the same relative path, makes
@@ -113,7 +118,8 @@ class GameFinder:
 
     When several games match one file, the copy checked by the most files wins; a tie between games is ambiguous
     (a "launcher.exe" alone tells nothing) and none of them is taken. Microsoft Store copies are skipped: their
-    folder can't be read."""
+    folder can't be read.
+    """
 
     def __init__(
         self,

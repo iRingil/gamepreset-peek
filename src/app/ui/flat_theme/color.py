@@ -60,6 +60,8 @@ class Color:
     alpha: float
     hsla: _Hsla
 
+    # Bytes of a color with its alpha channel
+    _RGBA: ClassVar[int] = 4
     _HEX: ClassVar[re.Pattern[str]] = re.compile(r"#?(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{8})")
 
     @classmethod
@@ -74,7 +76,10 @@ class Color:
             raise ValueError(f"Not a #RRGGBB or #RRGGBBAA color: {text!r}")
         channels: bytes = bytes.fromhex(text.lstrip("#"))
         return cls.from_rgba(
-            red=channels[0], green=channels[1], blue=channels[2], alpha=channels[3] / 255 if len(channels) == 4 else 1
+            red=channels[0],
+            green=channels[1],
+            blue=channels[2],
+            alpha=channels[3] / 255 if len(channels) == cls._RGBA else 1,
         )
 
     @classmethod

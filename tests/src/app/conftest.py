@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Iterator
+from typing import cast
 
 import pytest
 from babel.messages.catalog import Catalog
@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QApplication
 
 from app.config import GETTEXT_DOMAIN, LOCALE_DIR, UI_LANGUAGES
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 @pytest.fixture(name="catalogs")
@@ -47,12 +47,12 @@ def _locale_dir(tmp_path: Path, catalogs: dict[str, Catalog]) -> Path:
 
 
 @pytest.fixture(name="qt_app", scope="session")
-def _qt_app() -> Iterator[QApplication]:
+def _qt_app() -> QApplication:
     """
     Create one Qt application for the session, drawing off-screen.
 
     :return: the application
     """
     os.environ["QT_QPA_PLATFORM"] = "offscreen"
-    application: QApplication = QApplication.instance() or QApplication([])  # type: ignore[assignment]
-    yield application
+    application: QApplication = cast("QApplication", QApplication.instance() or QApplication([]))
+    return application

@@ -2,6 +2,7 @@
 
 from functools import cache
 from pathlib import Path
+from typing import override
 
 from PySide6.QtCore import QByteArray, QEvent, QRectF, QSize, QSizeF, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPalette, QPixmap
@@ -118,7 +119,8 @@ class IconButton(QToolButton):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.redraw()
 
-    def changeEvent(self, event: QEvent) -> None:  # pylint: disable=invalid-name
+    @override
+    def changeEvent(self, event: QEvent) -> None:
         """
         Redraw the symbol when the palette changes, e.g. on a switch between the light and the dark theme.
 

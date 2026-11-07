@@ -3,9 +3,12 @@
 import ctypes
 import subprocess
 import sys
-from typing import Any
+from typing import TYPE_CHECKING, cast
 
 from loguru import logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 __all__: tuple[str, ...] = ("Elevation",)
 
@@ -25,7 +28,7 @@ class Elevation:
         :return: True when it does
         """
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
-        is_user_an_admin: Any = ctypes.WinDLL(name="shell32")["IsUserAnAdmin"]
+        is_user_an_admin: Callable[[], int] = cast("Callable[[], int]", ctypes.WinDLL(name="shell32")["IsUserAnAdmin"])
         return bool(is_user_an_admin())
 
     @classmethod
@@ -37,7 +40,9 @@ class Elevation:
         """
         parameters: str = subprocess.list2cmdline(sys.orig_argv[1:])
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
-        shell_execute: Any = ctypes.WinDLL(name="shell32")["ShellExecuteW"]
+        shell_execute: Callable[[None, str, str, str, None, int], int] = cast(
+            "Callable[[None, str, str, str, None, int], int]", ctypes.WinDLL(name="shell32")["ShellExecuteW"]
+        )
         result: int = shell_execute(None, "runas", sys.executable, parameters, None, cls._SHOW_NORMAL)
         if result <= cls._SUCCESS_ABOVE:
             logger.warning("Not started as administrator (ShellExecute {})", result)

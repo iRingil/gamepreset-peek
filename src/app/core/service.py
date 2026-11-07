@@ -1,11 +1,11 @@
 """Orchestration for the UI: games, installed games, the hardware to request presets with, settings of a preset."""
 
 from collections import OrderedDict
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from functools import cached_property, partial
 from pathlib import Path
-from typing import Callable, Sequence
 
 from loguru import logger
 
@@ -48,17 +48,19 @@ __all__: tuple[str, ...] = ("PresetService",)
 
 
 class PresetService:
-    """Answers the UI by chaining NVIDIA requests, the bundled data, hardware detection and the saved settings.
+    """
+    Answers the UI by chaining NVIDIA requests, the bundled data, hardware detection and the saved settings.
 
     Every method may block on the network, the disk or the registry, so the UI calls them from worker threads. The
     NVIDIA requests run in one thread, so the files of the last games shown are cached without a lock. The search for
     games, the database update and the settings saves run in threads of their own: the data in use is replaced as a
-    whole, and the settings store serializes its changes."""
+    whole, and the settings store serializes its changes.
+    """
 
     _CPU: str = "cpu"
     _GPU: str = "gpu"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - every data source is injected, so tests can replace it
         self,
         *,
         api: OpsApi,
@@ -68,7 +70,7 @@ class PresetService:
         store: UserSettingsStore,
         finder: GameFinder,
         covers: CoverCache,
-        now: Callable[[], datetime] = partial(datetime.now, tz=UTC),
+        now: Callable[[], datetime] | None = None,
     ) -> None:
         """
         Use the given data sources.
@@ -80,7 +82,7 @@ class PresetService:
         :param store: saved user settings
         :param finder: search for installed games
         :param covers: box art cache
-        :param now: gives the current moment, for the database update schedule
+        :param now: gives the current moment, for the database update schedule; the UTC clock when None
         """
         self._api: OpsApi = api
         self._database: AppDatabase = database
@@ -89,7 +91,7 @@ class PresetService:
         self._store: UserSettingsStore = store
         self._finder: GameFinder = finder
         self._covers: CoverCache = covers
-        self._now: Callable[[], datetime] = now
+        self._now: Callable[[], datetime] = now or partial(datetime.now, tz=UTC)
         self._files: OrderedDict[tuple[str, str, RemoteFile], GameSettings] = OrderedDict()
 
     def games(self) -> tuple[Game, ...]:

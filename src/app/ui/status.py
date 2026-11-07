@@ -1,7 +1,8 @@
 """Status lines of the main window: texts that translate themselves when shown, with how serious they are."""
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
+from typing import ClassVar
 
 import requests
 
@@ -26,7 +27,7 @@ class Status:
 class StatusTexts:
     """Makes the status lines; each one is translated with the translator in use at the time it is shown."""
 
-    _COMPONENTS: dict[str, UiText] = {
+    _COMPONENTS: ClassVar[dict[str, UiText]] = {
         "cpu": UiText.COMPONENT_CPU,
         "gpu": UiText.COMPONENT_GPU,
         "memory": UiText.COMPONENT_MEMORY,
@@ -34,7 +35,7 @@ class StatusTexts:
     }
 
     # A missing CPU and GPU together get one line of their own.
-    _MISSING: dict[tuple[str, ...], UiText] = {
+    _MISSING: ClassVar[dict[tuple[str, ...], UiText]] = {
         ("cpu",): UiText.CPU_NOT_DETECTED,
         ("gpu",): UiText.NO_NVIDIA_GPU,
     }

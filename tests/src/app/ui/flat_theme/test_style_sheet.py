@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of app.ui.flat_theme.style_sheet."""
 
 import re
@@ -10,7 +11,7 @@ from app.ui.flat_theme.color_map import ColorMap
 from app.ui.flat_theme.default_colors import DEFAULT_COLORS
 from app.ui.flat_theme.style_sheet import StyleSheet
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestStyleSheet:

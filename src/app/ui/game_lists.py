@@ -8,10 +8,12 @@ __all__: tuple[str, ...] = ("GameLists",)
 
 
 class GameLists:
-    """Keeps the game lists of both tabs and the game chosen in each tab, by identifier.
+    """
+    Keeps the game lists of both tabs and the game chosen in each tab, by identifier.
 
     A tab's game survives a new database and a new search for installed games while the tab's list still has it;
-    otherwise the first game of the list is chosen. An empty list keeps the identifier for when the game is back."""
+    otherwise the first game of the list is chosen. An empty list keeps the identifier for when the game is back.
+    """
 
     def __init__(self, *, choice: GameChoice) -> None:
         """

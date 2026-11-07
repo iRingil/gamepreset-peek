@@ -1,7 +1,8 @@
+# ruff: noqa: S101, SLF001
 """Tests of the entry point's handling of errors raised in Qt slots."""
 
+from collections.abc import Iterator
 from types import TracebackType
-from typing import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,7 +12,7 @@ from PySide6.QtWidgets import QApplication
 # noinspection PyProtectedMember
 from app.__main__ import _Application
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestLogUnhandled:
@@ -64,10 +65,11 @@ class TestLogUnhandled:
         # Arrange
         exc_type, exc_value, traceback = self._raised(error=ValueError("broken row"))
         # Act
-        _Application._log_unhandled(exc_type, exc_value, traceback)  # pylint: disable=protected-access
+        _Application._log_unhandled(exc_type, exc_value, traceback)
         # Assert
         assert len(records) == 1
-        assert records[0].startswith("ERROR Unhandled error in the window") and "ValueError: broken row" in records[0]
+        assert records[0].startswith("ERROR Unhandled error in the window")
+        assert "ValueError: broken row" in records[0]
         quit_app.assert_not_called()
 
     def test_interrupt_stops(self, records: list[str], quit_app: MagicMock) -> None:
@@ -81,7 +83,7 @@ class TestLogUnhandled:
         # Arrange
         exc_type, exc_value, traceback = self._raised(error=KeyboardInterrupt())
         # Act
-        _Application._log_unhandled(exc_type, exc_value, traceback)  # pylint: disable=protected-access
+        _Application._log_unhandled(exc_type, exc_value, traceback)
         # Assert
         assert records == ["INFO Interrupted\n\n"]
         quit_app.assert_called_once_with()

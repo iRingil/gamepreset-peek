@@ -4,9 +4,10 @@ import ctypes
 import re
 import sys
 import winreg
+from collections.abc import Callable, Mapping
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Mapping, Self
+from typing import Self, cast, final
 
 from loguru import logger
 
@@ -17,8 +18,12 @@ from app.core.models import Gpu
 __all__: tuple[str, ...] = ("CpuList", "GpuList", "GpuRanks", "HardwareDetector")
 
 
-class _MemoryStatus(ctypes.Structure):  # pylint: disable=too-few-public-methods
+@final
+class _MemoryStatus(ctypes.Structure):
     """MEMORYSTATUSEX of the Windows API."""
+
+    # Fields are created from _fields_ at run time; the ones the app reads are declared for type checkers
+    ullTotalPhys: int  # noqa: N815  # pyright: ignore[reportUninitializedInstanceVariable] - set from _fields_
 
     _fields_ = [
         ("dwLength", ctypes.c_ulong),
@@ -33,8 +38,13 @@ class _MemoryStatus(ctypes.Structure):  # pylint: disable=too-few-public-methods
     ]
 
 
-class _DisplayMode(ctypes.Structure):  # pylint: disable=too-few-public-methods
+@final
+class _DisplayMode(ctypes.Structure):
     """DEVMODEW of the Windows API, as far as the display fields; dmSize tells the API how much of it is filled."""
+
+    # Fields are created from _fields_ at run time; the ones the app reads are declared for type checkers
+    dmPelsWidth: int  # noqa: N815  # pyright: ignore[reportUninitializedInstanceVariable] - set from _fields_
+    dmPelsHeight: int  # noqa: N815  # pyright: ignore[reportUninitializedInstanceVariable] - set from _fields_
 
     _fields_ = [
         ("dmDeviceName", ctypes.c_wchar * 32),
@@ -63,13 +73,15 @@ class _DisplayMode(ctypes.Structure):  # pylint: disable=too-few-public-methods
 
 
 class HardwareDetector:
-    """Reads the hardware NVIDIA identifies a system by, and the screen resolution.
+    r"""
+    Reads the hardware NVIDIA identifies a system by, and the screen resolution.
 
-    GPUs come from HARDWARE\\DEVICEMAP\\VIDEO, which Windows rebuilds at boot with the active adapters only, so a
+    GPUs come from HARDWARE\DEVICEMAP\VIDEO, which Windows rebuilds at boot with the active adapters only, so a
     removed or disabled card left in the driver class key is never reported.
 
     A component that can't be read is logged and left out, or guessed for the memory size: the user can still choose
-    the others by hand."""
+    the others by hand.
+    """
 
     _CPU_KEY: str = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
     _VIDEO_MAP_KEY: str = r"HARDWARE\DEVICEMAP\VIDEO"
@@ -126,7 +138,9 @@ class HardwareDetector:
         """
         status: _MemoryStatus = _MemoryStatus(dwLength=ctypes.sizeof(_MemoryStatus))
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
-        global_memory_status: Any = ctypes.WinDLL(name="kernel32")["GlobalMemoryStatusEx"]
+        global_memory_status: Callable[[object], int] = cast(
+            "Callable[[object], int]", ctypes.WinDLL(name="kernel32")["GlobalMemoryStatusEx"]
+        )
         if not global_memory_status(ctypes.byref(status)):
             logger.warning("Memory size not detected ({!r}), assuming {} GB", ctypes.WinError(), DEFAULT_MEMORY_GB)
             return DEFAULT_MEMORY_GB
@@ -143,7 +157,9 @@ class HardwareDetector:
         """
         mode: _DisplayMode = _DisplayMode(dmSize=ctypes.sizeof(_DisplayMode))
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
-        enum_display_settings: Any = ctypes.WinDLL(name="user32")["EnumDisplaySettingsW"]
+        enum_display_settings: Callable[[None, int, object], int] = cast(
+            "Callable[[None, int, object], int]", ctypes.WinDLL(name="user32")["EnumDisplaySettingsW"]
+        )
         if not enum_display_settings(None, cls._CURRENT_SETTINGS, ctypes.byref(mode)) or not mode.dmPelsWidth:
             logger.warning("Screen resolution not detected")
             return None
@@ -158,8 +174,10 @@ class HardwareDetector:
 
         :return: major and minor version, e.g. "10.0"
         """
-        version: Any = sys.getwindowsversion()
-        text: str = f"{version.major}.{version.minor}"
+        major: int
+        minor: int
+        major, minor = sys.getwindowsversion()[:2]
+        text: str = f"{major}.{minor}"
         logger.info("Windows version: {}", text)
         return text
 
@@ -180,16 +198,20 @@ class HardwareDetector:
             index: int = 0
             while True:
                 try:
-                    name: str
-                    value: Any
-                    name, value, _ = winreg.EnumValue(key, index)
+                    entry: tuple[str, object, int] = winreg.EnumValue(key, index)
                 except OSError:
                     break
                 index += 1
-                if name.startswith(cls._VIDEO_DEVICE_PREFIX) and isinstance(value, str):
-                    # Values look like \Registry\Machine\System\CurrentControlSet\Control\Video\{guid}\0000.
-                    if value.lower().startswith(cls._MACHINE_PREFIX):
-                        paths.append(value[len(cls._MACHINE_PREFIX) :])
+                name: str
+                value: object
+                name, value, _ = entry
+                # Values look like \Registry\Machine\System\CurrentControlSet\Control\Video\{guid}\0000.
+                if (
+                    name.startswith(cls._VIDEO_DEVICE_PREFIX)
+                    and isinstance(value, str)
+                    and value.lower().startswith(cls._MACHINE_PREFIX)
+                ):
+                    paths.append(value[len(cls._MACHINE_PREFIX) :])
         return paths
 
     @classmethod
@@ -223,7 +245,7 @@ class HardwareDetector:
         :return: size in GiB to one decimal (7.996 -> 8.0), None when the driver doesn't report it
         """
         try:
-            value: Any = winreg.QueryValueEx(key, cls._VIDEO_MEMORY_VALUE)[0]
+            value: object = cast("object", winreg.QueryValueEx(key, cls._VIDEO_MEMORY_VALUE)[0])
         except OSError:
             return None
         if not isinstance(value, int) or value <= 0:
@@ -240,7 +262,7 @@ class HardwareDetector:
         :param name: value name
         :return: the value
         """
-        value: Any = winreg.QueryValueEx(key, name)[0]
+        value: object = cast("object", winreg.QueryValueEx(key, name)[0])
         if not isinstance(value, str):
             raise OSError(f"registry value {name} is not a string: {value!r}")
         return value
@@ -308,13 +330,15 @@ class GpuList:
 
 
 class GpuRanks:
-    """Rough performance scores of NVIDIA chips by device id: generation number plus the tier of the chip in it.
+    """
+    Rough performance scores of NVIDIA chips by device id: generation number plus the tier of the chip in it.
 
     A newer generation is about one chip tier faster, so the sum orders an RTX 3090 above an RTX 4060 and a GTX 780
     above a GT 1030. The bundled table covers the chips of the PCI ID database from Fermi on.
 
     A device id missing from it is guessed: newer than every known id means a generation after the newest known one,
-    otherwise a legacy chip; the tier comes from the last two digits of the model number in the name."""
+    otherwise a legacy chip; the tier comes from the last two digits of the model number in the name.
+    """
 
     _LEGACY_GENERATION: int = -1
     _NUMBER: re.Pattern[str] = re.compile(pattern=r"\d+")
@@ -372,5 +396,7 @@ class GpuRanks:
         :param name: GPU name
         :return: tier from 0 (entry level) to 4 (flagship)
         """
-        model: int = max((int(number) for number in cls._NUMBER.findall(string=name)), default=0)
+        # The pattern has no groups, so every match is the matched text
+        numbers: list[str] = cast("list[str]", cls._NUMBER.findall(string=name))
+        model: int = max((int(number) for number in numbers), default=0)
         return next((tier for lowest, tier in cls._NAME_TIERS if model % 100 >= lowest), 0.0)

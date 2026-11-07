@@ -1,3 +1,4 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the service the UI calls."""
 
 from dataclasses import replace
@@ -7,6 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.config import DEFAULT_GAME_FOLDERS, GAME_FILES_CACHED, SCREEN_RESOLUTIONS
 from app.core.database import AppData
 from app.core.game_catalog import GameCatalog
 from app.core.hardware import CpuList, GpuList, GpuRanks
@@ -35,14 +37,13 @@ from app.core.models import (
     Translations,
     UserSettings,
 )
-from app.config import DEFAULT_GAME_FOLDERS, GAME_FILES_CACHED, SCREEN_RESOLUTIONS
 from app.core.ops_api import OpsFormatError
 from app.core.service import PresetService
 from app.core.user_settings import UserSettingsStore
 from tests.src.app.core.conftest import CHECKED_MANIFEST
 from tests.src.app.core.hardware_fakes import DETECTED_CPU, FakeHardware
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 # The moment the clock fixture gives, the scheduled check of its week and the next one.
 _FRIDAY: datetime = datetime(year=2026, month=10, day=23, hour=10, tzinfo=UTC)
@@ -270,8 +271,9 @@ class TestDatabaseUpdate:
             "at the next check in New York, still Sunday there",
         ],
     )
-    def test_due(  # pylint: disable=too-many-arguments
+    def test_due(  # noqa: PLR0913 - pytest passes every fixture and parameter by name
         self,
+        *,
         database: MagicMock,
         store: UserSettingsStore,
         service: PresetService,
@@ -310,8 +312,9 @@ class TestDatabaseUpdate:
         ],
         ids=["this week's check", "check not published yet"],
     )
-    def test_manifest_checked(  # pylint: disable=too-many-arguments
+    def test_manifest_checked(  # noqa: PLR0913 - pytest passes every fixture and parameter by name
         self,
+        *,
         database: MagicMock,
         store: UserSettingsStore,
         service: PresetService,
@@ -327,7 +330,7 @@ class TestDatabaseUpdate:
         :param service: service under test
         :param checked: check time in the manifest
         :param result: expected outcome
-        :param saved: expected settings Вafterwards
+        :param saved: expected settings afterwards
         :return: None
         """
         # Arrange
@@ -337,16 +340,13 @@ class TestDatabaseUpdate:
         # Assert
         assert (outcome, store.load(), database.download.called) == (result, saved, result is DatabaseUpdate.UNCHANGED)
 
-    def test_new_database_loaded(
-        self, database: MagicMock, store: UserSettingsStore, service: PresetService, ops: MagicMock
-    ) -> None:
+    def test_new_database_loaded(self, database: MagicMock, store: UserSettingsStore, service: PresetService) -> None:
         """
         Reads the lists again from a new database, keeping the other settings when recording the check time.
 
         :param database: database mock
         :param store: settings store
         :param service: service under test
-        :param ops: NVIDIA endpoints mock
         :return: None
         """
         # Arrange
@@ -516,7 +516,8 @@ class TestHardwareSetup:
         setup: HardwareSetup = service.hardware_setup()
         # Assert
         assert setup.choice == HardwareChoice(cpu_name=_LISTED_CPU, gpu=_LAPTOP_GPU)
-        assert setup.choice.gpu is not None and setup.choice.gpu.memory_gb == 8.0
+        assert setup.choice.gpu is not None
+        assert setup.choice.gpu.memory_gb == 8.0
         assert setup.resolution == "1920x1080"
 
     def test_detected_once(self, ops: MagicMock, detector: MagicMock, service: PresetService) -> None:

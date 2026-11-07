@@ -1,10 +1,11 @@
+# ruff: noqa: S101
 """Tests of app.ui.flat_theme.color."""
 
 import pytest
 
 from app.ui.flat_theme.color import Color
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestColor:

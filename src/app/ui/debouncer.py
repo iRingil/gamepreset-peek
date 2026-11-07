@@ -1,13 +1,14 @@
 """Delayed calls in the UI thread: an action scheduled under a key replaces the one still waiting under that key."""
 
-from typing import Callable, Protocol
+from collections.abc import Callable
+from typing import Protocol
 
 from PySide6.QtCore import QObject, QTimer
 
 __all__: tuple[str, ...] = ("Debouncer", "QtDebouncer")
 
 
-class Debouncer(Protocol):  # pylint: disable=too-few-public-methods
+class Debouncer(Protocol):
     """Runs an action once a delay has passed without another call under the same key."""
 
     def call(self, *, key: str, delay_ms: int, action: Callable[[], None]) -> None:

@@ -1,6 +1,7 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the CPU, GPU and resolution drop-down choice."""
 
-from typing import Iterator
+from collections.abc import Iterator
 
 import pytest
 from PySide6.QtCore import QRect, Qt
@@ -11,7 +12,7 @@ from PySide6.QtWidgets import QApplication, QLineEdit, QListWidget, QListWidgetI
 from app.ui.choice_popup import ChoicePopup
 from app.ui.views import ChoiceGroup, ChoiceView
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _DETECTED: str = "13th Gen Intel(R) Core(TM) i9-13900HX"
 _AMD: tuple[str, ...] = (
@@ -162,7 +163,9 @@ class TestChoicePopup:
             list(_INTEL),
         )
         assert popup.titles() == ["AMD", "Intel"]
-        assert tabs is not None and tabs.currentWidget() is amd and amd.currentRow() == 1
+        assert tabs is not None
+        assert tabs.currentWidget() is amd
+        assert amd.currentRow() == 1
 
     def test_detected_mark(self, popup: _Popup) -> None:
         """
@@ -303,7 +306,9 @@ class TestChoicePopup:
         popup: _Popup = _Popup(qt_app=qt_app, choice=choice)
         # Assert
         tabs: QTabWidget | None = popup.tabs
-        assert tabs is not None and tabs.currentIndex() == 1 and popup.lists()[2].currentRow() == 2
+        assert tabs is not None
+        assert tabs.currentIndex() == 1
+        assert popup.lists()[2].currentRow() == 2
         popup.widget.close()
 
     def test_single_group_without_tabs(self, qt_app: QApplication) -> None:
@@ -415,7 +420,9 @@ class TestChoicePopup:
         tabs: QTabWidget | None = popup.tabs
         intel: QListWidget = popup.lists()[2]
         assert popup.titles() == ["AMD (0)", "Intel (1)"]
-        assert tabs is not None and tabs.currentWidget() is intel and intel.currentRow() == 1
+        assert tabs is not None
+        assert tabs.currentWidget() is intel
+        assert intel.currentRow() == 1
 
     def test_no_match(self, popup: _Popup) -> None:
         """
@@ -431,7 +438,9 @@ class TestChoicePopup:
         # Assert
         tabs: QTabWidget | None = popup.tabs
         assert popup.titles() == ["AMD (0)", "Intel (0)"]
-        assert tabs is not None and tabs.currentIndex() == 0 and popup.picked == []
+        assert tabs is not None
+        assert tabs.currentIndex() == 0
+        assert popup.picked == []
 
     def test_search_cleared(self, popup: _Popup) -> None:
         """

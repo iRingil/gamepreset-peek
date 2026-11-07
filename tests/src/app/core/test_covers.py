@@ -1,7 +1,9 @@
+# ruff: noqa: S101
 """Tests of the box art cache."""
 
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import pytest
 import responses
@@ -10,7 +12,7 @@ from app.config import COVER_WIDTH, NV_GAME_ART_URL
 from app.core.covers import CoverCache
 from app.infra.http_client import HttpClient, HttpClientError
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _URL: str = "https://img.example.test/apps/1/GAME_BOX_ART_01_a.jpg"
 _CURRENT: str = "https://img.example.test/apps/1/GAME_BOX_ART_01_b.jpg"

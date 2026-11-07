@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the game lists of both tabs and the game chosen in each tab."""
 
 from pathlib import Path
@@ -7,7 +8,7 @@ import pytest
 from app.core.models import Game, GameChoice, GamesTab, InstalledGame
 from app.ui.game_lists import GameLists
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _BG3: Game = Game(game_id="baldurs_gate_3", name="Baldur's Gate 3")
 _MORDHAU: Game = Game(game_id="mordhau", name="MORDHAU")

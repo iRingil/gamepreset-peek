@@ -1,6 +1,8 @@
 """The drop-down settings menu: theme buttons, the language list with flags and the database update switch."""
 
-from typing import Callable
+from collections.abc import Callable
+from functools import partial
+from typing import ClassVar
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtWidgets import QButtonGroup, QCheckBox, QComboBox, QFrame, QGridLayout, QHBoxLayout, QLabel, QWidget
@@ -20,19 +22,21 @@ _LANGUAGE_CODE_LENGTH: int = 2
 
 
 class SettingsMenu(QFrame):
-    """A popup under the settings button; a click outside closes it, a language pick too.
+    """
+    A popup under the settings button; a click outside closes it, a language pick too.
 
     The theme is one of three symbol buttons, the language a list of flags with language codes, the automatic
-    database update a checkbox."""
+    database update a checkbox.
+    """
 
     # Theme modes in menu order with the symbol and the tooltip of each.
-    _THEMES: dict[ThemeMode, tuple[str, UiText]] = {
+    _THEMES: ClassVar[dict[ThemeMode, tuple[str, UiText]]] = {
         ThemeMode.AUTO: ("sun-moon", UiText.THEME_AUTO),
         ThemeMode.DARK: ("moon", UiText.THEME_DARK),
         ThemeMode.LIGHT: ("sun", UiText.THEME_LIGHT),
     }
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(  # noqa: PLR0913 - every callback of the view is passed in, so the presenter and tests can wire it
         self,
         *,
         parent: QWidget,
@@ -106,8 +110,20 @@ class SettingsMenu(QFrame):
             button.setToolTip(translator.text(item=hint))
             group.addButton(button, position)
             row.addWidget(button)
-        group.idClicked.connect(lambda clicked: on_theme(modes[int(clicked)]))
+        group.idClicked.connect(partial(self._pick_theme, modes=modes, on_theme=on_theme))
         return row
+
+    @staticmethod
+    def _pick_theme(clicked: int, *, modes: list[ThemeMode], on_theme: Callable[[ThemeMode], None]) -> None:
+        """
+        Pass the theme of a clicked button on.
+
+        :param clicked: position of the button
+        :param modes: themes in the order of the buttons
+        :param on_theme: called with the theme the user picks
+        :return: None
+        """
+        on_theme(modes[clicked])
 
     def _pick_language(self, position: int) -> None:
         """

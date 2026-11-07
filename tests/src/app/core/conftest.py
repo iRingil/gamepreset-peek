@@ -1,15 +1,15 @@
 """Fixtures shared by the core tests."""
 
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator
 from unittest.mock import MagicMock, create_autospec
 
 import pytest
 import responses
 
-from app.core.database import AppData, AppDatabase, DatabaseManifest
 from app.core.covers import CoverCache
+from app.core.database import AppData, AppDatabase, DatabaseManifest
 from app.core.game_catalog import GameCatalog
 from app.core.game_finder import GameFinder
 from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
@@ -110,8 +110,9 @@ def _data() -> AppData:
 @pytest.fixture(name="database")
 def _database(data: AppData) -> MagicMock:
     """
-    Stand in for the database file whose manifest tells of this week's check, whose download changes nothing and whose
-    load gives the same contents.
+    Stand in for the database file: its manifest tells of this week's check, its download changes nothing.
+
+    Its load gives the same contents.
 
     :param data: database contents
     :return: mock with the interface of AppDatabase
@@ -156,7 +157,8 @@ def _covers() -> MagicMock:
 
 
 @pytest.fixture(name="service")
-def _service(
+def _service(  # noqa: PLR0913 - pytest passes every fixture and parameter by name
+    *,
     ops: MagicMock,
     database: MagicMock,
     data: AppData,

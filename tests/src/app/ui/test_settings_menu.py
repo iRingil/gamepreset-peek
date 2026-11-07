@@ -1,7 +1,8 @@
+# ruff: noqa: S101
 """Tests of the settings menu: what it shows and which callbacks the user's picks make."""
 
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -14,7 +15,7 @@ from app.i18n.translator import Translator
 from app.ui.icons import IconButton
 from app.ui.settings_menu import SettingsMenu
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class _Menu:
@@ -168,4 +169,4 @@ class TestSettingsMenu:
         # Arrange & Act
         menu.update().click()
         # Assert
-        menu.on_auto_update.assert_called_once_with(False)
+        menu.on_auto_update.assert_called_once_with(False)  # noqa: FBT003 - as Qt passes it

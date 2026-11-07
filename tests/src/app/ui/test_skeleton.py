@@ -1,14 +1,19 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the skeletons shown in place of content that is not there yet."""
 
-from PySide6.QtCore import QRectF
-from PySide6.QtGui import QImage
+from typing import TYPE_CHECKING
+
 from PySide6.QtWidgets import QApplication
 
 # noinspection PyProtectedMember
 from app.ui.skeleton import _ROW, _TABLE_HEADER, _TABLE_ROW, _TABLE_TOP, ListSkeleton, SettingsSkeleton, Skeleton
 from app.ui.typography import Typography
 
-__all__: tuple = ()
+if TYPE_CHECKING:
+    from PySide6.QtCore import QRectF
+    from PySide6.QtGui import QImage
+
+__all__: tuple[str, ...] = ()
 
 
 class TestSkeleton:
@@ -50,7 +55,7 @@ class TestSkeleton:
         shapes: tuple[list[QRectF], list[QRectF]] = (plain.shapes(), with_icons.shapes())
         # Assert
         assert (len(shapes[0]), len(shapes[1])) == (5, 10)
-        assert all(0 <= shape.left() and shape.right() <= 300 for shape in shapes[0] + shapes[1])
+        assert all(shape.left() >= 0 and shape.right() <= 300 for shape in shapes[0] + shapes[1])
         qt_app.processEvents()
 
     def test_settings_layout(self, qt_app: QApplication) -> None:
@@ -71,6 +76,6 @@ class TestSkeleton:
         skeleton.set_active(active=False)
         # Assert
         assert len(shapes) == 6 + 3 * 2
-        assert all(0 <= shape.left() and shape.right() <= 600 and shape.bottom() <= height for shape in shapes)
+        assert all(shape.left() >= 0 and shape.right() <= 600 and shape.bottom() <= height for shape in shapes)
         assert not image.isNull()
         qt_app.processEvents()

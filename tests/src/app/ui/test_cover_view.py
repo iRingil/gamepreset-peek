@@ -1,7 +1,8 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the box art view: picture, placeholder and skeleton."""
 
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 from PySide6.QtCore import QPoint
@@ -10,7 +11,7 @@ from PySide6.QtWidgets import QApplication
 
 from app.ui.cover_view import CoverView
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _RED: QColor = QColor("#ff0000")
 
@@ -114,7 +115,7 @@ class TestCoverView:
         assert image.pixelColor(QPoint(cover.width() // 2, cover.height() // 2)).blue() > 240
 
     @pytest.mark.parametrize(argnames="broken", argvalues=[False, True], ids=["no picture", "broken file"])
-    def test_placeholder(self, tmp_path: Path, cover: CoverView, broken: bool) -> None:
+    def test_placeholder(self, *, tmp_path: Path, cover: CoverView, broken: bool) -> None:
         """
         Draws the placeholder for a game without a picture, or for a file that is not a picture.
 
@@ -136,7 +137,7 @@ class TestCoverView:
         assert (cover.picture, cover.placeholder) == (None, True)
 
     @pytest.mark.parametrize(argnames="loading", argvalues=[True, False], ids=["loading", "no game"])
-    def test_cleared(self, cover: CoverView, picture: Path, loading: bool) -> None:
+    def test_cleared(self, *, cover: CoverView, picture: Path, loading: bool) -> None:
         """
         Drops the picture for the skeleton, moving only while a picture loads.
 

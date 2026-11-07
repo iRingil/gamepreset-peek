@@ -1,7 +1,7 @@
 """UI logic of the game tabs: both game lists, the search, the folders searched for installed games and box art."""
 
+from collections.abc import Callable
 from pathlib import Path, PureWindowsPath
-from typing import Callable
 
 from loguru import logger
 
@@ -20,20 +20,22 @@ __all__: tuple[str, ...] = ("GamesPresenter",)
 
 
 class GamesPresenter:
-    """Drives the game tabs and tells the owner which game is chosen; box art follows the chosen game.
+    """
+    Drives the game tabs and tells the owner which game is chosen; box art follows the chosen game.
 
     Installed games are searched for in a runner of their own, so a long search never holds up the presets; a search
     asked for while one runs starts again once it ends. The icons of the executables come with the search, so the
     list shows them at once.
 
     Each game tab has a game of its own: the game of the tab in use is the chosen one. The tab and both games are saved
-    whenever they change, the first game of a list being chosen when the saved one is not there."""
+    whenever they change, the first game of a list being chosen when the saved one is not there.
+    """
 
     # Debouncer keys.
     _SEARCH: str = "search"
     _COVER: str = "cover"
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - the services, views and runners are injected, so tests can replace them
         self,
         *,
         view: MainView,
@@ -309,7 +311,7 @@ class GamesPresenter:
         others: tuple[str, ...] = self._folders[:position] + self._folders[after:]
         if normalized.casefold() in (item.casefold() for item in others):
             return
-        self._set_folders(folders=self._folders[:position] + (normalized,) + self._folders[after:])
+        self._set_folders(folders=(*self._folders[:position], normalized, *self._folders[after:]))
 
     def _set_folders(self, *, folders: tuple[str, ...]) -> None:
         """

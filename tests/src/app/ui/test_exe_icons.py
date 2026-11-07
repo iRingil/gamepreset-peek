@@ -1,3 +1,4 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the icons of executables kept in the cache."""
 
 import ctypes
@@ -9,7 +10,7 @@ from PySide6.QtGui import QImage
 
 from app.ui.exe_icons import ExeIcons
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestExeIcons:
@@ -27,7 +28,8 @@ class TestExeIcons:
         # Act
         path: Path | None = icons.get(executable=Path(sys.executable))
         # Assert
-        assert path is not None and path.parent == tmp_path / "icons"
+        assert path is not None
+        assert path.parent == tmp_path / "icons"
         assert QImage(str(path)).size().width() == 48
 
     def test_kept(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -41,11 +43,12 @@ class TestExeIcons:
         # Arrange
         icons: ExeIcons = ExeIcons(folder=tmp_path)
         first: Path | None = icons.get(executable=Path(sys.executable))
-        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda name: pytest.fail(reason="icon read again"))
+        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda **_: pytest.fail(reason="icon read again"))
         # Act
         second: Path | None = icons.get(executable=Path(sys.executable.upper()))
         # Assert
-        assert first is not None and second == first
+        assert first is not None
+        assert second == first
 
     def test_no_icon(self, tmp_path: Path) -> None:
         """

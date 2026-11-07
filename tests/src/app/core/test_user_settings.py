@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the saved user settings."""
 
 import threading
@@ -10,7 +11,7 @@ import pytest
 from app.core.models import GameChoice, GamesTab, Gpu, ThemeMode, UserSettings
 from app.core.user_settings import UserSettingsStore
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestUserSettingsStore:

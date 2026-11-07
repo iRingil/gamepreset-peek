@@ -1,6 +1,7 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the quality slider drawn as a broken track with a stop per preset."""
 
-from typing import Iterator
+from collections.abc import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,7 +14,7 @@ from PySide6.QtWidgets import QApplication
 from app.ui.preset_slider import _FOCUS, _HANDLE, _MARK, _TRACK, PresetSlider
 from app.ui.typography import Typography
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _WIDTH: int = 424
 

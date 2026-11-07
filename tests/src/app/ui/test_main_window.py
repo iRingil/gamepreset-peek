@@ -1,9 +1,10 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the main window: what the presenter's calls show and which presenter calls the user's actions make."""
 
+from collections.abc import Iterator
 from dataclasses import replace
 from pathlib import Path
 from queue import Queue
-from typing import Iterator
 from unittest.mock import MagicMock, create_autospec
 
 import pytest
@@ -38,14 +39,14 @@ from app.ui.icons import IconButton
 from app.ui.log_panel import LogPanel
 from app.ui.main_window import MainWindow
 from app.ui.notice import Notice
-from app.ui.preset_slider import PresetSlider
 from app.ui.presenter import Presenter
+from app.ui.preset_slider import PresetSlider
 from app.ui.settings_menu import SettingsMenu
 from app.ui.skeleton import SettingsSkeleton
 from app.ui.theme import Theme
 from app.ui.views import ChoiceGroup, ChoiceView, HardwareView, InstalledGameView, SettingRow, SettingsView, StatusLevel
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _SETTINGS: SettingsView = SettingsView(
     title="Baldur's Gate 3",
@@ -308,7 +309,8 @@ class TestMainWindow:
         if search is not None:
             search.returnPressed.emit()
         # Assert
-        assert search is not None and search.placeholderText() == "Search"
+        assert search is not None
+        assert search.placeholderText() == "Search"
         window.presenter.choose_gpu.assert_called_once_with(position=1)
 
     def test_offer_cpus_picks_cpu(self, window: _Window) -> None:
@@ -476,9 +478,8 @@ class TestMainWindow:
             True,
             False,
         )
-        assert option.font.bold() and option.palette.color(QPalette.ColorRole.Text) == option.palette.color(
-            QPalette.ColorRole.Link
-        )
+        assert option.font.bold()
+        assert option.palette.color(QPalette.ColorRole.Text) == option.palette.color(QPalette.ColorRole.Link)
         window.presenter.move_slider.assert_called_once_with(index=3)
 
     def test_hints(self, window: _Window) -> None:
@@ -533,7 +534,7 @@ class TestMainWindow:
         assert not option.font.bold()
 
     @pytest.mark.parametrize(argnames="loading", argvalues=[True, False], ids=["loading", "nothing to wait for"])
-    def test_settings_cleared(self, window: _Window, loading: bool) -> None:
+    def test_settings_cleared(self, *, window: _Window, loading: bool) -> None:
         """
         Shows the skeleton in place of the table, the slider and the title, moving only while settings load.
 
@@ -673,7 +674,8 @@ class TestMainWindow:
         size: QSize = window.widget.size()
         # Assert
         assert window.widget.minimumSize() == QSize(1040, 520)
-        assert size.width() <= max(screen.width(), 1040) and size.height() <= max(screen.height(), 520)
+        assert size.width() <= max(screen.width(), 1040)
+        assert size.height() <= max(screen.height(), 520)
 
     def test_status(self, window: _Window) -> None:
         """
@@ -741,11 +743,11 @@ class TestMainWindow:
         # Assert
         assert (shown, button.text()) == ("Hide logs", "Show logs")
 
-    def test_no_logs_without_lines(self, qt_app: QApplication, translator: Translator) -> None:
+    @pytest.mark.usefixtures("qt_app")
+    def test_no_logs_without_lines(self, translator: Translator) -> None:
         """
         Has neither the log panel nor its button when the window gets no log lines, as in a release.
 
-        :param qt_app: Qt application
         :param translator: English translator
         :return: None
         """

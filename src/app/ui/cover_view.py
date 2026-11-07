@@ -1,6 +1,7 @@
 """The box art of the chosen game, a skeleton while it loads and a placeholder when the game has none."""
 
 from pathlib import Path
+from typing import override
 
 from PySide6.QtCore import QRectF, QSize, Qt
 from PySide6.QtGui import QIcon, QPainter, QPainterPath, QPaintEvent, QPalette, QPixmap
@@ -80,6 +81,7 @@ class CoverView(Skeleton):
         self._scaled = None
         self.set_active(active=loading)
 
+    @override
     def shapes(self) -> list[QRectF]:
         """
         Fill the whole cover with one shape.
@@ -88,7 +90,8 @@ class CoverView(Skeleton):
         """
         return [QRectF(self.rect())]
 
-    def paintEvent(self, event: QPaintEvent) -> None:  # pylint: disable=invalid-name
+    @override
+    def paintEvent(self, event: QPaintEvent) -> None:
         """
         Draw the picture cut to rounded corners, the placeholder, or the skeleton.
 

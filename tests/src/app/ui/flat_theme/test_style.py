@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of app.ui.flat_theme.style."""
 
 from PySide6.QtCore import QSize
@@ -6,7 +7,7 @@ from PySide6.QtWidgets import QApplication, QStyle
 
 from app.ui.flat_theme.style import FlatStyle
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestFlatStyle:

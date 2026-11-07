@@ -1,3 +1,4 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the icons drawn from the bundled SVG files and of the button showing one."""
 
 from PySide6.QtCore import QSize
@@ -8,7 +9,7 @@ from app.config import UI_LANGUAGES
 from app.ui.icons import ICON_SIZE, IconButton, Icons
 from app.ui.typography import Typography
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _RED: QColor = QColor("#ff0000")
 _SIZE: int = 32

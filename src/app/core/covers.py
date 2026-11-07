@@ -1,25 +1,25 @@
 """Box art of the games, downloaded once into a disk cache."""
 
 import hashlib
-import os
 from pathlib import Path
-from typing import Any
 
 from loguru import logger
 
 from app.config import COVER_WIDTH, COVERS_DIR, NV_GAME_ART_URL
-from app.infra.http_client import HttpClient, HttpClientError
+from app.infra.http_client import HttpClient, HttpClientError, JsonValue
 
 __all__: tuple[str, ...] = ("CoverCache",)
 
 
 class CoverCache:
-    """Keeps the box art of each game as a file named after its URL, so a new picture of a game gets a new file.
+    """
+    Keeps the box art of each game as a file named after its URL, so a new picture of a game gets a new file.
 
     A URL the image server no longer answers is looked up again by the game's application id; the picture of the
     current URL is kept under the old URL's name, where it is found until a database update brings the new URL.
 
-    A file is written beside its place and renamed into it, so a broken download never leaves a half picture."""
+    A file is written beside its place and renamed into it, so a broken download never leaves a half picture.
+    """
 
     def __init__(self, *, http: HttpClient, folder: Path = COVERS_DIR) -> None:
         """
@@ -49,7 +49,7 @@ class CoverCache:
         self._folder.mkdir(parents=True, exist_ok=True)
         temp: Path = path.with_suffix(".download")
         temp.write_bytes(data=body)
-        os.replace(src=temp, dst=path)
+        temp.replace(target=path)
         logger.debug("Cached the cover {} as {}", url, path)
         return path
 
@@ -92,13 +92,13 @@ class CoverCache:
             f'{{ apps(vpcId: "NP-AMS-08", language: "en_US", appIds: ["{app_id}"]) '
             "{ items { id images { GAME_BOX_ART } } } }"
         )
-        answer: Any = self._http.get_json(url=NV_GAME_ART_URL, params={"query": query})
-        data: Any = answer.get("data") if isinstance(answer, dict) else None
-        apps: Any = data.get("apps") if isinstance(data, dict) else None
-        items: Any = apps.get("items") if isinstance(apps, dict) else None
+        answer: JsonValue = self._http.get_json(url=NV_GAME_ART_URL, params={"query": query})
+        data: JsonValue = answer.get("data") if isinstance(answer, dict) else None
+        apps: JsonValue = data.get("apps") if isinstance(data, dict) else None
+        items: JsonValue = apps.get("items") if isinstance(apps, dict) else None
         for item in items if isinstance(items, list) else []:
-            images: Any = item.get("images") if isinstance(item, dict) and item.get("id") == app_id else None
-            url: Any = images.get("GAME_BOX_ART") if isinstance(images, dict) else None
+            images: JsonValue = item.get("images") if isinstance(item, dict) and item.get("id") == app_id else None
+            url: JsonValue = images.get("GAME_BOX_ART") if isinstance(images, dict) else None
             if isinstance(url, str) and url:
                 return url
         logger.info("No current box art for application {}", app_id)

@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of app.ui.flat_theme."""
 
 import ast
@@ -7,7 +8,7 @@ from pathlib import Path
 
 import app.ui.flat_theme
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestPackage:

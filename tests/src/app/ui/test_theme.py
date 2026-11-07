@@ -1,6 +1,7 @@
+# ruff: noqa: S101
 """Tests of app.ui.theme."""
 
-from typing import Iterator
+from collections.abc import Iterator
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,7 +13,7 @@ from app.core.models import ThemeMode
 from app.ui.theme import Theme
 from app.ui.views import StatusLevel
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestTheme:

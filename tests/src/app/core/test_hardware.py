@@ -1,3 +1,4 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the hardware detection."""
 
 import ctypes
@@ -14,7 +15,7 @@ from app.core.hardware import CpuList, GpuList, GpuRanks, HardwareDetector
 from app.core.models import Gpu
 from tests.src.app.core.db_files import DbFiles
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _VIDEO_MAP: str = r"hardware\devicemap\video"
 _CPU: str = r"hardware\description\system\centralprocessor\0"
@@ -75,12 +76,11 @@ class _FakeRegistry:
         monkeypatch.setattr(target=winreg, name="EnumValue", value=self.enum_value)
         monkeypatch.setattr(target=winreg, name="QueryValueEx", value=self.query_value)
 
-    # noinspection PyUnusedLocal
-    def open_key(self, root: int, path: str) -> _FakeKey:
+    def open_key(self, _root: int, path: str) -> _FakeKey:
         """
         Open a key like winreg.OpenKey.
 
-        :param root: predefined root key, ignored
+        :param _root: predefined root key, ignored
         :param path: key path
         :return: the key
         """
@@ -270,7 +270,7 @@ class TestHardwareDetector:
         :return: None
         """
         # Arrange
-        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda name: {"GlobalMemoryStatusEx": lambda *_: 0})
+        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda **_: {"GlobalMemoryStatusEx": lambda *_: 0})
         # Act
         size: int = HardwareDetector.memory_gb()
         # Assert
@@ -307,7 +307,8 @@ class TestHardwareDetector:
         # Arrange & Act
         resolution: str | None = HardwareDetector.screen_resolution()
         # Assert
-        assert resolution is not None and re.fullmatch(pattern=r"[1-9]\d+x[1-9]\d+", string=resolution)
+        assert resolution is not None
+        assert re.fullmatch(pattern=r"[1-9]\d+x[1-9]\d+", string=resolution)
 
     def test_screen_not_detected(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """
@@ -317,7 +318,7 @@ class TestHardwareDetector:
         :return: None
         """
         # Arrange
-        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda name: {"EnumDisplaySettingsW": lambda *_: 0})
+        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda **_: {"EnumDisplaySettingsW": lambda *_: 0})
         # Act
         resolution: str | None = HardwareDetector.screen_resolution()
         # Assert
@@ -376,7 +377,8 @@ class TestCpuList:
         # Arrange & Act
         cpu_list: CpuList = CpuList.load(path=APP_DB)
         # Assert
-        assert cpu_list.amd and cpu_list.intel
+        assert cpu_list.amd
+        assert cpu_list.intel
         assert "13th Gen Intel(R) Core(TM) i9-13900HX" in cpu_list.intel
 
 

@@ -1,3 +1,4 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the game tabs logic, driven through the presenter that owns it, on the fakes."""
 
 from pathlib import Path
@@ -12,16 +13,16 @@ from tests.src.app.ui.presenter_fakes import (
     BG3_EXE,
     COVER,
     FOLDERS,
+    GAMES,
+    INSTALLED,
+    SHOWN,
     FakeDebouncer,
     FakeRunner,
     FakeView,
-    GAMES,
-    INSTALLED,
     PresenterTests,
-    SHOWN,
 )
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestSearch(PresenterTests):
@@ -229,7 +230,8 @@ class TestInstalledGames(PresenterTests):
         presenter.games.select_installed_game(index=1)
         # Assert
         assert service.game_presets.call_args.kwargs["game_id"] == "mordhau"
-        assert view.settings is not None and view.settings.title == "MORDHAU"
+        assert view.settings is not None
+        assert view.settings.title == "MORDHAU"
 
     def test_game_per_tab(self, presenter: Presenter, view: FakeView) -> None:
         """
@@ -286,7 +288,8 @@ class TestGameChoice(PresenterTests):
         # Assert
         assert view.tab is GamesTab.INSTALLED
         assert (view.game_selected, view.installed_selected) == (0, 0)
-        assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
+        assert view.settings is not None
+        assert view.settings.title == "Baldur's Gate 3"
         service.save_game_choice.assert_called_with(
             choice=GameChoice(
                 tab=GamesTab.INSTALLED, installed_game_id="baldurs_gate_3", catalog_game_id="baldurs_gate_3"
@@ -390,7 +393,8 @@ class TestGameChoice(PresenterTests):
         presenter.games.find_games()
         # Assert
         assert view.installed_selected == 0
-        assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
+        assert view.settings is not None
+        assert view.settings.title == "Baldur's Gate 3"
         assert service.save_game_choice.call_args.kwargs["choice"].installed_game_id == "baldurs_gate_3"
 
 
@@ -455,8 +459,9 @@ class TestFolders(PresenterTests):
             "negative",
         ],
     )
-    def test_changed(  # pylint: disable=too-many-arguments
+    def test_changed(  # noqa: PLR0913 - pytest passes every fixture and parameter by name
         self,
+        *,
         presenter: Presenter,
         view: FakeView,
         service: MagicMock,

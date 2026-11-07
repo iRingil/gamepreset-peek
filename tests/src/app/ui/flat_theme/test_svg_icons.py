@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of app.ui.flat_theme.svg_icons."""
 
 from pathlib import Path
@@ -5,7 +6,7 @@ from pathlib import Path
 from app.ui.flat_theme.color import Color
 from app.ui.flat_theme.svg_icons import SvgIcons
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestSvgIcons:

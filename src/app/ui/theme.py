@@ -1,5 +1,7 @@
 """Light and dark mode of the window: the flat theme in the app's colors."""
 
+from typing import ClassVar
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QLabel
@@ -25,7 +27,7 @@ QLabel[muted="true"] {color: {{foreground|color(state="input.placeholder")}}}
 class Theme:
     """Applies the flat theme in the app's colors; with AUTO it follows the Windows app mode, also when it changes."""
 
-    _SCHEMES: dict[ThemeMode, Qt.ColorScheme] = {
+    _SCHEMES: ClassVar[dict[ThemeMode, Qt.ColorScheme]] = {
         ThemeMode.AUTO: Qt.ColorScheme.Unknown,
         ThemeMode.LIGHT: Qt.ColorScheme.Light,
         ThemeMode.DARK: Qt.ColorScheme.Dark,
@@ -33,7 +35,7 @@ class Theme:
 
     # The theme's own light palette is near white with gray text and faint borders: a steel window holds lighter
     # lists and tables, with near-black text and one teal-blue accent (links, slider, selection).
-    _LIGHT_COLORS: dict[str, str] = {
+    _LIGHT_COLORS: ClassVar[dict[str, str]] = {
         "background": "#d9e0e8",
         "background>list": "#f7f9fb",
         "background>table": "#f7f9fb",
@@ -52,7 +54,7 @@ class Theme:
         "foreground>input.placeholder": "#3d4a5a",
     }
     # Dimmed text of the dark mode: the theme's text at half opacity on its window, as it always looked.
-    _DARK_COLORS: dict[str, str] = {"foreground>input.placeholder": "#828488"}
+    _DARK_COLORS: ClassVar[dict[str, str]] = {"foreground>input.placeholder": "#828488"}
 
     # The theme of the whole application; Qt is touched only by apply().
     _FLAT: FlatTheme = FlatTheme(
@@ -62,15 +64,18 @@ class Theme:
     )
 
     # Status line colors on a dark and a light background; an informing line keeps the dimmed text color.
-    _STATUS_COLORS: dict[tuple[StatusLevel, bool], str] = {
+    _STATUS_COLORS: ClassVar[dict[tuple[StatusLevel, bool], str]] = {
         (StatusLevel.WARNING, True): "#fdd663",
         (StatusLevel.ERROR, True): "#f28b82",
         (StatusLevel.WARNING, False): "#8a4b00",
         (StatusLevel.ERROR, False): "#b3261e",
     }
 
+    # A background lighter than this (of 255) is a light one
+    _DARK_BELOW: int = 128
+
     # Green of a confirmation on a dark and a light background.
-    _SUCCESS_COLORS: dict[bool, str] = {True: "#81c995", False: "#188038"}
+    _SUCCESS_COLORS: ClassVar[dict[bool, str]] = {True: "#81c995", False: "#188038"}
 
     @classmethod
     def success_color(cls, *, background: QColor) -> str:
@@ -80,7 +85,7 @@ class Theme:
         :param background: color the mark is drawn on
         :return: the color as "#rrggbb"
         """
-        return cls._SUCCESS_COLORS[background.lightness() < 128]
+        return cls._SUCCESS_COLORS[background.lightness() < cls._DARK_BELOW]
 
     @staticmethod
     def mute(*, label: QLabel) -> None:
@@ -90,7 +95,7 @@ class Theme:
         :param label: the label, not yet shown
         :return: None
         """
-        label.setProperty("muted", True)
+        label.setProperty("muted", True)  # noqa: FBT003 - Qt takes no keyword arguments
 
     @classmethod
     def status_color(cls, *, level: StatusLevel, background: QColor) -> str | None:
@@ -101,7 +106,7 @@ class Theme:
         :param background: color the line is drawn on
         :return: the color as "#rrggbb", None for an informing line
         """
-        return cls._STATUS_COLORS.get((level, background.lightness() < 128))
+        return cls._STATUS_COLORS.get((level, background.lightness() < cls._DARK_BELOW))
 
     @classmethod
     def scheme(cls, *, mode: ThemeMode) -> Qt.ColorScheme:

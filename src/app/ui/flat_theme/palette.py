@@ -1,9 +1,13 @@
 """The palette that goes with the style sheet: the colors Qt takes only from a palette, e.g. links, placeholders."""
 
+from typing import TYPE_CHECKING
+
 from PySide6.QtGui import QColor, QPalette
 
-from .color import Color
 from .color_map import ColorMap
+
+if TYPE_CHECKING:
+    from .color import Color
 
 __all__: tuple[str, ...] = ("Palette",)
 

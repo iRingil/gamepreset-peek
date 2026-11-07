@@ -1,7 +1,8 @@
+# ruff: noqa: S101
 """Tests of the application font and the lengths measured in ems of it."""
 
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 from PySide6.QtGui import QFont, QGuiApplication
@@ -10,7 +11,7 @@ from PySide6.QtWidgets import QApplication
 from app.ui import typography
 from app.ui.typography import Typography
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestTypography:
@@ -41,7 +42,7 @@ class TestTypography:
         assert (QApplication.font().family(), QApplication.font().pointSizeF()) == ("Golos Text", 10)
         # PySide's stubs take the class name as bytes only, but bytes finds no font at run time.
         # noinspection PyTypeChecker
-        assert QApplication.font("QAbstractItemView").family() == "Golos Text"  # type: ignore[call-overload]
+        assert QApplication.font("QAbstractItemView").family() == "Golos Text"  # pyright: ignore[reportCallIssue, reportArgumentType]
 
     def test_install_without_font_file(self, font_kept: QFont, monkeypatch: pytest.MonkeyPatch) -> None:
         """

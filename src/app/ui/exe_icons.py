@@ -3,20 +3,25 @@
 import ctypes
 import hashlib
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, cast
 
 from loguru import logger
 from PySide6.QtGui import QImage
 
 from app.config import EXE_ICON_SIZE, EXE_ICONS_DIR
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 __all__: tuple[str, ...] = ("ExeIcons",)
 
 
 class ExeIcons:
-    """Extracts the icon of an executable into a PNG file once; an executable's icon never changes, so it is kept.
+    """
+    Extracts the icon of an executable into a PNG file once; an executable's icon never changes, so it is kept.
 
-    Only QImage is used, which works off the UI thread: the icons are extracted during the search for games."""
+    Only QImage is used, which works off the UI thread: the icons are extracted during the search for games.
+    """
 
     # SHDefExtractIcon answers S_OK with an icon, S_FALSE for a file without one.
     _S_OK: int = 0
@@ -63,7 +68,9 @@ class ExeIcons:
         """
         icon: ctypes.c_void_p = ctypes.c_void_p()
         # Looked up by name: attribute access to DLL functions is dynamic and unresolvable for type checkers.
-        extract_icon: Any = ctypes.WinDLL(name="shell32")["SHDefExtractIconW"]
+        extract_icon: Callable[[str, int, int, object, None, int], int] = cast(
+            "Callable[[str, int, int, object, None, int], int]", ctypes.WinDLL(name="shell32")["SHDefExtractIconW"]
+        )
         result: int = extract_icon(str(executable), 0, 0, ctypes.byref(icon), None, self._size)
         if result != self._S_OK or not icon.value:
             logger.debug("No icon in {} (result {})", executable, result)

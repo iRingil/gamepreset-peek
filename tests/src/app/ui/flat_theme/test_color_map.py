@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of app.ui.flat_theme.color_map."""
 
 import pytest
@@ -5,7 +6,7 @@ import pytest
 from app.ui.flat_theme.color_map import ColorMap
 from app.ui.flat_theme.default_colors import ColorTree
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestColorMap:
@@ -80,7 +81,11 @@ class TestColorMap:
         assert colors.color(color_id="primary").hex == "ffffff"
         assert colors.color(color_id="primary", state="hover").hex == "010203"
         assert defaults["border"] == "#3f4042"
-        assert defaults["primary"]["hover"] == "#112233"  # type: ignore[index]
+        assert defaults["primary"] == {
+            "base": "#8ab4f7",
+            "hover": "#112233",
+            "faded": {"transparent": 0.5, "darken": 0.1},
+        }
 
     @pytest.mark.parametrize(
         argnames="key",

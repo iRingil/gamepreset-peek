@@ -1,3 +1,3 @@
 """Tests of the Qt user interface."""
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()

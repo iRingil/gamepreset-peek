@@ -5,8 +5,9 @@ import json
 
 # noinspection PyPep8Naming
 import xml.etree.ElementTree as ET
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import cast
 
 from loguru import logger
 
@@ -27,7 +28,7 @@ from app.core.models import (
     SettingTranslation,
     Translations,
 )
-from app.infra.http_client import HttpClient
+from app.infra.http_client import HttpClient, JsonValue
 
 __all__: tuple[str, ...] = ("OpsApi", "OpsFormatError")
 
@@ -37,9 +38,11 @@ class OpsFormatError(Exception):
 
 
 class OpsApi:
-    """Requests the compatibility check, presets and translations from NVIDIA and parses them.
+    """
+    Requests the compatibility check, presets and translations from NVIDIA and parses them.
 
-    HTTP failures propagate from HttpClient as they are; an answer of unexpected structure raises OpsFormatError."""
+    HTTP failures propagate from HttpClient as they are; an answer of unexpected structure raises OpsFormatError.
+    """
 
     def __init__(self, *, http: HttpClient) -> None:
         """
@@ -57,15 +60,18 @@ class OpsApi:
         :return: overall result and the names of the failed components ("cpu", "gpu", "memory", "os")
         """
         with self._parsing(what="compatibility answer"):
-            answer: Any = self._http.get_json(
-                url=OPS_COMPATIBILITY_URL, params=self._hardware_params(hardware=hardware)
+            answer: dict[str, JsonValue] = self._object(
+                value=self._http.get_json(url=OPS_COMPATIBILITY_URL, params=self._hardware_params(hardware=hardware))
             )
-            criteria: dict[str, Any] = self._typed(value=answer["criteria"], kind=dict)
+            criteria: dict[str, JsonValue] = self._object(value=answer["criteria"])
+            states: list[dict[str, JsonValue]] = [
+                self._object(value=state) for state in self._array(value=criteria.get("states", []))
+            ]
             compatibility: Compatibility = Compatibility(
                 ok=self._typed(value=criteria["overallState"], kind=bool),
                 failed=tuple(
                     self._typed(value=state["name"], kind=str)
-                    for state in self._typed(value=criteria.get("states", []), kind=list)
+                    for state in states
                     if not self._typed(value=state["state"], kind=bool)
                 ),
             )
@@ -81,17 +87,17 @@ class OpsApi:
         :return: profile, presets file and the preset of each resolution (none when NVIDIA has no recommendation)
         """
         with self._parsing(what=f"preset answer for {game_id}"):
-            answer: dict[str, Any] = self._typed(
+            answer: dict[str, JsonValue] = self._object(
                 value=self._http.get_json(
                     url=OPS_PRESETS_URL.format(game_id=game_id), params=self._hardware_params(hardware=hardware)
-                ),
-                kind=dict,
+                )
             )
             if len(answer) != 1:
                 raise ValueError(f"expected one profile, got {sorted(answer)}")
             profile: str
-            body: Any
-            ((profile, body),) = answer.items()
+            value: JsonValue
+            ((profile, value),) = answer.items()
+            body: dict[str, JsonValue] = self._object(value=value)
             presets: GamePresets = GamePresets(
                 profile=profile,
                 version=self._typed(value=body["version"], kind=str),
@@ -103,7 +109,7 @@ class OpsApi:
                         rate=self._typed(value=entry["rate"], kind=int),
                         below_min_spec=self._typed(value=entry["belowMinSpec"], kind=bool),
                     )
-                    for entry in self._typed(value=body["ops"], kind=list)
+                    for entry in (self._object(value=item) for item in self._array(value=body["ops"]))
                 ),
             )
         logger.info("Presets of {}: profile {}, {} resolutions", game_id, profile, len(presets.resolutions))
@@ -119,13 +125,15 @@ class OpsApi:
         body: bytes = self._download(file=file)
         with self._parsing(what=f"presets file {file.url}"):
             # Despite its .tsv name, the file is JSON.
-            document: Any = json.loads(s=body)
+            document: dict[str, JsonValue] = self._object(value=cast("JsonValue", json.loads(s=body)))
             settings: tuple[Setting, ...] = tuple(
-                self._setting(entry=entry) for entry in self._typed(value=document["settings"], kind=list)
+                self._setting(entry=entry) for entry in self._array(value=document["settings"])
             )
             presets: tuple[tuple[str, ...], ...] = tuple(
-                self._preset_values(values=self._typed(value=preset["values"], kind=dict), count=len(settings))
-                for preset in self._typed(value=document["pops"], kind=list)
+                self._preset_values(
+                    values=self._object(value=self._object(value=preset)["values"]), count=len(settings)
+                )
+                for preset in self._array(value=document["pops"])
             )
         logger.info("Presets file: {} settings, {} presets", len(settings), len(presets))
         return PresetsFile(settings=settings, presets=presets)
@@ -139,8 +147,10 @@ class OpsApi:
         :return: the game's translation file
         """
         with self._parsing(what=f"common files of {game_id}"):
-            common: Any = self._http.get_json(url=OPS_COMMON_FILES_URL.format(game_id=game_id, profile=profile))
-            translations: list[Any] = self._typed(value=common["translations"], kind=list)
+            common: dict[str, JsonValue] = self._object(
+                value=self._http.get_json(url=OPS_COMMON_FILES_URL.format(game_id=game_id, profile=profile))
+            )
+            translations: list[JsonValue] = self._array(value=common["translations"])
             if len(translations) != 1:
                 raise ValueError(f"expected one translation file, got {len(translations)}")
             return self._remote_file(entry=translations[0])
@@ -154,7 +164,8 @@ class OpsApi:
         """
         body: bytes = self._download(file=file)
         with self._parsing(what=f"translation file {file.url}"):
-            root: ET.Element = ET.fromstring(text=body)
+            # The bundled expat refuses entity expansion attacks, and ElementTree never fetches external entities
+            root: ET.Element = ET.fromstring(text=body)  # noqa: S314
             languages: dict[str, dict[str, SettingTranslation]] = {
                 language.attrib["name"]: {
                     setting.attrib["name"]: SettingTranslation(
@@ -185,21 +196,22 @@ class OpsApi:
         return body
 
     @classmethod
-    def _remote_file(cls, *, entry: Any) -> RemoteFile:
+    def _remote_file(cls, *, entry: JsonValue) -> RemoteFile:
         """
         Parse a file reference of an answer.
 
         :param entry: object with url, sha256 and size
         :return: the file reference
         """
+        fields: dict[str, JsonValue] = cls._object(value=entry)
         return RemoteFile(
-            url=cls._typed(value=entry["url"], kind=str),
-            sha256=cls._typed(value=entry["sha256"], kind=str),
-            size=cls._typed(value=entry["size"], kind=int),
+            url=cls._typed(value=fields["url"], kind=str),
+            sha256=cls._typed(value=fields["sha256"], kind=str),
+            size=cls._typed(value=fields["size"], kind=int),
         )
 
     @classmethod
-    def _setting(cls, *, entry: Any) -> Setting:
+    def _setting(cls, *, entry: JsonValue) -> Setting:
         """
         Parse an entry of the settings list of a presets file.
 
@@ -207,12 +219,12 @@ class OpsApi:
         :return: the setting
         """
         name: str
-        spec: Any
-        ((name, spec),) = cls._typed(value=entry, kind=dict).items()
-        return Setting(name=name, type=cls._typed(value=spec["type"], kind=str))
+        spec: JsonValue
+        ((name, spec),) = cls._object(value=entry).items()
+        return Setting(name=name, type=cls._typed(value=cls._object(value=spec)["type"], kind=str))
 
     @classmethod
-    def _preset_values(cls, *, values: dict[str, Any], count: int) -> tuple[str, ...]:
+    def _preset_values(cls, *, values: dict[str, JsonValue], count: int) -> tuple[str, ...]:
         """
         Order the values of a preset by setting.
 
@@ -239,9 +251,33 @@ class OpsApi:
         }
 
     @staticmethod
-    def _typed[T](*, value: Any, kind: type[T]) -> T:
+    def _object(*, value: JsonValue) -> dict[str, JsonValue]:
         """
-        Check the type of parsed JSON value; a bool is not accepted as an int.
+        Check that a parsed JSON value is an object.
+
+        :param value: value to check
+        :return: the value
+        """
+        if not isinstance(value, dict):
+            raise TypeError(f"expected an object, got {value!r}")
+        return value
+
+    @staticmethod
+    def _array(*, value: JsonValue) -> list[JsonValue]:
+        """
+        Check that a parsed JSON value is an array.
+
+        :param value: value to check
+        :return: the value
+        """
+        if not isinstance(value, list):
+            raise TypeError(f"expected an array, got {value!r}")
+        return value
+
+    @staticmethod
+    def _typed[T: str | int | bool](*, value: JsonValue, kind: type[T]) -> T:
+        """
+        Check the type of a parsed JSON scalar; a bool is not accepted as an int.
 
         :param value: value to check
         :param kind: expected type
@@ -253,7 +289,7 @@ class OpsApi:
 
     @staticmethod
     @contextmanager
-    def _parsing(*, what: str) -> Iterator[None]:
+    def _parsing(*, what: str) -> Generator[None]:
         """
         Turn the errors of parsing an answer into OpsFormatError.
 

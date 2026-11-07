@@ -1,7 +1,8 @@
 """The game tabs: installed games with the folders searched for them, and all games with a search field."""
 
-from pathlib import Path
-from typing import Callable, Sequence
+from collections.abc import Callable, Sequence
+from functools import partial
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QFileInfo, QModelIndex, QSize, Qt
 from PySide6.QtGui import QIcon, QStandardItem, QStandardItemModel
@@ -29,6 +30,9 @@ from app.ui.theme import Theme
 from app.ui.typography import GAP, Typography
 from app.ui.views import InstalledGameView
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 __all__: tuple[str, ...] = ("GamesPanel",)
 
 # Size of the executable icons in the installed games list, in ems.
@@ -55,10 +59,22 @@ class _ChoiceList(QListView):
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.selectionModel().currentChanged.connect(
-            # A refill or a cleared selection makes no item current, which is no choice.
-            lambda current, _: on_select(current.row()) if current.isValid() else None
-        )
+        self.selectionModel().currentChanged.connect(partial(self._select, on_select=on_select))
+
+    @staticmethod
+    def _select(current: QModelIndex, _previous: QModelIndex, *, on_select: Callable[[int], None]) -> None:
+        """
+        Pass the position of the item that became current on.
+
+        A refill or a cleared selection makes no item current, which is no choice.
+
+        :param current: the item that became current
+        :param _previous: the item current before
+        :param on_select: called with the position of the item
+        :return: None
+        """
+        if current.isValid():
+            on_select(current.row())
 
     def fill(self, *, items: Sequence[str], selected: int | None, icons: Sequence[QIcon] = ()) -> None:
         """
@@ -93,10 +109,10 @@ class _ChoiceList(QListView):
         self.scrollTo(index, hint=QAbstractItemView.ScrollHint.EnsureVisible)
 
 
-class _InstalledTab(QWidget):  # pylint: disable=too-many-instance-attributes
+class _InstalledTab(QWidget):
     """The installed games over the folders searched for them, with the buttons that change the folders."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - every callback of the view is passed in, so the presenter and tests can wire it
         self,
         *,
         on_select: Callable[[int], None],
@@ -137,7 +153,8 @@ class _InstalledTab(QWidget):  # pylint: disable=too-many-instance-attributes
         self._caption: QLabel = QLabel(parent=self)
         Theme.mute(label=self._caption)
         self.folder_list: QListWidget = QListWidget(parent=self)
-        self.folder_list.currentRowChanged.connect(lambda _: self._update_buttons())
+        # A slot with fewer parameters than the signal gets only the first of its arguments, here none
+        self.folder_list.currentRowChanged.connect(self._update_buttons)
         self.add: IconButton = IconButton(symbol="plus", parent=self)
         self.add.clicked.connect(self._add)
         self.remove: IconButton = IconButton(symbol="minus", parent=self)
@@ -305,7 +322,7 @@ class _AllTab(QWidget):
 class GamesPanel(QTabWidget):
     """Two tabs: the games installed on this computer, and all games NVIDIA has presets for."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 - every callback of the view is passed in, so the presenter and tests can wire it
         self,
         *,
         on_select_installed: Callable[[int], None],
@@ -343,7 +360,7 @@ class GamesPanel(QTabWidget):
         self.all: _AllTab = _AllTab(on_search=on_search, on_select=on_select, parent=self)
         self.addTab(self.installed, "")
         self.addTab(self.all, "")
-        self.currentChanged.connect(lambda index: on_tab(self._tab(index=index)))
+        self.currentChanged.connect(partial(self._switch_tab, on_tab=on_tab))
 
     def apply_language(self, *, translator: Translator) -> None:
         """
@@ -365,6 +382,16 @@ class GamesPanel(QTabWidget):
         :return: None
         """
         self.setCurrentWidget(self.installed if tab is GamesTab.INSTALLED else self.all)
+
+    def _switch_tab(self, index: int, *, on_tab: Callable[[GamesTab], None]) -> None:
+        """
+        Pass the tab brought to the front on.
+
+        :param index: position of the tab
+        :param on_tab: called with the tab
+        :return: None
+        """
+        on_tab(self._tab(index=index))
 
     def _tab(self, *, index: int) -> GamesTab:
         """

@@ -7,9 +7,11 @@ __all__: tuple[str, ...] = ("AppDb",)
 
 
 class AppDb:
-    """Connections to the SQLite file; the app only reads it and replaces it as a whole with a downloaded update.
+    """
+    Connections to the SQLite file; the app only reads it and replaces it as a whole with a downloaded update.
 
-    The file is written outside this repository; it only ever gains CPUs and GPUs, so the lists never shrink."""
+    The file is written outside this repository; it only ever gains CPUs and GPUs, so the lists never shrink.
+    """
 
     @staticmethod
     def read(*, path: Path) -> sqlite3.Connection:

@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the background worker."""
 
 import sys
@@ -10,7 +11,7 @@ from PySide6.QtWidgets import QApplication
 
 from app.ui.worker import Worker
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestWorker:
@@ -109,7 +110,8 @@ class TestWorker:
         # Act
         self._finish(worker=worker, qt_app=qt_app)
         # Assert
-        assert threads and threads[0] is not threading.current_thread()
+        assert threads
+        assert threads[0] is not threading.current_thread()
         assert threads[0].name == "finder"
 
     def test_callbacks_in_ui_thread(self, qt_app: QApplication) -> None:
@@ -143,13 +145,13 @@ class TestWorker:
         hooked: list[BaseException] = []
         results: list[int] = []
 
-        def hook(_: type[BaseException], error: BaseException, __: TracebackType | None) -> None:
+        def hook(_kind: type[BaseException], error: BaseException, _trace: TracebackType | None) -> None:
             """
             Keep an unhandled error.
 
-            :param _: exception type
+            :param _kind: exception type
             :param error: exception
-            :param __: traceback
+            :param _trace: traceback
             :return: None
             """
             hooked.append(error)

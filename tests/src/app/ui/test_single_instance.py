@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the one running copy per user."""
 
 import time
@@ -10,7 +11,7 @@ from PySide6.QtWidgets import QApplication
 
 from app.ui.single_instance import SingleInstance
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestSingleInstance:
@@ -30,7 +31,8 @@ class TestSingleInstance:
         # Act
         claimed: bool = instance.claim()
         # Assert
-        assert claimed and qt_app is not None
+        assert claimed
+        assert qt_app is not None
 
     def test_later_copy_hands_over(self, qt_app: QApplication) -> None:
         """
@@ -66,4 +68,5 @@ class TestSingleInstance:
         # Act
         claimed: bool = SingleInstance(name=f"test-{uuid.uuid4().hex}").claim()
         # Assert
-        assert claimed and qt_app is not None
+        assert claimed
+        assert qt_app is not None

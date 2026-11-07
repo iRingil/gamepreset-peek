@@ -1,3 +1,4 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the NVIDIA OPS endpoints client on answers saved from NVIDIA (mordhau)."""
 
 import hashlib
@@ -23,7 +24,7 @@ from app.core.models import (
 from app.core.ops_api import OpsApi, OpsFormatError
 from app.infra.http_client import HttpClientError
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _DATA: Path = Path(__file__).parent / "data"
 _GAME: str = "mordhau"
@@ -118,8 +119,14 @@ class TestCheckCompatibility:
 
     @pytest.mark.parametrize(
         argnames="answer",
-        argvalues=({}, {"criteria": {"overallState": "true"}}, {"criteria": {"overallState": False, "states": [{}]}}),
-        ids=("no-criteria", "state-not-bool", "state-without-name"),
+        argvalues=[
+            {},
+            {"criteria": []},
+            {"criteria": {"overallState": True, "states": {}}},
+            {"criteria": {"overallState": "true"}},
+            {"criteria": {"overallState": False, "states": [{}]}},
+        ],
+        ids=("no-criteria", "criteria-not-object", "states-not-array", "state-not-bool", "state-without-name"),
     )
     def test_unexpected_answer(self, mock: responses.RequestsMock, api: OpsApi, answer: dict[str, Any]) -> None:
         """
@@ -286,12 +293,12 @@ class TestPresetsFile:
 
     @pytest.mark.parametrize(
         argnames="document",
-        argvalues=(
+        argvalues=[
             {"settings": [{"A": {"type": "ENUM"}}], "pops": [{"values": {"2": "Low"}}]},
             {"settings": [{"A": {"type": "ENUM"}, "B": {"type": "ENUM"}}], "pops": []},
             {"settings": [{"A": {"type": "ENUM"}}], "pops": [{"values": {"1": 1}}]},
             {"settings": [{"A": {}}], "pops": []},
-        ),
+        ],
         ids=("value-missing", "two-settings-in-entry", "value-not-string", "no-type"),
     )
     def test_unexpected_file(self, mock: responses.RequestsMock, api: OpsApi, document: dict[str, Any]) -> None:
@@ -380,11 +387,11 @@ class TestTranslations:
 
     @pytest.mark.parametrize(
         argnames="body",
-        argvalues=(
+        argvalues=[
             b"<game><language name='ru_RU'>",
             b"<game><language name='ru_RU'><setting translation='X'/></language></game>",
             b"<game><language translation=''/></game>",
-        ),
+        ],
         ids=("broken-xml", "setting-without-name", "language-without-name"),
     )
     def test_unexpected_file(self, mock: responses.RequestsMock, api: OpsApi, body: bytes) -> None:

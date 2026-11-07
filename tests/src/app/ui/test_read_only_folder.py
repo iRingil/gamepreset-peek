@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the warning about a folder the program can't write to."""
 
 from pathlib import Path
@@ -9,7 +10,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from app.i18n.translator import Translator
 from app.ui.read_only_folder import ReadOnlyFolder
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestReadOnlyFolder:

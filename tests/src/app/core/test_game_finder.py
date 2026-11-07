@@ -1,8 +1,9 @@
+# ruff: noqa: S101
 """Tests of the search for installed games and of the registry reader it uses."""
 
 import winreg
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 import pytest
 
@@ -10,7 +11,7 @@ from app.core.game_catalog import GameCatalog
 from app.core.game_finder import GameFinder, WindowsRegistry
 from app.core.models import FileRole, Game, GameSource, InstalledGame, RegistryValue, SourceFile
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _BG3: Game = Game(game_id="baldurs_gate_3", name="Baldur's Gate 3")
 _MORDHAU: Game = Game(game_id="mordhau", name="MORDHAU")

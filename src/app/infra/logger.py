@@ -4,13 +4,13 @@ import logging
 import sys
 import threading
 from queue import Queue
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
 from loguru import logger
 
 from app.config import LOG_FILE
 
-if TYPE_CHECKING:  # pragma: no cover
+if TYPE_CHECKING:
     from loguru import Message
 
 __all__: tuple[str, ...] = ("LoggingManager",)
@@ -19,6 +19,7 @@ __all__: tuple[str, ...] = ("LoggingManager",)
 class _InterceptHandler(logging.Handler):
     """Redirects standard logging records (requests, urllib3) to loguru."""
 
+    @override
     def emit(self, record: logging.LogRecord) -> None:
         """
         Redirect a standard logging record to loguru, attributed to its real caller.
@@ -39,9 +40,11 @@ class _InterceptHandler(logging.Handler):
 
 
 class LoggingManager:
-    """Configures loguru for the application and, in debug mode, collects log lines for the UI log panel.
+    """
+    Configures loguru for the application and, in debug mode, collects log lines for the UI log panel.
 
-    The panel drains ``lines`` periodically; lines logged before the window exists wait in the queue."""
+    The panel drains ``lines`` periodically; lines logged before the window exists wait in the queue.
+    """
 
     def __init__(self, *, debug: bool) -> None:
         """

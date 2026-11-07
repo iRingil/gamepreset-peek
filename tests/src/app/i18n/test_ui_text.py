@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests that the .po catalogs translate every UI text."""
 
 import re
@@ -8,7 +9,7 @@ from babel.messages.catalog import Catalog, Message
 from app.config import UI_LANGUAGES
 from app.i18n.ui_text import UiText
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _PLACEHOLDER: re.Pattern[str] = re.compile(pattern=r"\{\w+\}")
 

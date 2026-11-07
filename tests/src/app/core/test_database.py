@@ -1,10 +1,11 @@
+# ruff: noqa: S101
 """Tests of the database file and its download."""
 
 import hashlib
 import stat
+from collections.abc import Iterator, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Iterator, Sequence
 
 import pytest
 import responses
@@ -13,7 +14,7 @@ from app.core.database import AppData, AppDatabase, DatabaseManifest
 from app.infra.http_client import HttpClient, HttpClientError
 from tests.src.app.core.db_files import DbFiles
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _URL: str = "https://downloads.example.test/app.db"
 _MANIFEST_URL: str = "https://downloads.example.test/app.db.json"
@@ -278,8 +279,9 @@ class TestAppDatabase:
         argvalues=[("games", "games"), ("cpus", "CPUs"), ("gpus", "GPUs")],
         ids=["games", "cpus", "gpus"],
     )
-    def test_empty_download_dropped(  # pylint: disable=too-many-arguments
+    def test_empty_download_dropped(  # noqa: PLR0913 - pytest passes every fixture and parameter by name
         self,
+        *,
         mock: responses.RequestsMock,
         tmp_path: Path,
         database: AppDatabase,
@@ -300,7 +302,9 @@ class TestAppDatabase:
         """
         # Arrange
         empty: Path = self._database(
-            path=tmp_path / "empty.db", name="Mordhau II", extra=[(f"DELETE FROM {table}", ())]
+            path=tmp_path / "empty.db",
+            name="Mordhau II",
+            extra=[(f"DELETE FROM {table}", ())],  # noqa: S608 - a table name of the test
         )
         mock.add(method=responses.GET, url=_URL, body=empty.read_bytes())
         manifest: DatabaseManifest = self._manifest(content=empty.read_bytes())

@@ -8,14 +8,14 @@ import tempfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import ClassVar
 
 from loguru import logger
 
 from app.config import APP_DB, DB_MANIFEST_URL, DB_UPDATE_URL
 from app.core.game_catalog import GameCatalog
 from app.core.hardware import CpuList, GpuList, GpuRanks
-from app.infra.http_client import HttpClient
+from app.infra.http_client import HttpClient, JsonValue
 
 __all__: tuple[str, ...] = ("AppData", "AppDatabase", "DatabaseManifest")
 
@@ -39,11 +39,13 @@ class AppData:
 
 
 class AppDatabase:
-    """The database file and its replacement by the latest one from the repository.
+    """
+    The database file and its replacement by the latest one from the repository.
 
     The manifest tells whether the file in use is the latest: it is downloaded only when the hashes differ. A download
     that doesn't match the manifest is dropped, and so is one that is not a usable database or lacks games, CPUs or
-    GPUs; a new one takes the file's place."""
+    GPUs; a new one takes the file's place.
+    """
 
     _SHA256: ClassVar[re.Pattern[str]] = re.compile(pattern=r"[0-9a-f]{64}")
 
@@ -83,7 +85,7 @@ class AppDatabase:
             name: str
             handle, name = tempfile.mkstemp(dir=self._path.parent)
             os.close(handle)
-            os.unlink(path=name)
+            Path(name).unlink()
             with self._path.open(mode="r+b"):
                 pass
         except OSError as error:
@@ -105,11 +107,11 @@ class AppDatabase:
 
         :return: its sha256 and when its source data were last checked
         """
-        document: Any = self._http.get_json(url=self._manifest_url)
+        document: JsonValue = self._http.get_json(url=self._manifest_url)
         if not isinstance(document, dict):
             raise TypeError(f"expected an object, got {document!r}")
-        sha256: Any = document.get("sha256")
-        checked: Any = document.get("checked")
+        sha256: JsonValue = document.get("sha256")
+        checked: JsonValue = document.get("checked")
         if not isinstance(sha256, str) or not self._SHA256.fullmatch(string=sha256):
             raise ValueError(f"expected a sha256, got {sha256!r}")
         if not isinstance(checked, str):
@@ -140,7 +142,7 @@ class AppDatabase:
         temp.write_bytes(data=body)
         try:
             self._check(data=self._load(path=temp))
-            os.replace(src=temp, dst=self._path)
+            temp.replace(target=self._path)
         except (sqlite3.Error, ValueError, TypeError) as error:
             raise ValueError(f"downloaded file is not a usable database: {error!r}") from error
         finally:

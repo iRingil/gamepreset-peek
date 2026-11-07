@@ -11,10 +11,12 @@ __all__: tuple[str, ...] = ("AppDirs",)
 
 @dataclass(frozen=True, slots=True)
 class AppDirs:
-    """Data and cache folders of the program, chosen by the portable marker file in the program's folder.
+    """
+    Data and cache folders of the program, chosen by the portable marker file in the program's folder.
 
     With the marker everything stays under the program's folder, so a copy on a USB stick leaves nothing on the
-    computer; without it the data goes to %LOCALAPPDATA% and the cache to the temporary folder."""
+    computer; without it the data goes to %LOCALAPPDATA% and the cache to the temporary folder.
+    """
 
     data: Path
     cache: Path

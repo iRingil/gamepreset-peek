@@ -1,7 +1,9 @@
-"""Default colors of the light and dark modes: a color id maps to a hex color or to a base color and its states.
+"""
+Default colors of the light and dark modes: a color id maps to a hex color or to a base color and its states.
 
 A state is a hex color of its own or a change of the base color: "transparent" scales its alpha, then "darken" and
-"lighten" change its lightness by a share of itself."""
+"lighten" change its lightness by a share of itself.
+"""
 
 from PySide6.QtCore import Qt
 

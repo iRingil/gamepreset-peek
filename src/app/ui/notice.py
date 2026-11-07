@@ -1,5 +1,7 @@
 """A big translucent notice filling an empty area: a large exclamation mark over a short line of text."""
 
+from typing import override
+
 from PySide6.QtCore import QRectF, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPaintEvent, QPalette
 from PySide6.QtWidgets import QWidget
@@ -20,9 +22,11 @@ _MEASURE_PX: int = 100
 
 
 class Notice(QWidget):
-    """Draws a large exclamation mark above a line of text in the accent of the theme, translucent and centered.
+    """
+    Draws a large exclamation mark above a line of text in the accent of the theme, translucent and centered.
 
-    The pair fills most of the widget: the text as large as fits its width, the mark taking the rest of the height."""
+    The pair fills most of the widget: the text as large as fits its width, the mark taking the rest of the height.
+    """
 
     def __init__(self, *, parent: QWidget | None = None) -> None:
         """
@@ -52,7 +56,8 @@ class Notice(QWidget):
         """
         return self._text
 
-    def paintEvent(self, event: QPaintEvent) -> None:  # pylint: disable=invalid-name,unused-argument
+    @override
+    def paintEvent(self, event: QPaintEvent) -> None:
         """
         Draw the mark and the text, scaled to the widget's size.
 

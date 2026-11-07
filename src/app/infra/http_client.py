@@ -2,8 +2,10 @@
 
 import json
 import time
+from collections.abc import Mapping
+from http import HTTPStatus
 from types import TracebackType
-from typing import Any, Mapping, Self
+from typing import Self, cast
 
 import requests
 from fake_useragent import UserAgent
@@ -17,7 +19,9 @@ from app.config import (
     USER_AGENT_OS,
 )
 
-__all__: tuple[str, ...] = ("HttpClient", "HttpClientError")
+__all__: tuple[str, ...] = ("HttpClient", "HttpClientError", "JsonValue")
+
+type JsonValue = dict[str, JsonValue] | list[JsonValue] | str | int | float | bool | None
 
 
 class HttpClientError(Exception):
@@ -38,10 +42,12 @@ class HttpClientError(Exception):
 
 
 class HttpClient:
-    """Sends GET requests through one session with a fake Windows User-Agent and retries transient failures.
+    """
+    Sends GET requests through one session with a fake Windows User-Agent and retries transient failures.
 
     Connection errors, timeouts and 5xx answers are retried with exponential backoff. When the retries run out, the
-    last requests exception or HttpClientError propagates; other non-2xx answers raise HttpClientError at once."""
+    last requests exception or HttpClientError propagates; other non-2xx answers raise HttpClientError at once.
+    """
 
     def __init__(
         self,
@@ -93,7 +99,7 @@ class HttpClient:
         """
         self._session.close()
 
-    def get_json(self, *, url: str, params: Mapping[str, str] | None = None) -> Any:
+    def get_json(self, *, url: str, params: Mapping[str, str] | None = None) -> JsonValue:
         """
         GET a URL and parse the body as JSON, whatever its Content-Type.
 
@@ -101,7 +107,7 @@ class HttpClient:
         :param params: query string parameters
         :return: parsed JSON
         """
-        return json.loads(s=self.get_bytes(url=url, params=params))
+        return cast("JsonValue", json.loads(s=self.get_bytes(url=url, params=params)))
 
     def get_bytes(self, *, url: str, params: Mapping[str, str] | None = None) -> bytes:
         """
@@ -132,11 +138,11 @@ class HttpClient:
                     raise
                 reason = type(error).__name__
             else:
-                if response.status_code < 500 or attempt >= self._max_retries:
+                if response.status_code < HTTPStatus.INTERNAL_SERVER_ERROR or attempt >= self._max_retries:
                     self._raise_for_status(response=response)
                     return response
                 reason = f"HTTP {response.status_code}"
-            delay: float = HTTP_RETRY_BACKOFF * 2**attempt
+            delay: float = HTTP_RETRY_BACKOFF * 2.0**attempt
             attempt += 1
             logger.warning("GET {} failed ({}), retry {} of {} in {} s", url, reason, attempt, self._max_retries, delay)
             time.sleep(delay)
@@ -149,5 +155,5 @@ class HttpClient:
         :param response: answer to check
         :return: None
         """
-        if not 200 <= response.status_code < 300:
+        if not HTTPStatus.OK <= response.status_code < HTTPStatus.MULTIPLE_CHOICES:
             raise HttpClientError(status=response.status_code, url=response.url, body=response.text)

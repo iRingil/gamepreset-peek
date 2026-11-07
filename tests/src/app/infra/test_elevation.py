@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the start again as administrator."""
 
 import ctypes
@@ -8,14 +9,14 @@ import pytest
 
 from app.infra.elevation import Elevation
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestElevation:
     """Tests of Elevation."""
 
     @pytest.mark.parametrize(argnames=("result", "started"), argvalues=[(42, True), (5, False)], ids=["yes", "no"])
-    def test_relaunch(self, monkeypatch: pytest.MonkeyPatch, result: int, started: bool) -> None:
+    def test_relaunch(self, *, monkeypatch: pytest.MonkeyPatch, result: int, started: bool) -> None:
         """
         Asks Windows to start the program as administrator with its command line; a refusal starts nothing.
 
@@ -28,7 +29,7 @@ class TestElevation:
         calls: list[tuple[Any, ...]] = []
         monkeypatch.setattr(target=sys, name="orig_argv", value=["python.exe", "-m", "app", "--flag x"])
 
-        def shell_execute(*args: Any) -> int:
+        def shell_execute(*args: object) -> int:
             """
             Record the call like ShellExecuteW.
 
@@ -38,7 +39,7 @@ class TestElevation:
             calls.append(args)
             return result
 
-        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda name: {"ShellExecuteW": shell_execute})
+        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda **_: {"ShellExecuteW": shell_execute})
         # Act
         relaunched: bool = Elevation.relaunch()
         # Assert
@@ -46,7 +47,7 @@ class TestElevation:
         assert calls == [(None, "runas", sys.executable, '-m app "--flag x"', None, 1)]
 
     @pytest.mark.parametrize(argnames=("answer", "admin"), argvalues=[(1, True), (0, False)], ids=["admin", "user"])
-    def test_is_admin(self, monkeypatch: pytest.MonkeyPatch, answer: int, admin: bool) -> None:
+    def test_is_admin(self, *, monkeypatch: pytest.MonkeyPatch, answer: int, admin: bool) -> None:
         """
         Tells whether the program runs as administrator, as Windows answers.
 
@@ -56,7 +57,7 @@ class TestElevation:
         :return: None
         """
         # Arrange
-        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda name: {"IsUserAnAdmin": lambda: answer})
+        monkeypatch.setattr(target=ctypes, name="WinDLL", value=lambda **_: {"IsUserAnAdmin": lambda: answer})
         # Act
         result: bool = Elevation.is_admin()
         # Assert

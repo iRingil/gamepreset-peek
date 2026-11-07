@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication, QStyleHints
@@ -17,9 +18,11 @@ __all__: tuple[str, ...] = ("FlatTheme",)
 
 
 class FlatTheme:
-    """A flat light and dark theme with an app's own colors and QSS on top.
+    """
+    A flat light and dark theme with an app's own colors and QSS on top.
 
-    With Qt.ColorScheme.Unknown it takes the mode of Windows and switches with it."""
+    With Qt.ColorScheme.Unknown it takes the mode of Windows and switches with it.
+    """
 
     # Mode used when Windows tells none.
     _FALLBACK: Qt.ColorScheme = Qt.ColorScheme.Dark
@@ -83,6 +86,7 @@ class FlatTheme:
         if scheme not in self._colors:
             scheme = self._FALLBACK
         colors: ColorMap = self._colors[scheme]
-        application: QApplication = QApplication.instance()  # type: ignore[assignment]
+        # A theme is applied only once the QApplication exists
+        application: QApplication = cast("QApplication", QApplication.instance())
         application.setStyleSheet(StyleSheet.render(colors=colors, extra_qss=self._extra_qss, icon_dir=self._icon_dir))
         application.setPalette(Palette.build(colors=colors))

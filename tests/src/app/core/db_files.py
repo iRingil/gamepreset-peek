@@ -1,9 +1,9 @@
 """Database files written for the core tests, laid out like the bundled database."""
 
 import sqlite3
+from collections.abc import Sequence
 from contextlib import closing
 from pathlib import Path
-from typing import Sequence
 
 __all__: tuple[str, ...] = ("DbFiles",)
 

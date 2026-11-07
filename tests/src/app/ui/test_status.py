@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the status lines: their levels and their translation at the time they are shown."""
 
 from pathlib import Path
@@ -13,7 +14,7 @@ from app.infra.http_client import HttpClientError
 from app.ui.status import Status, StatusTexts
 from app.ui.views import StatusLevel
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestStatusTexts:

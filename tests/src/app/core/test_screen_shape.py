@@ -1,10 +1,11 @@
+# ruff: noqa: S101
 """Tests of the aspect ratios of screen resolutions."""
 
 import pytest
 
 from app.core.screen_shape import ScreenShape
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestScreenShape:
@@ -24,7 +25,7 @@ class TestScreenShape:
         ],
         ids=["16:10", "16:10 larger", "16:9 on 16:10", "rounded 16:9", "both 21:9", "5:4 on 4:3", "malformed", "zero"],
     )
-    def test_fits(self, resolution: str, screen: str, expected: bool) -> None:
+    def test_fits(self, *, resolution: str, screen: str, expected: bool) -> None:
         """
         Matches resolutions of the screen's shape within the tolerance, nothing malformed.
 

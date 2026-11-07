@@ -65,11 +65,12 @@ class GameCatalog:
         :return: the catalog
         """
         with closing(AppDb.read(path=path)) as db:
+            rows: list[tuple[str, str, str, str]] = db.execute(
+                "SELECT game_id, name, box_art_url, app_id FROM games"
+            ).fetchall()
             games: tuple[Game, ...] = tuple(
                 Game(game_id=game_id, name=name, cover_url=cover_url, app_id=app_id)
-                for game_id, name, cover_url, app_id in db.execute(
-                    "SELECT game_id, name, box_art_url, app_id FROM games"
-                )
+                for game_id, name, cover_url, app_id in rows
             )
             sources: tuple[GameSource, ...] = cls._sources_of(db=db)
         logger.debug("Loaded {} games and {} game copies from {}", len(games), len(sources), path)
@@ -83,19 +84,21 @@ class GameCatalog:
         :param db: open database
         :return: copies in the order of game and position
         """
-        files: defaultdict[tuple[str, int], list[SourceFile]] = defaultdict(list)
-        for game_id, position, path, role, is_directory in db.execute(
+        file_rows: list[tuple[str, int, str, str, int]] = db.execute(
             "SELECT game_id, position, path, role, is_directory FROM game_source_files"
             " ORDER BY game_id, position, path, role"
-        ):
+        ).fetchall()
+        files: defaultdict[tuple[str, int], list[SourceFile]] = defaultdict(list)
+        for game_id, position, path, role, is_directory in file_rows:
             files[(game_id, position)].append(
                 SourceFile(path=path, role=FileRole(role), is_directory=bool(is_directory))
             )
-        registry: defaultdict[tuple[str, int], list[RegistryValue]] = defaultdict(list)
-        for game_id, position, value_path, view, parent_levels, suffix, value_regex in db.execute(
+        registry_rows: list[tuple[str, int, str, int | None, int, str | None, str | None]] = db.execute(
             "SELECT game_id, position, value_path, view, parent_levels, suffix, value_regex FROM game_source_registry"
             " ORDER BY game_id, position, entry"
-        ):
+        ).fetchall()
+        registry: defaultdict[tuple[str, int], list[RegistryValue]] = defaultdict(list)
+        for game_id, position, value_path, view, parent_levels, suffix, value_regex in registry_rows:
             registry[(game_id, position)].append(
                 RegistryValue(
                     value_path=value_path,
@@ -105,6 +108,9 @@ class GameCatalog:
                     value_regex=value_regex,
                 )
             )
+        source_rows: list[tuple[str, int, str | None]] = db.execute(
+            "SELECT game_id, position, package_family FROM game_sources ORDER BY game_id, position"
+        ).fetchall()
         return tuple(
             GameSource(
                 game_id=game_id,
@@ -112,7 +118,5 @@ class GameCatalog:
                 registry=tuple(registry[(game_id, position)]),
                 package_family=package_family,
             )
-            for game_id, position, package_family in db.execute(
-                "SELECT game_id, position, package_family FROM game_sources ORDER BY game_id, position"
-            )
+            for game_id, position, package_family in source_rows
         )

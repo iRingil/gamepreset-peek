@@ -1,6 +1,8 @@
 """The drop-down choice of a CPU, a GPU or a resolution, with a search over the bundled items."""
 
-from typing import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
+from functools import partial
+from typing import cast, override
 
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, Qt
 from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPalette
@@ -37,10 +39,12 @@ _WARNED_ROLE: int = Qt.ItemDataRole.UserRole + 2
 
 
 class _MarkDelegate(QStyledItemDelegate):
-    """Draws a symbol and a word in one color at the right end of the marked items, and a warning sign before them.
+    """
+    Draws a symbol and a word in one color at the right end of the marked items, and a warning sign before them.
 
     Detected items get a green check and "Detected"; resolutions of the screen's shape get a monitor and the ratio;
-    resolutions too demanding for the hardware get the warning sign, next to the other mark if there is one."""
+    resolutions too demanding for the hardware get the warning sign, next to the other mark if there is one.
+    """
 
     def __init__(self, *, symbol: str, mark: str, color: Callable[[QPalette], QColor], parent: QListWidget) -> None:
         """
@@ -56,6 +60,7 @@ class _MarkDelegate(QStyledItemDelegate):
         self._mark: str = mark
         self._color: Callable[[QPalette], QColor] = color
 
+    @override
     def paint(
         self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex
     ) -> None:
@@ -67,16 +72,25 @@ class _MarkDelegate(QStyledItemDelegate):
         :param index: the item
         :return: None
         """
-        marked: bool = bool(index.data(_MARKED_ROLE))
-        warned: bool = bool(index.data(_WARNED_ROLE))
+        marked: bool = bool(cast("object", index.data(_MARKED_ROLE)))
+        warned: bool = bool(cast("object", index.data(_WARNED_ROLE)))
         if not marked and not warned:
             super().paint(painter, option, index)
             return
         item: QStyleOptionViewItem = QStyleOptionViewItem(option)
         self.initStyleOption(item, index)
         widget: QWidget | None = item.widget
-        style: QStyle = widget.style() if widget is not None else QApplication.style()
-        ratio: float = widget.devicePixelRatio() if widget is not None else 1.0
+        # A delegate may paint without a widget, which the stubs don't allow for
+        style: QStyle = (
+            widget.style()
+            if widget is not None  # pyright: ignore[reportUnnecessaryComparison]
+            else QApplication.style()
+        )
+        ratio: float = (
+            widget.devicePixelRatio()
+            if widget is not None  # pyright: ignore[reportUnnecessaryComparison]
+            else 1.0
+        )
         gap: int = Typography.px(ems=_MARK_GAP)
         size: int = item.fontMetrics.height()
         word: int = item.fontMetrics.horizontalAdvance(self._mark) if marked else 0
@@ -106,12 +120,14 @@ class _MarkDelegate(QStyledItemDelegate):
 
 
 class ChoicePopup(QFrame):
-    """A drop-down list under a link: detected items, a line, a search field, then the bundled items in tabs if several.
+    """
+    A drop-down list under a link: detected items, a line, a search field, then the bundled items in tabs if several.
 
     A click or Enter on an item picks it and closes the list; a click outside closes it with no choice. The search
-    filters the bundled items of every tab at once and opens a tab with matches when the open one has none."""
+    filters the bundled items of every tab at once and opens a tab with matches when the open one has none.
+    """
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         *,
         parent: QWidget,
@@ -181,7 +197,8 @@ class ChoicePopup(QFrame):
         if focus is not None:
             focus.setFocus()
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:  # pylint: disable=invalid-name
+    @override
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """
         Move from the search field into the open list on the Down key; other keys are handled as usual.
 
@@ -212,11 +229,11 @@ class ChoicePopup(QFrame):
                 count += int(found)
             counts.append(count)
             current: QListWidgetItem | None = view.currentItem()
-            if current is None or current.isHidden():
+            if current is None or current.isHidden():  # pyright: ignore[reportUnnecessaryComparison] - the stubs omit None, which Qt returns
                 first: QListWidgetItem | None = self._first_shown(view=view)
                 if first is not None:
                     view.setCurrentItem(first)
-            if view.currentItem() is not None:
+            if view.currentItem() is not None:  # pyright: ignore[reportUnnecessaryComparison] - the stubs omit None, which Qt returns
                 view.scrollToItem(view.currentItem(), QAbstractItemView.ScrollHint.EnsureVisible)
             if self._tabs is not None:
                 self._tabs.setTabText(self._tabs.indexOf(view), f"{title} ({count})" if words else title)
@@ -270,9 +287,20 @@ class ChoicePopup(QFrame):
         if selected is not None and 0 <= selected - offset < len(items):
             view.setCurrentRow(selected - offset)
             view.scrollToItem(view.currentItem(), QAbstractItemView.ScrollHint.PositionAtCenter)
-        view.itemClicked.connect(lambda item: self._pick(position=offset + view.row(item)))
-        view.itemActivated.connect(lambda item: self._pick(position=offset + view.row(item)))
+        view.itemClicked.connect(partial(self._pick_item, view=view, offset=offset))
+        view.itemActivated.connect(partial(self._pick_item, view=view, offset=offset))
         return view
+
+    def _pick_item(self, item: QListWidgetItem, *, view: QListWidget, offset: int) -> None:
+        """
+        Pick an item clicked or activated in one of the lists.
+
+        :param item: the item
+        :param view: list of the item
+        :param offset: position of the list's first item in the whole choice
+        :return: None
+        """
+        self._pick(position=offset + view.row(item))
 
     def _detected_list(self, *, choice: ChoiceView, mark: str) -> QListWidget:
         """
@@ -342,7 +370,7 @@ class ChoicePopup(QFrame):
         """
         for row in rows:
             item: QListWidgetItem = view.item(row)
-            item.setData(role, True)
+            item.setData(role, True)  # noqa: FBT003 - Qt takes no keyword arguments
             if hint:
                 item.setToolTip(f"{item.toolTip()}\n{hint}" if item.toolTip() else hint)
 

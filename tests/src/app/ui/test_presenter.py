@@ -1,6 +1,5 @@
+# ruff: noqa: PLR2004, S101
 """Tests of the main window logic on a fake window, a runner that runs tasks in place and a debouncer run by hand."""
-
-# pylint: disable=too-many-lines
 
 from dataclasses import replace
 from typing import Any
@@ -32,10 +31,6 @@ from tests.src.app.ui.presenter_fakes import (
     CPU,
     DESKTOP_GPU,
     FIT_HINT,
-    FakeDebouncer,
-    FakeHardware,
-    FakeRunner,
-    FakeView,
     GAMES,
     INSTALLED,
     INTEL_CPU,
@@ -43,13 +38,17 @@ from tests.src.app.ui.presenter_fakes import (
     LAPTOP_VIEW,
     PRESETS,
     PRESETS_FILE,
-    PresenterTests,
     SCREEN,
     SETUP,
     SHOWN,
+    FakeDebouncer,
+    FakeHardware,
+    FakeRunner,
+    FakeView,
+    PresenterTests,
 )
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestStart(PresenterTests):
@@ -75,7 +74,8 @@ class TestStart(PresenterTests):
             "",
         )
         assert (view.tab, view.game_selected, view.cover) == (GamesTab.ALL, 0, "picture")
-        assert view.settings is not None and view.settings.title == "Baldur's Gate 3"
+        assert view.settings is not None
+        assert view.settings.title == "Baldur's Gate 3"
         service.check_hardware.assert_called_once_with(choice=HardwareChoice(cpu_name=CPU, gpu=LAPTOP_GPU))
         service.update_database_if_due.assert_called_once_with()
 
@@ -401,7 +401,7 @@ class TestGame(PresenterTests):
 
         presenter.start()
         runner.deferred = True
-        view.show_settings = record  # type: ignore[method-assign]
+        view.show_settings = record
         presenter.games.select_game(index=1)
         presenter.games.select_game(index=0)
         # Act
@@ -462,7 +462,8 @@ class TestSettings(PresenterTests):
             recommended=2,
             optimal=False,
         )
-        assert view.settings is not None and (view.settings.index, view.settings.optimal) == (2, True)
+        assert view.settings is not None
+        assert (view.settings.index, view.settings.optimal) == (2, True)
 
     @pytest.mark.parametrize(argnames="index", argvalues=[0, 4], ids=["below", "above"])
     def test_slider_out_of_range(self, presenter: Presenter, view: FakeView, index: int) -> None:
@@ -479,7 +480,8 @@ class TestSettings(PresenterTests):
         # Act
         presenter.move_slider(index=index)
         # Assert
-        assert view.settings is not None and view.settings.index == 2
+        assert view.settings is not None
+        assert view.settings.index == 2
 
     def test_slider_without_settings(self, presenter: Presenter, view: FakeView, service: MagicMock) -> None:
         """
@@ -656,8 +658,10 @@ class TestResolution(PresenterTests):
         presenter.choose_resolution(position=2)
         # Assert
         service.save_resolution.assert_called_once_with(resolution="2560x1440")
-        assert view.hardware is not None and view.hardware.resolution == "2560x1440"
-        assert view.settings is not None and (view.settings.index, view.status) == (3, "")
+        assert view.hardware is not None
+        assert view.hardware.resolution == "2560x1440"
+        assert view.settings is not None
+        assert (view.settings.index, view.status) == (3, "")
 
     def test_closest_smaller_resolution(self, presenter: Presenter, view: FakeView, service: MagicMock) -> None:
         """
@@ -673,7 +677,8 @@ class TestResolution(PresenterTests):
         # Act
         self.show_settings(presenter=presenter)
         # Assert
-        assert view.settings is not None and view.settings.index == 3
+        assert view.settings is not None
+        assert view.settings.index == 3
         assert view.status == "No preset for 2560x1600: showing the one for 2560x1440."
         assert view.status_level is StatusLevel.WARNING
 
@@ -691,7 +696,8 @@ class TestResolution(PresenterTests):
         # Act
         self.show_settings(presenter=presenter)
         # Assert
-        assert view.settings is not None and view.settings.index == 3
+        assert view.settings is not None
+        assert view.settings.index == 3
         assert view.status == "No preset for 1920x1080: showing the one for 2560x1440."
 
     def test_below_min_spec_noted(self, presenter: Presenter, view: FakeView) -> None:
@@ -708,7 +714,8 @@ class TestResolution(PresenterTests):
         # Act
         presenter.choose_resolution(position=1)
         # Assert
-        assert view.settings is not None and view.settings.index == 1
+        assert view.settings is not None
+        assert view.settings.index == 1
         assert view.status == "Too demanding for this PC: even the lowest settings may stutter at this resolution."
         assert view.status_level is StatusLevel.WARNING
 
@@ -751,12 +758,13 @@ class TestResolution(PresenterTests):
         presenter.choose_resolution(position=1)
         # Assert
         service.save_resolution.assert_called_once_with(resolution="3840x2160")
-        assert view.hardware is not None and view.hardware.resolution == "3840x2160"
+        assert view.hardware is not None
+        assert view.hardware.resolution == "3840x2160"
         service.game_settings.assert_not_called()
 
     @pytest.mark.parametrize(argnames="fails", argvalues=[False, True], ids=["answer", "error"])
     def test_stale_settings_dropped(
-        self, presenter: Presenter, view: FakeView, service: MagicMock, runner: FakeRunner, fails: bool
+        self, *, presenter: Presenter, view: FakeView, service: MagicMock, runner: FakeRunner, fails: bool
     ) -> None:
         """
         Drops the settings, or the error, of a resolution the user left before they arrived.
@@ -785,7 +793,8 @@ class TestResolution(PresenterTests):
                 "Could not get data from NVIDIA: no connection, check your internet",
             )
         else:
-            assert view.settings is not None and (view.settings.index, view.status) == (3, "")
+            assert view.settings is not None
+            assert (view.settings.index, view.status) == (3, "")
 
 
 class TestLanguage(PresenterTests):
@@ -1014,7 +1023,8 @@ class TestDatabaseUpdate(PresenterTests):
         presenter.change_auto_update(enabled=True)
         # Assert
         assert (view.games, view.game_selected) == (["Baldur's Gate III"], 0)
-        assert view.settings is not None and view.settings.title == "Baldur's Gate III"
+        assert view.settings is not None
+        assert view.settings.title == "Baldur's Gate III"
         assert service.save_game_choice.call_args.kwargs["choice"].catalog_game_id == "baldurs_gate_3"
 
     def test_once_per_start(self, presenter: Presenter, service: MagicMock) -> None:
@@ -1367,7 +1377,8 @@ class TestHardwareChoice(PresenterTests):
         presenter.choose_gpu(position=1)
         presenter.games.select_game(index=1)
         # Assert
-        assert view.hardware is not None and view.hardware.gpu == "NVIDIA GeForce RTX 4090"
+        assert view.hardware is not None
+        assert view.hardware.gpu == "NVIDIA GeForce RTX 4090"
         assert view.status == "NVIDIA does not know your graphics card. Choose the closest one from the list."
         assert view.status_level is StatusLevel.ERROR
         service.game_presets.assert_not_called()

@@ -1,3 +1,3 @@
 """Tests of the application sources."""
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()

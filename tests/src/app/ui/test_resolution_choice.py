@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of the resolution choice."""
 
 from pathlib import Path
@@ -14,7 +15,7 @@ from app.i18n.translator import Translator
 from app.ui.resolution_choice import ResolutionChoice
 from app.ui.views import ChoiceGroup, ChoiceView
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 _SETUP: HardwareSetup = HardwareSetup(
     system=SystemHardware(cpu_name=None, gpus=(), memory_gb=16, os_version="10.0", resolution="2560x1600"),

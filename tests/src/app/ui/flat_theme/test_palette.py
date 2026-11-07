@@ -1,3 +1,4 @@
+# ruff: noqa: S101
 """Tests of app.ui.flat_theme.palette."""
 
 from PySide6.QtGui import QPalette
@@ -6,7 +7,7 @@ from PySide6.QtWidgets import QApplication
 from app.ui.flat_theme.color_map import ColorMap
 from app.ui.flat_theme.palette import Palette
 
-__all__: tuple = ()
+__all__: tuple[str, ...] = ()
 
 
 class TestPalette:

@@ -11,7 +11,7 @@ from app.i18n.ui_text import UiText
 __all__: tuple[str, ...] = ("ReadOnlyFolder",)
 
 
-class ReadOnlyFolder:  # pylint: disable=too-few-public-methods
+class ReadOnlyFolder:
     """Tells how to make the folder writable; the program quits once the warning is closed."""
 
     @staticmethod
