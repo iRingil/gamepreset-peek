@@ -40,8 +40,8 @@ Ruff and basedpyright are installed globally (PyCharm External Tools, `%APPDATA%
 `.github/workflows/lint.yml` pins their versions (and pip-audit's): bump them there together. Lint rules: Ruff
 `select = ["ALL"]` minus the few global ignores commented in `pyproject.toml`; test-only rules are silenced per file by
 a `# ruff: noqa: ...` line, everything else locally with a reason (`.claude/rules/code-style.md`). basedpyright relaxes
-only the Any/unknown/private-access rules for `tests/` (mocks); `pythonPlatform = "Windows"`, as the code uses
-`winreg` and the Windows API while the lint job runs on Ubuntu.
+only the Any/unknown/private-access rules for `tests/` (mocks). The lint job runs on Windows, as the PySide6 stubs
+differ per platform.
 
 The bundled database (`src/app/data/app.db`, committed) is written only by the private `gamepreset-peek-update`
 project: it owns the schema and pushes the file here weekly; this repository only reads it.

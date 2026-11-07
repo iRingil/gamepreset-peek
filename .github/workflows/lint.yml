@@ -1,5 +1,6 @@
 name: Lint
 
+# The app uses Windows-only APIs, and the PySide6 stubs differ per platform, so the checks run on Windows.
 permissions:
   contents: read
 
@@ -24,7 +25,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - name: Set up Python 3.13
@@ -36,16 +37,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m venv .venv
-          .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/pip install -r src/requirements-dev.txt ruff==0.17.4 basedpyright==1.40.2 pip-audit==2.10.1
+          .venv\Scripts\python.exe -m pip install --upgrade pip
+          .venv\Scripts\pip.exe install -r src/requirements-dev.txt ruff==0.17.4 basedpyright==1.40.2 pip-audit==2.10.1
       # Audits every installed package, transitive ones included - Dependabot only sees the requirements files
       - name: pip-audit
         run: |
-          .venv/bin/pip-audit --progress-spinner off
+          .venv\Scripts\pip-audit.exe --progress-spinner off
       - name: Ruff
         run: |
-          .venv/bin/ruff check src tests
-          .venv/bin/ruff format --check src tests
+          .venv\Scripts\ruff.exe check src tests
+          .venv\Scripts\ruff.exe format --check src tests
       - name: basedpyright
         run: |
-          .venv/bin/basedpyright
+          .venv\Scripts\basedpyright.exe

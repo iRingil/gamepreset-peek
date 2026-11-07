@@ -21,8 +21,6 @@ ignore = [
 [tool.basedpyright]
 include = ["src", "tests"]
 pythonVersion = "3.13"
-# The app reads the Windows registry and uses Windows-only APIs
-pythonPlatform = "Windows"
 typeCheckingMode = "all"
 venvPath = "."
 venv = ".venv"

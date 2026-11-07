@@ -253,8 +253,8 @@ in the commits.
 
 ## Lint and types
 
-- Ruff + basedpyright since 2026-11-07 (they replaced black, pylint and mypy). The lint job runs on Ubuntu with
-  `pythonPlatform = "Windows"`, so `winreg` and `ctypes.WinDLL` are checked as on Windows.
+- Ruff + basedpyright since 2026-11-07 (they replaced black, pylint and mypy). The lint job runs on Windows: the
+  PySide6 stubs differ per platform (the Linux ones lack `QImage.fromHICON`), and `winreg` exists only there.
 - No `Any` in `src`: parsed JSON is `JsonValue`; `OpsApi` checks each value with `_object`/`_array`/`_typed`, so a
   wrong shape is still an `OpsFormatError`. SQLite rows get their types from `fetchall()` annotations, registry
   values are `cast` to `object` and narrowed with `isinstance`, Windows API functions are `cast` to a `Callable`.
