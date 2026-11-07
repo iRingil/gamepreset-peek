@@ -109,6 +109,8 @@ class Skeleton(QWidget):
         if not self.active:
             return
         band: float = max(self.width() * 0.35, Typography.length(ems=_BAND))
+        # The animation runs from 0.0 to 1.0; the stubs give Any, which PyCharm counts as a float already
+        # noinspection PyUnnecessaryCast
         middle: float = -band + (self.width() + band * 2) * cast("float", self._sweep.currentValue())
         gradient: QLinearGradient = QLinearGradient(middle - band, 0, middle + band, 0)
         gradient.setColorAt(0, self._faded(color=text, alpha=0))

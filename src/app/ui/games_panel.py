@@ -97,7 +97,7 @@ class _ChoiceList(QListView):
         """
         Select an item and scroll to it, or clear the selection keeping the scroll position.
 
-        :param position: position of the item, None for none
+        :param position: position of the item, None to clear the selection
         :return: None
         """
         if position is None:
@@ -112,6 +112,8 @@ class _ChoiceList(QListView):
 class _InstalledTab(QWidget):
     """The installed games over the folders searched for them, with the buttons that change the folders."""
 
+    # Grazie reads the parameter list of the docstring as one long sentence
+    # noinspection GrazieStyle
     def __init__(  # noqa: PLR0913 - every callback of the view is passed in, so the presenter and tests can wire it
         self,
         *,
@@ -197,7 +199,7 @@ class _InstalledTab(QWidget):
         Show the installed games with the icons of their executables, or the invitation to add a folder.
 
         :param games: installed games in list order
-        :param selected: position of the chosen game, None for none
+        :param selected: position of the chosen game, None when no game is chosen
         :return: None
         """
         self.skeleton.set_active(active=False)
@@ -322,6 +324,8 @@ class _AllTab(QWidget):
 class GamesPanel(QTabWidget):
     """Two tabs: the games installed on this computer, and all games NVIDIA has presets for."""
 
+    # Grazie reads the parameter list of the docstring as one long sentence
+    # noinspection GrazieStyle
     def __init__(  # noqa: PLR0913 - every callback of the view is passed in, so the presenter and tests can wire it
         self,
         *,
@@ -397,7 +401,7 @@ class GamesPanel(QTabWidget):
         """
         Tell which tab is at a position of the tab bar.
 
-        :param index: position of the tab
+        :param index: position in the tab bar
         :return: the tab
         """
         return GamesTab.INSTALLED if self.widget(index) is self.installed else GamesTab.ALL

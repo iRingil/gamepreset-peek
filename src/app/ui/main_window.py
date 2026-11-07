@@ -720,7 +720,7 @@ class MainWindow(QWidget):
 
     def show_games(self, *, names: Sequence[str], selected: int | None) -> None:
         """
-        Fill the list of all games.
+        Show all games in their list.
 
         :param names: display names in list order
         :param selected: position of the chosen game, None when it is not in the list
@@ -738,7 +738,7 @@ class MainWindow(QWidget):
 
     def show_installed_games(self, *, games: Sequence[InstalledGameView], selected: int | None) -> None:
         """
-        Fill the list of installed games; an empty list invites the user to add a folder.
+        Show the installed games in their list; an empty list invites the user to add a folder.
 
         :param games: installed games in list order
         :param selected: position of the chosen game, None when it is not in the list
@@ -768,7 +768,7 @@ class MainWindow(QWidget):
         """
         Show the box art of the chosen game.
 
-        :param picture: the picture file, None for a placeholder when the game has none
+        :param picture: the picture file, None for a placeholder when the game has no box art
         :return: None
         """
         self._cover.show_picture(path=picture)

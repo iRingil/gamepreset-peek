@@ -1,13 +1,11 @@
 """NVIDIA optimal playable settings (OPS) endpoints: requests and parsing of the answers into models."""
 
 import hashlib
-import json
 
 # noinspection PyPep8Naming
 import xml.etree.ElementTree as ET
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import cast
 
 from loguru import logger
 
@@ -125,7 +123,7 @@ class OpsApi:
         body: bytes = self._download(file=file)
         with self._parsing(what=f"presets file {file.url}"):
             # Despite its .tsv name, the file is JSON.
-            document: dict[str, JsonValue] = self._object(value=cast("JsonValue", json.loads(s=body)))
+            document: dict[str, JsonValue] = self._object(value=HttpClient.parse_json(data=body))
             settings: tuple[Setting, ...] = tuple(
                 self._setting(entry=entry) for entry in self._array(value=document["settings"])
             )
@@ -277,7 +275,7 @@ class OpsApi:
     @staticmethod
     def _typed[T: str | int | bool](*, value: JsonValue, kind: type[T]) -> T:
         """
-        Check the type of a parsed JSON scalar; a bool is not accepted as an int.
+        Check that a parsed JSON scalar is of the expected type; a bool is not accepted as an int.
 
         :param value: value to check
         :param kind: expected type

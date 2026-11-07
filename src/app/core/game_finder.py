@@ -59,7 +59,7 @@ class WindowsRegistry:
         """
         List the existing key paths a key path with patterns stands for.
 
-        :param hive: root key
+        :param hive: registry root, e.g. HKEY_LOCAL_MACHINE
         :param parts: key names, some of them maybe regex patterns
         :param view: 32 or 64
         :return: key paths, the plain path as it is
@@ -86,7 +86,7 @@ class WindowsRegistry:
         """
         Read one string value.
 
-        :param hive: root key
+        :param hive: registry root, e.g. HKEY_LOCAL_MACHINE
         :param key_path: key path below the root
         :param name: value name, empty for the default value
         :param view: 32 or 64
@@ -94,6 +94,8 @@ class WindowsRegistry:
         """
         try:
             with winreg.OpenKey(hive, key_path, 0, winreg.KEY_READ | cls._VIEWS[view]) as key:
+                # The stubs give Any for a registry value, which PyCharm counts as a type the cast already has
+                # noinspection PyUnnecessaryCast
                 text: object = cast("object", winreg.QueryValueEx(key, name)[0])
         except OSError:
             return None
@@ -114,7 +116,7 @@ class GameFinder:
 
     The registry is read first: a copy whose value leads to a folder holding its executable and files is found. Then
     the game folders are walked: a file named like a copy's executable, at the end of the same relative path, makes
-    its folder a candidate. A copy matches when every file it needs is there and none it must not have is.
+    its folder a candidate. A copy matches when it has every file it needs and none of the files it must not have.
 
     When several games match one file, the copy checked by the most files wins; a tie between games is ambiguous
     (a "launcher.exe" alone tells nothing) and none of them is taken. Microsoft Store copies are skipped: their

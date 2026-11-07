@@ -171,8 +171,8 @@ def _service(  # noqa: PLR0913 - pytest passes every fixture and parameter by na
     """
     Create the service over mocked NVIDIA, database, hardware, game search and covers, with small lists and games.
 
-    :param ops: NVIDIA endpoints mock
-    :param database: database mock
+    :param ops: mock of the NVIDIA endpoints
+    :param database: mock of the database file
     :param data: database contents
     :param detector: hardware detection mock
     :param store: settings store

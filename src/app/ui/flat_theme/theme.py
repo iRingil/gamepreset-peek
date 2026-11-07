@@ -49,7 +49,7 @@ class FlatTheme:
         """
         Switch the whole application to a mode; the first call also sets the theme's style.
 
-        :param scheme: Light or Dark, or Unknown to follow Windows
+        :param scheme: Light or Dark, or Unknown to follow the Windows app mode
         :return: None
         """
         hints: QStyleHints = QGuiApplication.styleHints()

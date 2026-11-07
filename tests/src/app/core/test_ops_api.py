@@ -63,7 +63,7 @@ class _Data:
         """
         Build a reference to a file with the given content.
 
-        :param body: content of the file
+        :param body: content to refer to
         :return: file reference with the matching sha256
         """
         return RemoteFile(url=_FILE_URL, sha256=hashlib.sha256(body).hexdigest(), size=len(body))

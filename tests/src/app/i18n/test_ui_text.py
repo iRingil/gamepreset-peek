@@ -22,8 +22,8 @@ class TestCatalogs:
         """
         Holds exactly the UiText messages: no text missing, none left over from a removed member.
 
-        :param catalogs: catalogs by UI language
-        :param language: UI language
+        :param catalogs: the catalog of each UI language, by its code
+        :param language: language under test
         :return: None
         """
         # Arrange & Act
@@ -36,8 +36,8 @@ class TestCatalogs:
         """
         Translates every message, none of them fuzzy, keeping the placeholders of the source.
 
-        :param catalogs: catalogs by UI language
-        :param language: UI language
+        :param catalogs: the catalog of each UI language, by its code
+        :param language: language under test
         :return: None
         """
         # Arrange

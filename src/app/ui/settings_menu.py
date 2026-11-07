@@ -36,6 +36,8 @@ class SettingsMenu(QFrame):
         ThemeMode.LIGHT: ("sun", UiText.THEME_LIGHT),
     }
 
+    # Grazie reads the parameter list of the docstring as one long sentence
+    # noinspection GrazieStyle
     def __init__(  # noqa: PLR0913 - every callback of the view is passed in, so the presenter and tests can wire it
         self,
         *,

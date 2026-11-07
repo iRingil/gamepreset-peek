@@ -63,6 +63,8 @@ class Presenter:
     # Debouncer key.
     _PRESETS: str = "presets"
 
+    # Grazie reads the parameter list of the docstring as one long sentence
+    # noinspection GrazieStyle
     def __init__(  # noqa: PLR0913 - the services, views and runners are injected, so tests can replace them
         self,
         *,
@@ -316,7 +318,7 @@ class Presenter:
         """
         Show the settings of another chosen game, requested once the choice rests.
 
-        :param game: the game, None when the tab has none
+        :param game: the game, None when the tab has no games
         :return: None
         """
         if game is None:
@@ -476,10 +478,12 @@ class Presenter:
         :return: None
         """
         game: Game | None = self.games.game
-        if game is None or self._presets is None or self._resolution_name is None:  # pragma: no cover
+        presets: GamePresets | None = self._presets
+        resolution_name: str | None = self._resolution_name
+        if game is None or presets is None or resolution_name is None:  # pragma: no cover
             return
         request: int = self._next_request()
-        self._resolution = self._presets.preset_for(resolution=self._resolution_name)
+        self._resolution = presets.preset_for(resolution=resolution_name)
         self._settings = None
         if self._resolution is None:
             self._view.show_no_recommendation()
@@ -487,10 +491,11 @@ class Presenter:
             return
         self._view.clear_settings(loading=True)
         game_id: str = game.game_id
-        presets: GamePresets = self._presets
+        # The lambda runs later, so it gets the narrowed type through a local of its own
+        game_presets: GamePresets = presets
         self._set_status(status=self._texts.info(item=UiText.LOADING))
         self._runners.requests.submit(
-            task=lambda: self._service.game_settings(game_id=game_id, presets=presets),
+            task=lambda: self._service.game_settings(game_id=game_id, presets=game_presets),
             on_done=lambda settings: self._on_settings(request=request, settings=settings),
             on_error=lambda error: self._on_request_error(request=request, error=error),
         )

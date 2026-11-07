@@ -1007,7 +1007,7 @@ class TestDatabaseUpdate(PresenterTests):
 
     def test_chosen_game_gone(self, presenter: Presenter, view: FakeView, service: MagicMock) -> None:
         """
-        Chooses the first game when the new database doesn't list the chosen one any more.
+        Chooses the first game when the new database doesn't list the chosen one anymore.
 
         :param presenter: presenter under test
         :param view: fake window

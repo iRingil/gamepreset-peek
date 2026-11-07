@@ -137,9 +137,9 @@ class TestHttpClient:
         client.get_bytes(url=_URL)
         client.get_bytes(url=_URL)
         # Assert
-        user_agents: set[str | bytes] = {call.request.headers["User-Agent"] for call in mock.calls}
+        user_agents: set[str] = {str(call.request.headers["User-Agent"]) for call in mock.calls}
         assert len(user_agents) == 1
-        assert "Windows NT" in str(user_agents.pop())
+        assert "Windows NT" in user_agents.pop()
 
     def test_client_error_not_retried(
         self, mock: responses.RequestsMock, client: HttpClient, delays: list[float]

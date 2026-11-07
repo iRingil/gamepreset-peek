@@ -5,13 +5,12 @@ import threading
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import cast
 
 from loguru import logger
 
 from app.config import SETTINGS_FILE
 from app.core.models import GameChoice, GamesTab, Gpu, ThemeMode, UserSettings
-from app.infra.http_client import JsonValue
+from app.infra.http_client import HttpClient, JsonValue
 
 __all__: tuple[str, ...] = ("UserSettingsStore",)
 
@@ -44,7 +43,7 @@ class UserSettingsStore:
             return UserSettings()
         try:
             settings: UserSettings = self._parse(
-                document=cast("JsonValue", json.loads(s=self._path.read_text(encoding="utf-8")))
+                document=HttpClient.parse_json(data=self._path.read_text(encoding="utf-8"))
             )
         except (OSError, ValueError, TypeError, KeyError) as error:
             logger.warning("Ignored broken settings file {}: {!r}", self._path, error)

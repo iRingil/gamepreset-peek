@@ -35,6 +35,8 @@ class StatusTexts:
     }
 
     # A missing CPU and GPU together get one line of their own.
+    # PyCharm infers tuple[str] for the one-name keys, which tuple[str, ...] accepts
+    # noinspection PyClassVar
     _MISSING: ClassVar[dict[tuple[str, ...], UiText]] = {
         ("cpu",): UiText.CPU_NOT_DETECTED,
         ("gpu",): UiText.NO_NVIDIA_GPU,

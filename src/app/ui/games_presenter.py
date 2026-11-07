@@ -35,6 +35,8 @@ class GamesPresenter:
     _SEARCH: str = "search"
     _COVER: str = "cover"
 
+    # Grazie reads the parameter list of the docstring as one long sentence
+    # noinspection GrazieStyle
     def __init__(  # noqa: PLR0913 - the services, views and runners are injected, so tests can replace them
         self,
         *,
@@ -387,7 +389,7 @@ class GamesPresenter:
 
     def _render_installed(self) -> None:
         """
-        Fill the list of installed games, keeping the chosen game selected when it is there.
+        Show the installed games in their list, keeping the chosen game selected when it is there.
 
         :return: None
         """

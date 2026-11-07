@@ -2,7 +2,7 @@
 
 from collections.abc import Callable, Iterable, Sequence
 from functools import partial
-from typing import cast, override
+from typing import override
 
 from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, Qt
 from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPalette
@@ -68,12 +68,12 @@ class _MarkDelegate(QStyledItemDelegate):
         Draw the item as usual; a marked or warned one with its text shortened to leave room, then the mark and sign.
 
         :param painter: painter of the list
-        :param option: how to draw the item
+        :param option: style options of the drawing
         :param index: the item
         :return: None
         """
-        marked: bool = bool(cast("object", index.data(_MARKED_ROLE)))
-        warned: bool = bool(cast("object", index.data(_WARNED_ROLE)))
+        marked: bool = index.data(_MARKED_ROLE) is True
+        warned: bool = index.data(_WARNED_ROLE) is True
         if not marked and not warned:
             super().paint(painter, option, index)
             return
@@ -365,7 +365,7 @@ class ChoicePopup(QFrame):
         :param view: the list
         :param rows: rows of the items to flag
         :param role: item data role of the flag
-        :param hint: line of the hint, "" for none
+        :param hint: line of the hint, "" for no hint
         :return: None
         """
         for row in rows:

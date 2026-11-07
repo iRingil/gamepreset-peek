@@ -330,7 +330,7 @@ class TestDatabaseUpdate:
         :param service: service under test
         :param checked: check time in the manifest
         :param result: expected outcome
-        :param saved: expected settings afterwards
+        :param saved: expected settings afterward
         :return: None
         """
         # Arrange

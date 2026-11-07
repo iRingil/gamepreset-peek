@@ -21,6 +21,8 @@ class TestPalette:
         :return: None
         """
         # Arrange
+        # PyCharm infers dict[str, str] for the inner literal, which ColorTree accepts
+        # noinspection PyTypeChecker
         colors: ColorMap = ColorMap(
             tree={
                 "foreground": {

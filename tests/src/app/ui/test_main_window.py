@@ -133,7 +133,7 @@ class _Window:
 
         :param parent: widget to search in
         :param kind: class of the child
-        :return: the child
+        :return: the widget found
         """
         found: W | None = parent.findChild(kind)
         assert found is not None, f"no {kind.__name__}"

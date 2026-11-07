@@ -69,7 +69,7 @@ class Color:
         """
         Parse a color written as #RRGGBB or #RRGGBBAA.
 
-        :param text: the color
+        :param text: color text, e.g. "#8ab4f7"
         :return: the color
         """
         if not cls._HEX.fullmatch(text):

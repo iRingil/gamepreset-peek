@@ -107,7 +107,19 @@ class HttpClient:
         :param params: query string parameters
         :return: parsed JSON
         """
-        return cast("JsonValue", json.loads(s=self.get_bytes(url=url, params=params)))
+        return self.parse_json(data=self.get_bytes(url=url, params=params))
+
+    @staticmethod
+    def parse_json(*, data: str | bytes) -> JsonValue:
+        """
+        Parse a JSON document.
+
+        :param data: the document
+        :return: parsed JSON
+        """
+        # json.loads gives Any, which PyCharm counts as a type the cast already has
+        # noinspection PyUnnecessaryCast
+        return cast("JsonValue", json.loads(s=data))
 
     def get_bytes(self, *, url: str, params: Mapping[str, str] | None = None) -> bytes:
         """

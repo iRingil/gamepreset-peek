@@ -133,8 +133,13 @@ class CoverView(Skeleton):
         :param ratio: device pixel ratio of the screen
         :return: the scaled picture, its pixel ratio set
         """
-        if self._scaled is not None and self._scaled[:2] == (self.size(), ratio):
-            return self._scaled[2]
+        if self._scaled is not None:
+            size: QSize
+            scaled_ratio: float
+            cached: QPixmap
+            size, scaled_ratio, cached = self._scaled
+            if (size, scaled_ratio) == (self.size(), ratio):
+                return cached
         scaled: QPixmap = picture.scaled(
             round(self.width() * ratio),
             round(self.height() * ratio),

@@ -245,6 +245,8 @@ class HardwareDetector:
         :return: size in GiB to one decimal (7.996 -> 8.0), None when the driver doesn't report it
         """
         try:
+            # The stubs give Any for a registry value, which PyCharm counts as a type the cast already has
+            # noinspection PyUnnecessaryCast
             value: object = cast("object", winreg.QueryValueEx(key, cls._VIDEO_MEMORY_VALUE)[0])
         except OSError:
             return None
@@ -262,9 +264,11 @@ class HardwareDetector:
         :param name: value name
         :return: the value
         """
+        # The stubs give Any for a registry value, which PyCharm counts as a type the cast already has
+        # noinspection PyUnnecessaryCast
         value: object = cast("object", winreg.QueryValueEx(key, name)[0])
         if not isinstance(value, str):
-            raise OSError(f"registry value {name} is not a string: {value!r}")
+            raise OSError(f"registry value {name} is not a string but {type(value).__name__}")
         return value
 
 
@@ -396,7 +400,8 @@ class GpuRanks:
         :param name: GPU name
         :return: tier from 0 (entry level) to 4 (flagship)
         """
-        # The pattern has no groups, so every match is the matched text
+        # The pattern has no groups, so every match is a string; the stubs give a list of Any
+        # noinspection PyUnnecessaryCast
         numbers: list[str] = cast("list[str]", cls._NUMBER.findall(string=name))
         model: int = max((int(number) for number in numbers), default=0)
         return next((tier for lowest, tier in cls._NAME_TIERS if model % 100 >= lowest), 0.0)

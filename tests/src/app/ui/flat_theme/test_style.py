@@ -18,7 +18,7 @@ class TestFlatStyle:
         """
         Draw an icon at 24x24.
 
-        :param icon: the icon
+        :param icon: icon to draw
         :param mode: icon mode
         :return: the drawn image
         """
