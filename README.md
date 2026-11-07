@@ -40,7 +40,7 @@
     <a href="https://github.com/iRingil/gamepreset-peek/releases/latest">
         <img src="https://img.shields.io/github/v/release/iRingil/gamepreset-peek" alt="Latest release">
     </a>
-    <a href="LICENSE">
+    <a href="LICENSE.md">
         <img src="https://img.shields.io/github/license/iRingil/gamepreset-peek" alt="License">
     </a>
     <a href="https://github.com/astral-sh/ruff">
@@ -141,7 +141,7 @@ infrastructure\inno\build.cmd                         # installer and portable z
 
 ## License
 
-GamePreset Peek is released under the [MIT License](LICENSE). It is built with these third-party components:
+GamePreset Peek is released under the [MIT License](LICENSE.md). It is built with these third-party components:
 
 - [Qt for Python (PySide6)](https://www.qt.io/qt-for-python) and Qt: LGPL-3.0
 - [PyQtDarkTheme](https://github.com/5yutan5/PyQtDarkTheme), reworked in `src/app/ui/flat_theme`: MIT; its style sheet

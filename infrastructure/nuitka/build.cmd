@@ -47,7 +47,7 @@ echo Python found. Running Nuitka...
 --include-data-dir=src/app/data=app/data ^
 --include-data-files=src/app/i18n/locale=app/i18n/locale/=**/*.mo ^
 --include-package-data=app.ui.flat_theme ^
---include-data-files=LICENSE=LICENSE.txt ^
+--include-data-files=LICENSE.md=LICENSE.txt ^
 --include-package-data=fake_useragent ^
 --output-dir=build ^
 --output-folder-name=GamePresetPeek ^
