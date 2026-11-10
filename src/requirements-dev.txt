@@ -1,8 +1,8 @@
 -r requirements.txt
 
 babel==2.18.0
-coverage==7.17.0
-nuitka==4.3.3
+coverage==7.17.2
+nuitka==4.3.4
 pytest==9.2.0
 responses==0.26.3
 types-requests==2.33.0.20261030
